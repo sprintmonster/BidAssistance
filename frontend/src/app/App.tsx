@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { LoginPage } from "./components/LoginPage";
 import { SignupPage } from "./components/SignupPage";
 import { Dashboard } from "./components/Dashboard";
@@ -6,7 +6,7 @@ import { BidDiscovery } from "./components/BidDiscovery";
 import { AnalyticsReport } from "./components/AnalyticsReport";
 import { BidSummary } from "./components/BidSummary";
 import { CartPage } from "./components/CartPage";
-import { NotificationsPage } from "./components/NotificationsPage";
+import { NotificationsPage, type NotificationItem } from "./components/NotificationsPage";
 import { ChatbotPage } from "./components/ChatbotPage";
 import { ProfilePage } from "./components/ProfilePage";
 import { Button } from "./components/ui/button";
@@ -36,6 +36,84 @@ function isNavState(v: unknown): v is NavState {
   return typeof anyV.page === "string";
 }
 
+const DEFAULT_NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: 1,
+    type: "deadline",
+    title: "마감 임박 알림",
+    message: "서울시 강남구 도로 보수공사가 2일 후 마감됩니다",
+    time: "2시간 전",
+    read: false,
+    urgent: true,
+  },
+  {
+    id: 2,
+    type: "correction",
+    title: "정정공고 발표",
+    message: "경기도 성남시 공공건물 신축공사의 예산이 87억원에서 92억원으로 변경되었습니다",
+    time: "5시간 전",
+    read: false,
+    urgent: false,
+  },
+  {
+    id: 3,
+    type: "reannouncement",
+    title: "재공고 등록",
+    message: "인천 항만시설 보수공사가 재공고 되었습니다",
+    time: "1일 전",
+    read: true,
+    urgent: false,
+  },
+  {
+    id: 4,
+    type: "unsuccessful",
+    title: "유찰 공고",
+    message: "부산시 해운대구 주차장 건설이 유찰되었습니다. 재입찰 예정",
+    time: "1일 전",
+    read: true,
+    urgent: false,
+  },
+  {
+    id: 5,
+    type: "new",
+    title: "신규 공고",
+    message: "관심 지역(서울)에 새로운 공고 3건이 등록되었습니다",
+    time: "2일 전",
+    read: true,
+    urgent: false,
+  },
+  {
+    id: 6,
+    type: "deadline",
+    title: "마감 임박 알림",
+    message: "인천광역시 연수구 학교시설 개선공사가 4일 후 마감됩니다",
+    time: "2일 전",
+    read: true,
+    urgent: false,
+  },
+  {
+    id: 7,
+    type: "correction",
+    title: "정정공고 발표",
+    message: "대전시 유성구 복지센터 리모델링의 기술요건이 변경되었습니다",
+    time: "3일 전",
+    read: true,
+    urgent: false,
+  },
+];
+
+function loadNotifications(): NotificationItem[] {
+  const raw = localStorage.getItem("notifications");
+  if (!raw) return DEFAULT_NOTIFICATIONS;
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed as NotificationItem[];
+    return DEFAULT_NOTIFICATIONS;
+  } catch {
+    return DEFAULT_NOTIFICATIONS;
+  }
+}
+
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>("login");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -44,9 +122,39 @@ export default function App() {
   const [selectedBidId, setSelectedBidId] = useState<number | undefined>();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // 알림 상태(전역)
+  const [notifications, setNotifications] = useState<NotificationItem[]>(() => loadNotifications());
+
+  // 알림 localStorage 저장(새로고침/재진입에도 유지)
+  useEffect(() => {
+    localStorage.setItem("notifications", JSON.stringify(notifications));
+  }, [notifications]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const markAllNotificationsRead = useCallback(() => {
+    setNotifications((prev) => {
+      const hasUnread = prev.some((n) => !n.read);
+      if (!hasUnread) return prev;
+      return prev.map((n) => (n.read ? n : { ...n, read: true }));
+    });
+  }, []);
+
+  const markNotificationRead = useCallback((id: number) => {
+    setNotifications((prev) => {
+      let changed = false;
+      const next = prev.map((n) => {
+        if (n.id !== id) return n;
+        if (n.read) return n;
+        changed = true;
+        return { ...n, read: true };
+      });
+      return changed ? next : prev;
+    });
+  }, []);
+
   // ---- history sync (핵심) ----
   useEffect(() => {
-    // 최초 로드시 history.state에 page가 없으면 login으로 초기화
     const st = window.history.state;
     if (isNavState(st) && st.page) {
       setCurrentPage(st.page as Page);
@@ -81,7 +189,6 @@ export default function App() {
   const handleLogin = (email: string) => {
     setIsAuthenticated(true);
     setUserEmail(email);
-    // 로그인 후에는 login 히스토리를 dashboard로 "대체"해서 back이 login으로 가지 않게 함(권장 UX)
     navigateTo("dashboard", undefined, true);
     toast.success("로그인되었습니다");
   };
@@ -99,7 +206,6 @@ export default function App() {
     setCartItems([]);
     setSelectedBidId(undefined);
 
-    // 로그아웃 시 현재 엔트리를 login으로 대체
     navigateTo("login", undefined, true);
     toast.info("로그아웃되었습니다");
   };
@@ -145,7 +251,7 @@ export default function App() {
     { id: "bids" as Page, icon: Search, label: "공고 찾기" },
     { id: "analytics" as Page, icon: TrendingUp, label: "낙찰 분석" },
     { id: "cart" as Page, icon: ShoppingCart, label: "장바구니", badge: cartItems.length },
-    { id: "notifications" as Page, icon: Bell, label: "알림", badge: 2 },
+    { id: "notifications" as Page, icon: Bell, label: "알림", badge: unreadCount },
     { id: "chatbot" as Page, icon: MessageSquare, label: "AI 챗봇" },
     { id: "profile" as Page, icon: User, label: "마이페이지" },
   ];
@@ -263,7 +369,15 @@ export default function App() {
             onNavigate={handleNavigate}
           />
         )}
-        {currentPage === "notifications" && <NotificationsPage onNavigate={handleNavigate} />}
+        {currentPage === "notifications" && (
+          <NotificationsPage
+            onNavigate={handleNavigate}
+            notifications={notifications}
+            onMarkRead={markNotificationRead}
+            onMarkAllRead={markAllNotificationsRead}
+            autoMarkAllReadOnEnter={true}
+          />
+        )}
         {currentPage === "chatbot" && <ChatbotPage />}
         {currentPage === "profile" && <ProfilePage userEmail={userEmail} />}
       </main>
