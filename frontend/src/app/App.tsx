@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LoginPage } from "./components/LoginPage";
 import { SignupPage } from "./components/SignupPage";
 import { Dashboard } from "./components/Dashboard";
@@ -6,13 +6,16 @@ import { BidDiscovery } from "./components/BidDiscovery";
 import { AnalyticsReport } from "./components/AnalyticsReport";
 import { BidSummary } from "./components/BidSummary";
 import { CartPage } from "./components/CartPage";
-import { NotificationsPage, type NotificationItem } from "./components/NotificationsPage";
+import { NotificationsPage } from "./components/NotificationsPage";
 import { ChatbotPage } from "./components/ChatbotPage";
 import { ProfilePage } from "./components/ProfilePage";
+
 import { Button } from "./components/ui/button";
 import { Badge } from "./components/ui/badge";
-import type { Page } from "../types/navigation";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
+import { Input } from "./components/ui/input";
 
+import type { Page } from "../types/navigation";
 import {
   LayoutDashboard,
   Search,
@@ -25,9 +28,16 @@ import {
   LogOut,
   Menu,
   X,
+  Sparkles,
+  LogIn,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 
+/**
+ * 중요:
+ * Page 타입에 "home"이 포함되어 있어야 합니다.
+ * (../types/navigation.ts에서 Page 유니온에 "home" 추가)
+ */
 type NavState = { page: Page; bidId?: number };
 
 function isNavState(v: unknown): v is NavState {
@@ -36,144 +46,182 @@ function isNavState(v: unknown): v is NavState {
   return typeof anyV.page === "string";
 }
 
-const DEFAULT_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: 1,
-    type: "deadline",
-    title: "마감 임박 알림",
-    message: "서울시 강남구 도로 보수공사가 2일 후 마감됩니다",
-    time: "2시간 전",
-    read: false,
-    urgent: true,
-  },
-  {
-    id: 2,
-    type: "correction",
-    title: "정정공고 발표",
-    message: "경기도 성남시 공공건물 신축공사의 예산이 87억원에서 92억원으로 변경되었습니다",
-    time: "5시간 전",
-    read: false,
-    urgent: false,
-  },
-  {
-    id: 3,
-    type: "reannouncement",
-    title: "재공고 등록",
-    message: "인천 항만시설 보수공사가 재공고 되었습니다",
-    time: "1일 전",
-    read: true,
-    urgent: false,
-  },
-  {
-    id: 4,
-    type: "unsuccessful",
-    title: "유찰 공고",
-    message: "부산시 해운대구 주차장 건설이 유찰되었습니다. 재입찰 예정",
-    time: "1일 전",
-    read: true,
-    urgent: false,
-  },
-  {
-    id: 5,
-    type: "new",
-    title: "신규 공고",
-    message: "관심 지역(서울)에 새로운 공고 3건이 등록되었습니다",
-    time: "2일 전",
-    read: true,
-    urgent: false,
-  },
-  {
-    id: 6,
-    type: "deadline",
-    title: "마감 임박 알림",
-    message: "인천광역시 연수구 학교시설 개선공사가 4일 후 마감됩니다",
-    time: "2일 전",
-    read: true,
-    urgent: false,
-  },
-  {
-    id: 7,
-    type: "correction",
-    title: "정정공고 발표",
-    message: "대전시 유성구 복지센터 리모델링의 기술요건이 변경되었습니다",
-    time: "3일 전",
-    read: true,
-    urgent: false,
-  },
-];
+function isPublicPage(page: Page) {
+  return page === "home" || page === "login" || page === "signup";
+}
 
-function loadNotifications(): NotificationItem[] {
-  const raw = localStorage.getItem("notifications");
-  if (!raw) return DEFAULT_NOTIFICATIONS;
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed as NotificationItem[];
-    return DEFAULT_NOTIFICATIONS;
-  } catch {
-    return DEFAULT_NOTIFICATIONS;
-  }
+function HomeLanding({
+  onGoLogin,
+  onGoSignup,
+  onNavigate,
+}: {
+  onGoLogin: () => void;
+  onGoSignup: () => void;
+  onNavigate: (page: Page) => void;
+}) {
+  const [q, setQ] = useState("");
+
+  const quickLinks = useMemo(
+    () => [
+      { id: "dashboard" as Page, label: "대시보드", icon: LayoutDashboard },
+      { id: "bids" as Page, label: "공고 찾기", icon: Search },
+      { id: "analytics" as Page, label: "낙찰 분석", icon: TrendingUp },
+      { id: "cart" as Page, label: "장바구니", icon: ShoppingCart },
+      { id: "notifications" as Page, label: "알림", icon: Bell },
+      { id: "chatbot" as Page, label: "AI 챗봇", icon: MessageSquare },
+      { id: "profile" as Page, label: "마이페이지", icon: User },
+    ],
+    []
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Toaster position="top-right" />
+
+      <header className="bg-white border-b sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <div className="bg-blue-600 p-2 rounded-lg">
+                <Building2 className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold">입찰 인텔리전스</h1>
+                <p className="text-xs text-muted-foreground hidden sm:block">
+                  Smart Procurement Platform
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={onGoLogin} className="gap-2">
+                <LogIn className="h-4 w-4" />
+                로그인
+              </Button>
+              <Button onClick={onGoSignup}>회원가입</Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-12 gap-6">
+          {/* 중앙 */}
+          <div className="col-span-12 lg:col-span-8 space-y-6">
+            {/* 메뉴로 이동하는 박스들 */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {quickLinks.map((x) => {
+                const Icon = x.icon;
+                return (
+                  <button key={x.id} onClick={() => onNavigate(x.id)} className="text-left">
+                    <Card className="hover:shadow-sm transition">
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-md bg-gray-100 flex items-center justify-center">
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div className="font-medium">{x.label}</div>
+                      </CardContent>
+                    </Card>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* AI 검색 패널 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5" />
+                  AI를 활용한 검색
+                </CardTitle>
+                <CardDescription>
+                  자연어로 검색 조건을 입력하면, 공고 탐색/분석 흐름으로 연결합니다.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder='예: "서울/경기 10억~50억 시설공사, 마감 임박 우선"'
+                />
+                <div className="flex gap-2">
+                  <Button
+                    className="gap-2"
+                    onClick={() => {
+                      if (!q.trim()) {
+                        toast.info("검색어를 입력해 주세요.");
+                        return;
+                      }
+                      // 비로그인 상태에서 바로 AI 기능 접근은 막히므로,
+                      // 사용자는 요구사항대로 로그인 페이지로 이동하게 됩니다.
+                      // (실제 이동/차단 로직은 App.handleNavigate에서 수행)
+                      localStorage.setItem("chatbot.initialQuery", q.trim());
+                      onNavigate("chatbot");
+                    }}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    AI로 검색
+                  </Button>
+                  <Button variant="outline" onClick={() => onNavigate("bids")}>
+                    공고 리스트로 이동
+                  </Button>
+                </div>
+
+                <p className="text-sm text-muted-foreground">
+                  로그인 후 검색 결과 탐색, 저장, 알림 연동 기능을 이용할 수 있습니다.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 우측: 로그인 박스 */}
+          <div className="col-span-12 lg:col-span-4 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <LogIn className="h-5 w-5" />
+                  로그인
+                </CardTitle>
+                <CardDescription>
+                  로그인하면 공고/장바구니/알림/AI 기능을 이용할 수 있습니다.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button className="w-full" onClick={onGoLogin}>
+                  로그인 페이지로 이동
+                </Button>
+                <Button className="w-full" variant="outline" onClick={onGoSignup}>
+                  회원가입
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </main>
+
+      <footer className="bg-white border-t mt-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">© 2026 입찰 인텔리전스. All rights reserved.</p>
+            <div className="flex gap-4 text-sm text-muted-foreground">
+              <a href="#" className="hover:text-blue-600">이용약관</a>
+              <a href="#" className="hover:text-blue-600">개인정보처리방침</a>
+              <a href="#" className="hover:text-blue-600">고객지원</a>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
 }
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<Page>("login");
+  const [currentPage, setCurrentPage] = useState<Page>("home");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [cartItems, setCartItems] = useState<number[]>([]);
   const [selectedBidId, setSelectedBidId] = useState<number | undefined>();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // 알림 상태(전역)
-  const [notifications, setNotifications] = useState<NotificationItem[]>(() => loadNotifications());
-
-  // 알림 localStorage 저장(새로고침/재진입에도 유지)
-  useEffect(() => {
-    localStorage.setItem("notifications", JSON.stringify(notifications));
-  }, [notifications]);
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const markAllNotificationsRead = useCallback(() => {
-    setNotifications((prev) => {
-      const hasUnread = prev.some((n) => !n.read);
-      if (!hasUnread) return prev;
-      return prev.map((n) => (n.read ? n : { ...n, read: true }));
-    });
-  }, []);
-
-  const markNotificationRead = useCallback((id: number) => {
-    setNotifications((prev) => {
-      let changed = false;
-      const next = prev.map((n) => {
-        if (n.id !== id) return n;
-        if (n.read) return n;
-        changed = true;
-        return { ...n, read: true };
-      });
-      return changed ? next : prev;
-    });
-  }, []);
-
-  // ---- history sync (핵심) ----
-  useEffect(() => {
-    const st = window.history.state;
-    if (isNavState(st) && st.page) {
-      setCurrentPage(st.page as Page);
-      setSelectedBidId(st.bidId as number | undefined);
-    } else {
-      window.history.replaceState({ page: "login" } satisfies NavState, "");
-    }
-
-    const onPopState = (e: PopStateEvent) => {
-      if (isNavState(e.state) && e.state.page) {
-        setCurrentPage(e.state.page);
-        setSelectedBidId(e.state.bidId);
-        setMobileMenuOpen(false);
-      }
-    };
-
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, []);
 
   const navigateTo = (page: Page, bidId?: number, replace: boolean = false) => {
     const next: NavState = { page, bidId };
@@ -186,9 +234,56 @@ export default function App() {
     setMobileMenuOpen(false);
   };
 
+  // ---- history sync (핵심) ----
+  useEffect(() => {
+    const st = window.history.state;
+
+    // 최초 로드: state가 없으면 home으로 초기화
+    if (isNavState(st) && st.page) {
+      // 보호 페이지를 비로그인 상태에서 직접 진입/새로고침한 경우 → 로그인으로 강제
+      if (!isAuthenticated && !isPublicPage(st.page)) {
+        toast.info("로그인이 필요합니다.");
+        window.history.replaceState({ page: "login" } satisfies NavState, "");
+        setCurrentPage("login");
+        setSelectedBidId(undefined);
+      } else {
+        setCurrentPage(st.page as Page);
+        setSelectedBidId(st.bidId as number | undefined);
+      }
+    } else {
+      window.history.replaceState({ page: "home" } satisfies NavState, "");
+      setCurrentPage("home");
+      setSelectedBidId(undefined);
+    }
+
+    const onPopState = (e: PopStateEvent) => {
+      if (!isNavState(e.state) || !e.state.page) return;
+
+      const nextPage = e.state.page;
+
+      // 브라우저 뒤/앞으로 보호 페이지 접근도 차단
+      if (!isAuthenticated && !isPublicPage(nextPage)) {
+        toast.info("로그인이 필요합니다.");
+        window.history.replaceState({ page: "login" } satisfies NavState, "");
+        setCurrentPage("login");
+        setSelectedBidId(undefined);
+        setMobileMenuOpen(false);
+        return;
+      }
+
+      setCurrentPage(nextPage);
+      setSelectedBidId(e.state.bidId);
+      setMobileMenuOpen(false);
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [isAuthenticated]);
+
   const handleLogin = (email: string) => {
     setIsAuthenticated(true);
     setUserEmail(email);
+    // 로그인 후에는 login 히스토리를 dashboard로 "대체"해서 back이 login으로 가지 않게 함
     navigateTo("dashboard", undefined, true);
     toast.success("로그인되었습니다");
   };
@@ -206,11 +301,19 @@ export default function App() {
     setCartItems([]);
     setSelectedBidId(undefined);
 
+    // 로그아웃 시 현재 엔트리를 login으로 대체
     navigateTo("login", undefined, true);
     toast.info("로그아웃되었습니다");
   };
 
   const handleNavigate = (page: Page, bidId?: number) => {
+    // 비로그인 상태: home/login/signup만 허용
+    if (!isAuthenticated && !isPublicPage(page)) {
+      toast.info("로그인이 필요합니다.");
+      // replace 권장: 막힌 이동을 히스토리에 남기지 않음
+      navigateTo("login", undefined, true);
+      return;
+    }
     navigateTo(page, bidId, false);
   };
 
@@ -228,7 +331,7 @@ export default function App() {
     toast.success("장바구니에서 제거되었습니다");
   };
 
-  // ---- Auth pages ----
+  // ---- 비로그인: 기존 로그인/회원가입 페이지는 그대로 사용 ----
   if (!isAuthenticated) {
     if (currentPage === "signup") {
       return (
@@ -238,10 +341,21 @@ export default function App() {
         />
       );
     }
+    if (currentPage === "login") {
+      return (
+        <LoginPage
+          onLogin={handleLogin}
+          onNavigateToSignup={() => navigateTo("signup")}
+        />
+      );
+    }
+
+    // home은 비로그인이어도 보여준다
     return (
-      <LoginPage
-        onLogin={handleLogin}
-        onNavigateToSignup={() => navigateTo("signup")}
+      <HomeLanding
+        onGoLogin={() => navigateTo("login")}
+        onGoSignup={() => navigateTo("signup")}
+        onNavigate={(p) => handleNavigate(p)}
       />
     );
   }
@@ -251,7 +365,7 @@ export default function App() {
     { id: "bids" as Page, icon: Search, label: "공고 찾기" },
     { id: "analytics" as Page, icon: TrendingUp, label: "낙찰 분석" },
     { id: "cart" as Page, icon: ShoppingCart, label: "장바구니", badge: cartItems.length },
-    { id: "notifications" as Page, icon: Bell, label: "알림", badge: unreadCount },
+    { id: "notifications" as Page, icon: Bell, label: "알림", badge: 2 },
     { id: "chatbot" as Page, icon: MessageSquare, label: "AI 챗봇" },
     { id: "profile" as Page, icon: User, label: "마이페이지" },
   ];
@@ -352,6 +466,14 @@ export default function App() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {currentPage === "home" && (
+          <HomeLanding
+            onGoLogin={() => navigateTo("login")}
+            onGoSignup={() => navigateTo("signup")}
+            onNavigate={(p) => handleNavigate(p)}
+          />
+        )}
+
         {currentPage === "dashboard" && (
           <Dashboard onNavigate={handleNavigate} cart={cartItems} />
         )}
@@ -369,15 +491,7 @@ export default function App() {
             onNavigate={handleNavigate}
           />
         )}
-        {currentPage === "notifications" && (
-          <NotificationsPage
-            onNavigate={handleNavigate}
-            notifications={notifications}
-            onMarkRead={markNotificationRead}
-            onMarkAllRead={markAllNotificationsRead}
-            autoMarkAllReadOnEnter={true}
-          />
-        )}
+        {currentPage === "notifications" && <NotificationsPage onNavigate={handleNavigate} />}
         {currentPage === "chatbot" && <ChatbotPage />}
         {currentPage === "profile" && <ProfilePage userEmail={userEmail} />}
       </main>
