@@ -6,7 +6,7 @@ import { BidDiscovery } from "./components/BidDiscovery";
 import { AnalyticsReport } from "./components/AnalyticsReport";
 import { BidSummary } from "./components/BidSummary";
 import { CartPage } from "./components/CartPage";
-import { NotificationsPage } from "./components/NotificationsPage";
+import { NotificationsPage, type NotificationItem } from "./components/NotificationsPage";
 import { ChatbotPage } from "./components/ChatbotPage";
 import { ProfilePage } from "./components/ProfilePage";
 
@@ -20,7 +20,6 @@ import type { Page } from "../types/navigation";
 import {
   LayoutDashboard,
   Search,
-  TrendingUp,
   ShoppingCart,
   Bell,
   User,
@@ -254,7 +253,6 @@ function HomeContent({
                     <Badge variant="outline">중형 건설사</Badge>
                   </div>
                 </div>
-
               </CardContent>
             </Card>
           )}
@@ -272,8 +270,21 @@ export default function App() {
   const [selectedBidId, setSelectedBidId] = useState<number | undefined>();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // 알림 뱃지(현재는 임시)
-  const [unreadCount] = useState<number>(0);
+  // 알림 데이터/읽음 처리 (빈페이지 이슈 해결 핵심)
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications]
+  );
+
+  const handleMarkRead = (id: number) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  };
+
+  const handleMarkAllRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
 
   // 챗봇 모달
   const [chatbotOpen, setChatbotOpen] = useState(false);
@@ -351,6 +362,7 @@ export default function App() {
     setUserEmail("");
     setCartItems([]);
     setSelectedBidId(undefined);
+    setNotifications([]);
     navigateTo("home", undefined, true);
     toast.info("로그아웃되었습니다");
   };
@@ -488,9 +500,11 @@ export default function App() {
         </main>
 
         <footer className="bg-white border-t mt-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 } py-6">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <p className="text-sm text-muted-foreground">© 2026 입찰 인텔리전스. All rights reserved.</p>
+              <p className="text-sm text-muted-foreground">
+                © 2026 입찰 인텔리전스. All rights reserved.
+              </p>
               <div className="flex gap-4 text-sm text-muted-foreground">
                 <a href="#" className="hover:text-blue-600">
                   이용약관
@@ -734,9 +748,7 @@ export default function App() {
 
         {currentPage === "analytics" && <AnalyticsReport />}
 
-        {currentPage === "summary" && (
-          <BidSummary bidId={selectedBidId} onNavigate={handleNavigate} />
-        )}
+        {currentPage === "summary" && <BidSummary bidId={selectedBidId} onNavigate={handleNavigate} />}
 
         {currentPage === "cart" && (
           <CartPage
@@ -746,7 +758,14 @@ export default function App() {
           />
         )}
 
-        {currentPage === "notifications" && <NotificationsPage onNavigate={handleNavigate} />}
+        {currentPage === "notifications" && (
+          <NotificationsPage
+            onNavigate={handleNavigate}
+            notifications={notifications}
+            onMarkRead={handleMarkRead}
+            onMarkAllRead={handleMarkAllRead}
+          />
+        )}
 
         {currentPage === "profile" && <ProfilePage userEmail={userEmail} />}
       </main>
