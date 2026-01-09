@@ -255,19 +255,6 @@ function HomeContent({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <Button size="sm" variant="outline" onClick={() => onNavigate("profile")}>
-                    마이페이지
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => onNavigate("cart")}>
-                    장바구니
-                  </Button>
-                </div>
-
-                <Button size="sm" variant="ghost" className="w-full justify-start" onClick={onLogout}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  로그아웃
-                </Button>
               </CardContent>
             </Card>
           )}
