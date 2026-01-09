@@ -101,14 +101,14 @@ export function NoticePage({ onNavigate, notices = DEFAULT_NOTICES }: NoticePage
                     </p>
                 </div>
 
-                <div className="hidden sm:flex gap-2">
-                    <Button variant="ghost" onClick={() => onNavigate("dashboard")}>
-                        대시보드
-                    </Button>
-                    <Button variant="ghost" onClick={() => onNavigate("notifications")}>
-                        알림
-                    </Button>
-                </div>
+                {/*<div className="hidden sm:flex gap-2">*/}
+                {/*    <Button variant="ghost" onClick={() => onNavigate("dashboard")}>*/}
+                {/*        대시보드*/}
+                {/*    </Button>*/}
+                {/*    <Button variant="ghost" onClick={() => onNavigate("notifications")}>*/}
+                {/*        알림*/}
+                {/*    </Button>*/}
+                {/*</div>*/}
             </div>
 
             {/* 검색/필터 */}
