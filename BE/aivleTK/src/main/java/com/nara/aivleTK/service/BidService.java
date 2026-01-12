@@ -1,7 +1,5 @@
 package com.nara.aivleTK.service;
-
 import com.nara.aivleTK.dto.BidResponse;
-
 import java.util.List;
 
 public interface BidService {

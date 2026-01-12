@@ -2,7 +2,6 @@ package com.nara.aivleTK.repository;
 
 import com.nara.aivleTK.domain.Bid;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 import java.util.List;
 
 public interface BidRepository extends JpaRepository<Bid,Long> {

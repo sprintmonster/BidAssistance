@@ -1,13 +1,9 @@
 package com.nara.aivleTK.dto;
 
 import com.nara.aivleTK.domain.Bid;
-import jakarta.persistence.Column;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.cglib.core.Local;
-
 import java.math.BigInteger;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
 @Getter

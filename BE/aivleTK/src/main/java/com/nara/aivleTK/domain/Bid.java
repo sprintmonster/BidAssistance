@@ -2,10 +2,7 @@ package com.nara.aivleTK.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.cglib.core.Local;
-
 import java.math.BigInteger;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
 @Entity

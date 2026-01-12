@@ -1,4 +1,4 @@
-package com.nara.aivleTK;
+package com.nara.aivleTK.controller;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
