@@ -66,7 +66,7 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
                 <Badge variant="outline">중형 건설사</Badge>
               </div>
             </div>
-            <Button variant="outline">프로필 수정</Button>
+            {/*<Button variant="outline">프로필 수정</Button>*/}
           </div>
         </CardContent>
       </Card>

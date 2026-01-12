@@ -15,6 +15,7 @@ import { Button } from "./components/ui/button";
 import { Badge } from "./components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
 import { Input } from "./components/ui/input";
+import { CommunityPage} from "./components/CommunityPage";
 
 import type { Page } from "../types/navigation";
 
@@ -24,6 +25,7 @@ import {
   ShoppingCart,
   Bell,
   User,
+  Users,
   Building2,
   LogOut,
   Menu,
@@ -308,7 +310,7 @@ function HomeContent({
       { id: "dashboard" as Page, label: "대시보드", icon: LayoutDashboard },
       { id: "bids" as Page, label: "공고 찾기", icon: Search },
       { id: "cart" as Page, label: "장바구니", icon: ShoppingCart, badge: cartCount },
-      { id: "profile" as Page, label: "마이페이지", icon: User },
+      { id: "community" as Page, label: "커뮤니티", icon: Users },
     ],
     [cartCount]
   );
@@ -411,20 +413,31 @@ function HomeContent({
                 <CardTitle className="text-base">회원 정보</CardTitle>
                 <CardDescription className="text-sm">현재 로그인된 계정 정보입니다.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <div className="font-semibold">김철수</div>
-                  <div className="text-sm text-muted-foreground">{userEmail}</div>
-                  <div className="flex gap-2 pt-2">
-                    <Badge>호반건설</Badge>
-                    <Badge variant="outline">중형 건설사</Badge>
-                  </div>
-                </div>
+                <CardContent className="space-y-3" >
+                    <div>
+                        <div className="font-semibold">김철수</div>
+                        <div className="text-sm text-muted-foreground">{userEmail}</div>
+                        <div className="flex gap-2 pt-2">
+                            <Badge>호반건설</Badge>
+                            <Badge variant="outline">중형 건설사</Badge>
+                        </div>
+                    </div>
 
-                <Button size="sm" variant="outline" className="w-full" onClick={onLogout}>
-                  로그아웃
-                </Button>
-              </CardContent>
+                    {/* 마이페이지 버튼 추가 */}
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => onNavigate("profile")}
+                    >
+                        마이페이지
+                    </Button>
+
+                    <Button size="sm" variant="outline" className="w-full" onClick={onLogout}>
+                        로그아웃
+                    </Button>
+                </CardContent>
+
             </Card>
           )}
         </div>
@@ -594,7 +607,7 @@ export default function App() {
       { id: "dashboard" as Page, label: "대시보드", icon: LayoutDashboard },
       { id: "bids" as Page, label: "공고 찾기", icon: Search },
       { id: "cart" as Page, label: "장바구니", icon: ShoppingCart, badge: cartItems.length },
-      { id: "profile" as Page, label: "마이페이지", icon: User },
+      { id: "community" as Page, label: "커뮤니티", icon: Users },
     ],
     [cartItems.length]
   );
@@ -642,20 +655,18 @@ export default function App() {
           );
       }
 
+
       if (currentPage === "resetPassword") {
           return (
               <>
                   <Toaster position="top-right" />
                   <ResetPasswordPage
-                      onRequestReset={(payload) => {
-                          toast.success("비밀번호 재설정 요청이 전달되었습니다.");
-                          console.log("resetPassword payload:", payload);
-                      }}
                       onNavigateToLogin={() => navigateTo("login", undefined, true)}
                   />
               </>
           );
       }
+
 
 
       // 비로그인 home
@@ -675,7 +686,7 @@ export default function App() {
                   <Building2 className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold">입찰 인텔리전스</h1>
+                  <h1 className="text-xl font-bold">입찰인사이트</h1>
                   <p className="text-xs text-muted-foreground hidden sm:block">
                     Smart Procurement Platform
                   </p>
@@ -722,12 +733,15 @@ export default function App() {
           )}
 
           {currentPage === "notice" && <NoticePage onNavigate={handleNavigate} canWrite={false} />}
+            {currentPage === "community" && <CommunityPage />}
+
+
         </main>
 
         <footer className="bg-white border-t mt-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <p className="text-sm text-muted-foreground">© 2026 입찰 인텔리전스. All rights reserved.</p>
+              <p className="text-sm text-muted-foreground">© 2026 입찰인사이트. All rights reserved.</p>
               <div className="flex gap-4 text-sm text-muted-foreground">
                 <a href="#" className="hover:text-blue-600">
                   이용약관
@@ -787,7 +801,7 @@ export default function App() {
                 <Building2 className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold">입찰 인텔리전스</h1>
+                <h1 className="text-xl font-bold">입찰인사이트</h1>
                 <p className="text-xs text-muted-foreground hidden sm:block">
                   Smart Procurement Platform
                 </p>
@@ -899,12 +913,12 @@ export default function App() {
               </Button>
 
               <Button
-                variant={currentPage === "profile" ? "default" : "ghost"}
+                variant={currentPage === "community" ? "default" : "ghost"}
                 className="w-full justify-start"
-                onClick={() => handleNavigate("profile")}
+                onClick={() => handleNavigate("community")}
               >
-                <User className="h-4 w-4 mr-3" />
-                마이페이지
+                <Users className="h-4 w-4 mr-3" />
+                커뮤니티
               </Button>
 
               <Button
@@ -981,12 +995,13 @@ export default function App() {
         )}
 
         {currentPage === "profile" && <ProfilePage userEmail={userEmail} />}
+          {currentPage === "community" && <CommunityPage />}
       </main>
 
       <footer className="bg-white border-t mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-muted-foreground">© 2026 입찰 인텔리전스. All rights reserved.</p>
+            <p className="text-sm text-muted-foreground">© 2026 입찰인사이트. All rights reserved.</p>
             <div className="flex gap-4 text-sm text-muted-foreground">
               <a href="#" className="hover:text-blue-600">
                 이용약관

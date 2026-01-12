@@ -12,4 +12,5 @@ export type Page =
     | "cart"
     | "notifications"
     | "chatbot"
-    | "profile";
+    | "profile"
+    | "community";
