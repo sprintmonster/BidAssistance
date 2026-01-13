@@ -13,18 +13,27 @@ export type Comment = {
     createdAt: string;
     likes: number;
 };
+export type Attachment = {
+    id: string;
+    name: string;
+    type: string;      // mime type e.g. image/png
+    url: string;       // objectURL or uploaded URL
+    size: number;
+    isImage: boolean;
+};
 
 export type Post = {
     id: string;
     title: string;
     content: string;
     category: "question" | "info" | "review" | "discussion";
-    tags: string[];
+    // tags: string[];
     author: string;
     createdAt: string;
     views: number;
     likes: number;
     comments: Comment[];
+    attachments: Attachment[];
 };
 
 type ViewMode = "list" | "detail" | "new";
@@ -34,31 +43,32 @@ export function CommunityPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
-    // ✅ 데모 데이터(원하면 localStorage로 바꿀 수 있음)
     const [posts, setPosts] = useState<Post[]>([
         {
             id: "p1",
             title: "입찰 서류 준비할 때 체크리스트 있을까요?",
             content: "처음 입찰 참여하는데 필수로 챙겨야 할 서류/실수 방지 팁 공유 부탁드립니다.",
             category: "question",
-            tags: ["입찰", "서류", "체크리스트"],
+            // tags: ["입찰", "서류", "체크리스트"],
             author: "사용자A",
             createdAt: "2026-01-12",
             views: 12,
             likes: 3,
             comments: [],
+            attachments: [],
         },
         {
             id: "p2",
             title: "마감 임박 공고 우선순위 정하는 기준 공유",
             content: "마감 임박 공고가 많을 때, 금액/지역/경쟁률 기반으로 우선순위 정하는 방법 공유합니다.",
             category: "info",
-            tags: ["마감임박", "우선순위"],
+            // tags: ["마감임박", "우선순위"],
             author: "사용자B",
             createdAt: "2026-01-11",
             views: 30,
             likes: 8,
             comments: [],
+            attachments: [],
         },
     ]);
 
@@ -68,17 +78,19 @@ export function CommunityPage() {
         return posts.filter(
             (p) =>
                 p.title.toLowerCase().includes(q) ||
-                p.content.toLowerCase().includes(q) ||
-                p.tags.some((t) => t.toLowerCase().includes(q))
+                p.content.toLowerCase().includes(q)
         );
     }, [posts, searchQuery]);
 
     const openDetail = (post: Post) => {
-        setSelectedPost(post);
-        // 조회수 증가(데모)
-        setPosts((prev) =>
-            prev.map((x) => (x.id === post.id ? { ...x, views: x.views + 1 } : x))
-        );
+        // 조회수 증가한 "업데이트된 post"를 만든 뒤
+        const nextPost = { ...post, views: post.views + 1 };
+
+        // 목록 state 업데이트
+        setPosts((prev) => prev.map((x) => (x.id === post.id ? nextPost : x)));
+
+        // detail state도 업데이트된 post로 세팅
+        setSelectedPost(nextPost);
         setViewMode("detail");
     };
 
