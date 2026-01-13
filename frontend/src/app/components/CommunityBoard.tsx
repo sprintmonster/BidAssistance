@@ -1,5 +1,5 @@
 import { MessageSquare, Eye, ThumbsUp } from 'lucide-react';
-import type { Post } from '../components/CommunityPage';
+import type { Post } from './CommunityPage';
 
 
 interface CommunityBoardProps {

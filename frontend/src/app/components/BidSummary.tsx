@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -295,11 +295,16 @@ export function BidSummary({ bidId, onNavigate }: BidSummaryProps) {
 		const targetId = bidId ?? 1;
 		return bids.find((b) => b.id === targetId) ?? bids[0];
 	}, [bids, bidId]);
+    const [checklist, setChecklist] = useState(() => bid.checklist);
 
-	const completedItems = bid.checklist.filter((item) => item.checked).length;
-	const completionRate = (completedItems / bid.checklist.length) * 100;
+    useEffect(() => {
+        setChecklist(bid.checklist);
+    }, [bid.id]);
 
-	const handleDownloadNotice = async () => {
+    const completedItems = checklist.filter((item) => item.checked).length;
+    const completionRate = checklist.length ? (completedItems / checklist.length) * 100 : 0;
+
+    const handleDownloadNotice = async () => {
 		const baseName = safeFileName(`공고문_${bid.id}_${bid.title}`);
 		const pdfName = bid.documentFileName ? safeFileName(bid.documentFileName) : `${baseName}.pdf`;
 
@@ -313,14 +318,14 @@ export function BidSummary({ bidId, onNavigate }: BidSummaryProps) {
 			}
 		}
 
-		const txt = buildTextNotice(bid);
+        const txt = buildTextNotice({ ...bid, checklist });
 		downloadText(txt, `${baseName}.txt`);
 		toast.info("PDF가 없어 텍스트 공고문으로 다운로드했습니다.");
 	};
 
 	const handleDownloadAiReport = () => {
 		const baseName = safeFileName(`AI_분석_리포트_${bid.id}_${bid.title}`);
-		const report = buildAiAnalysisReport(bid, completionRate);
+        const report = buildAiAnalysisReport({ ...bid, checklist }, completionRate);
 		downloadText(report, `${baseName}.txt`);
 		toast.success("AI 분석 리포트 다운로드가 시작되었습니다.");
 	};
@@ -480,24 +485,36 @@ export function BidSummary({ bidId, onNavigate }: BidSummaryProps) {
 						</CardHeader>
 						<CardContent>
 							<div className="space-y-3">
-								{bid.checklist.map((item, index) => (
-									<div
-										key={index}
-										className={`flex items-center gap-3 p-3 rounded-lg border ${
-											item.checked ? "bg-green-50 border-green-200" : "bg-gray-50"
-										}`}
-									>
-										{item.checked ? (
-											<CheckCircle2 className="h-5 w-5 text-green-600" />
-										) : (
-											<Clock className="h-5 w-5 text-gray-400" />
-										)}
-										<span className={item.checked ? "line-through text-muted-foreground" : ""}>
-											{item.item}
-										</span>
-									</div>
-								))}
-							</div>
+                                {checklist.map((item, index) => (
+                                    <button
+                                        key={index}
+                                        type="button"
+                                        onClick={() => {
+                                            setChecklist((prev) =>
+                                                prev.map((x, i) => (i === index ? { ...x, checked: !x.checked } : x))
+                                            );
+                                        }}
+                                        className={`w-full text-left flex items-center gap-3 p-3 rounded-lg border transition ${
+                                            item.checked ? "bg-green-50 border-green-200" : "bg-gray-50 hover:bg-gray-100"
+                                        }`}
+                                    >
+                                        {item.checked ? (
+                                            <CheckCircle2 className="h-5 w-5 text-green-600" />
+                                        ) : (
+                                            <Clock className="h-5 w-5 text-gray-400" />
+                                        )}
+
+                                        <span className={item.checked ? "line-through text-muted-foreground" : ""}>
+                                                  {item.item}
+                                                </span>
+
+                                        <span className="ml-auto text-xs text-muted-foreground">
+                                                  {item.checked ? "완료" : "미완료"}
+                                                </span>
+                                    </button>
+                                ))}
+
+                            </div>
 						</CardContent>
 					</Card>
 				</TabsContent>
