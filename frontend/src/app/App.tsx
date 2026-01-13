@@ -209,12 +209,14 @@ function formatDday(deadline: string) {
 function RecommendedBidsModal({
   open,
   onClose,
+    onHideToday,
   bids,
   onView,
   onAddToCart,
 }: {
   open: boolean;
   onClose: () => void;
+    onHideToday: () => void;
   bids: RecommendedBid[];
   onView: (bidId: number) => void;
   onAddToCart: (bidId: number) => void;
@@ -298,11 +300,18 @@ function RecommendedBidsModal({
           </div>
         </div>
 
-        <div className="border-t px-4 py-3 flex justify-end">
-          <Button variant="outline" onClick={onClose}>
-            닫기
-          </Button>
-        </div>
+        {/*<div className="border-t px-4 py-3 flex justify-end">*/}
+        {/*  <Button variant="outline" onClick={onClose}>*/}
+        {/*    닫기*/}
+        {/*  </Button>*/}
+        {/*</div>*/}
+          <div className="border-t px-4 py-3 flex justify-end gap-2">
+              <Button variant="outline" onClick={onHideToday}>
+                  오늘 하루 안 보기
+              </Button>
+              <Button onClick={onClose}>닫기</Button>
+          </div>
+
       </div>
     </div>
   );
@@ -559,9 +568,24 @@ export default function App() {
   // 추천공고 (1회성 팝업)
   const [recommendedBids] = useState<RecommendedBid[]>(DEFAULT_RECOMMENDED_BIDS);
   const [recommendationsOpen, setRecommendationsOpen] = useState(false);
-  const RECO_DISMISSED_KEY = "bidassistance_reco_dismissed_v1";
+  // const RECO_DISMISSED_KEY = "bidassistance_reco_dismissed_v1";
+    const RECO_HIDE_UNTIL_KEY = "bidassistance_reco_hide_until";
 
-  const navigateTo = (page: Page, bidId?: number, replace: boolean = false) => {
+    function todayKey() {
+        // 로컬 기준 YYYY-MM-DD
+        return new Date().toISOString().slice(0, 10);
+    }
+
+    function getRecoHideKey(userEmail: string) {
+        // 이메일이 없으면(비로그인) 공용키로 처리
+        return userEmail ? `${RECO_HIDE_UNTIL_KEY}:${userEmail}` : `${RECO_HIDE_UNTIL_KEY}:guest`;
+    }
+
+    function isHiddenToday(userEmail: string) {
+        return localStorage.getItem(getRecoHideKey(userEmail)) === todayKey();
+    }
+
+    const navigateTo = (page: Page, bidId?: number, replace: boolean = false) => {
     const next: NavState = { page, bidId };
     if (replace) window.history.replaceState(next, "");
     else window.history.pushState(next, "");
@@ -571,16 +595,28 @@ export default function App() {
   };
 
   // 추천공고 닫기: 닫는 순간 영구적으로 다시 안 뜨게 저장
-  const closeRecommendationsPermanently = () => {
-    localStorage.setItem(RECO_DISMISSED_KEY, "1");
-    setRecommendationsOpen(false);
-  };
+  // const closeRecommendationsPermanently = () => {
+  //   localStorage.setItem(RECO_DISMISSED_KEY, "1");
+  //   setRecommendationsOpen(false);
+  // };
+    const closeRecommendations = () => {
+        setRecommendationsOpen(false);
+    };
 
-  const handleViewRecommended = (bidId: number) => {
-    // 상세보기로 이동하는 것도 "팝업 종료"에 해당하므로 영구 닫힘 처리
-    closeRecommendationsPermanently();
-    navigateTo("summary", bidId);
-  };
+    const hideRecommendationsToday = () => {
+        localStorage.setItem(RECO_HIDE_UNTIL_KEY, todayKey()); // 오늘 날짜 저장
+        setRecommendationsOpen(false);
+    };
+
+  // const handleViewRecommended = (bidId: number) => {
+  //   // 상세보기로 이동하는 것도 "팝업 종료"에 해당하므로 영구 닫힘 처리
+  //   closeRecommendationsPermanently();
+  //   navigateTo("summary", bidId);
+  // };
+    const handleViewRecommended = (bidId: number) => {
+        closeRecommendations();
+        navigateTo("summary", bidId);
+    };
 
   const handleAddToCart = (bidId: number) => {
     if (!cartItems.includes(bidId)) {
@@ -641,27 +677,29 @@ export default function App() {
 
   // 로그인/회원가입
   const handleLogin = (email: string) => {
-    setIsAuthenticated(true);
-    setUserEmail(email);
-    navigateTo("home", undefined, true);
-    toast.success("로그인되었습니다");
+      setIsAuthenticated(true);
+      setUserEmail(email);
+      navigateTo("home", undefined, true);
+      toast.success("로그인되었습니다");
 
-    // 로그인 직후: 추천공고 팝업 1회 자동 노출 (이미 닫은 적 있으면 절대 안 뜸)
-    const dismissed = localStorage.getItem(RECO_DISMISSED_KEY) === "1";
-    if (!dismissed) setRecommendationsOpen(true);
+      // 로그인 직후: 추천공고 팝업 1회 자동 노출 (이미 닫은 적 있으면 절대 안 뜸)
+      //   const dismissed = localStorage.getItem(RECO_DISMISSED_KEY) === "1";
+      //   if (!dismissed) setRecommendationsOpen(true);
+      // };
+      if (!isHiddenToday(email)) setRecommendationsOpen(true);
   };
-
   const handleSignup = (email: string) => {
-    setIsAuthenticated(true);
-    setUserEmail(email);
-    navigateTo("home", undefined, true);
-    toast.success("회원가입이 완료되었습니다");
+      setIsAuthenticated(true);
+      setUserEmail(email);
+      navigateTo("home", undefined, true);
+      toast.success("회원가입이 완료되었습니다");
 
-    // 회원가입 직후도 로그인과 동일하게 1회 노출
-    const dismissed = localStorage.getItem(RECO_DISMISSED_KEY) === "1";
-    if (!dismissed) setRecommendationsOpen(true);
+      // 회원가입 직후도 로그인과 동일하게 1회 노출
+      //   const dismissed = localStorage.getItem(RECO_DISMISSED_KEY) === "1";
+      //   if (!dismissed) setRecommendationsOpen(true);
+      // };
+      if (!isHiddenToday(email)) setRecommendationsOpen(true);
   };
-
   const handleLogout = () => {
     setIsAuthenticated(false);
     setUserEmail("");
@@ -1138,7 +1176,8 @@ export default function App() {
 
       <RecommendedBidsModal
         open={recommendationsOpen}
-        onClose={closeRecommendationsPermanently}
+        onClose={closeRecommendations}
+        onHideToday={hideRecommendationsToday}
         bids={recommendedBids}
         onView={handleViewRecommended}
         onAddToCart={handleAddToCart}
