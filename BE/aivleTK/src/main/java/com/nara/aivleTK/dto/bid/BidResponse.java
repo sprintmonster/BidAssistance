@@ -1,13 +1,18 @@
 package com.nara.aivleTK.dto.bid;
 
+import com.nara.aivleTK.domain.AnalysisResult;
 import com.nara.aivleTK.domain.Bid;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import com.nara.aivleTK.dto.AnalysisResultDto;
+import lombok.*;
+
 import java.math.BigInteger;
 import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor
+@Setter
+@Builder
+@AllArgsConstructor
 public class BidResponse {
     private int id;
     private String realId;
@@ -20,6 +25,7 @@ public class BidResponse {
     private String organization;
     private String bidURL;
     private String bidReportURL;
+    private AnalysisResultDto analysisResult;
 
     public BidResponse(Bid bid){
         this.id = bid.getBidId();

@@ -1,4 +1,4 @@
-package com.nara.aivleTK;
+package com.nara.aivleTK.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
