@@ -1,0 +1,1 @@
+SELECT * FROM bid ORDER BY bid_id DESC LIMIT 10;

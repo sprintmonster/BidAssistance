@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS `bid` (
   `bid_id` INT NOT NULL AUTO_INCREMENT,
   `bid_real_id` VARCHAR(20) NOT NULL,
   `name` VARCHAR(50) NOT NULL,
-  `content` VARCHAR(400) NOT NULL,
+  `content` VARCHAR(400) NOT NULL DEFAULT '',
   `start_date` TIMESTAMP NOT NULL,
   `end_date` TIMESTAMP NOT NULL,
   `open_date` TIMESTAMP NOT NULL,
@@ -80,7 +80,8 @@ CREATE TABLE IF NOT EXISTS `bid` (
   UNIQUE INDEX `bid_real_id_UNIQUE` (`bid_real_id` ASC) VISIBLE)
 ENGINE = InnoDB;
 
-
+ALTER TABLE bid MODIFY COLUMN end_date DATETIME NULL;
+ALTER TABLE bid MODIFY COLUMN start_date DATETIME NULL;
 -- -----------------------------------------------------
 -- Table `alarm`
 -- -----------------------------------------------------
@@ -253,7 +254,6 @@ CREATE TABLE IF NOT EXISTS `comment` (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
-
 
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
