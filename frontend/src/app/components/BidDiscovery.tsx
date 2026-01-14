@@ -322,7 +322,16 @@ export function BidDiscovery({ onNavigate, onAddToCart, bids }: BidDiscoveryProp
 											<Badge variant="outline">{bid.status}</Badge>
 										</div>
 
-										<CardTitle className="text-xl mb-2">{bid.title}</CardTitle>
+										{/*<CardTitle className="text-xl mb-2">{bid.title}</CardTitle>*/}
+                                        <CardTitle className="text-xl mb-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => onNavigate("summary", bid.id)}
+                                                className="text-left hover:underline underline-offset-4"
+                                            >
+                                                {bid.title}
+                                            </button>
+                                        </CardTitle>
 
 										<CardDescription className="flex items-center gap-4 flex-wrap">
 											<span className="flex items-center gap-1">
