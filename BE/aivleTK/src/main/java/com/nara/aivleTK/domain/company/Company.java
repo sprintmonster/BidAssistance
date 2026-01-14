@@ -1,7 +1,11 @@
 package com.nara.aivleTK.domain.company;
 
+import com.nara.aivleTK.domain.user.User;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "company")
@@ -24,4 +28,8 @@ public class Company {
 
     @Column(name = "performance_history", length=200)
     private String performanceHistory;
+
+    // 양방향 매핑 with User
+    @OneToMany(mappedBy="company", cascade = CascadeType.ALL)
+    private List<User> users = new ArrayList<>();
 }

@@ -4,7 +4,6 @@ import com.nara.aivleTK.dto.user.LoginRequest;
 import com.nara.aivleTK.dto.user.ResetPasswordRequest;
 import com.nara.aivleTK.dto.user.UserCreateRequest;
 import com.nara.aivleTK.dto.user.UserResponse;
-import com.nara.aivleTK.repository.UserRepository;
 import com.nara.aivleTK.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +19,6 @@ import java.time.LocalDate;
 public class UserController {
 
     private final UserService userService;
-    private final UserRepository userRepository;
 
     // 1. 유저 생성
     @PostMapping
