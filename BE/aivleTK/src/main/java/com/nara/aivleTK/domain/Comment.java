@@ -47,9 +47,6 @@ public class Comment {
     private Comment parent;
 
 
-    @ManyToOne
-    @JoinColumn(name="board_id", nullable = true)
-
     @PrePersist
     public void onCreate() {
         this.commentCreateAt = LocalDateTime.now();

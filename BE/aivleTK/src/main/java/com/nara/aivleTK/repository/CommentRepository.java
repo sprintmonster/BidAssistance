@@ -16,5 +16,5 @@ public interface CommentRepository extends JpaRepository<Comment, Integer> {
     List<Comment> findByBoard(Board board);
     List<Comment> findAllByBid_BidId(int bidId);
     // Board ID로 댓글 찾기
-    List<Comment> findAllByBoard_BoardId(int boardId);
+    List<Comment> findAllByBoard_Id(int boardId);
 }

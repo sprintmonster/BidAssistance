@@ -9,6 +9,6 @@ import org.springframework.data.repository.query.Param;
 public interface BoardRepository extends JpaRepository<Board, Integer> {
 
     @Modifying
-    @Query("update board b set b.viewCount = b.viewCount+1 where b.id :id")
+    @Query("update Board b set b.viewCount = b.viewCount+1 where b.id =:id")
     void updateViewCount(@Param("id") Integer id);
 }
