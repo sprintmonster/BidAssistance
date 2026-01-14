@@ -32,6 +32,7 @@ export type Post = {
     createdAt: string;
     views: number;
     likes: number;
+    likedByMe : boolean;
     comments: Comment[];
     attachments: Attachment[];
 };
@@ -54,6 +55,7 @@ export function CommunityPage() {
             createdAt: "2026-01-12",
             views: 12,
             likes: 3,
+            likedByMe: false,
             comments: [],
             attachments: [],
         },
@@ -67,6 +69,7 @@ export function CommunityPage() {
             createdAt: "2026-01-11",
             views: 30,
             likes: 8,
+            likedByMe: false,
             comments: [],
             attachments: [],
         },
@@ -177,6 +180,36 @@ export function CommunityPage() {
             setViewMode("list");
         }
     };
+    const togglePostLike = (postId: string) => {
+        setPosts((prev) =>
+            prev.map((p) => {
+                if (p.id !== postId) return p;
+
+                const liked = !!p.likedByMe;
+                const nextLiked = !liked;
+
+                return {
+                    ...p,
+                    likedByMe: nextLiked,
+                    likes: Math.max(0, p.likes + (nextLiked ? 1 : -1)),
+                };
+            })
+        );
+
+        // detail 화면 즉시 반영
+        setSelectedPost((prev) => {
+            if (!prev || prev.id !== postId) return prev;
+
+            const liked = !!prev.likedByMe;
+            const nextLiked = !liked;
+
+            return {
+                ...prev,
+                likedByMe: nextLiked,
+                likes: Math.max(0, prev.likes + (nextLiked ? 1 : -1)),
+            };
+        });
+    };
 
     return (
         <div className="space-y-4">
@@ -186,11 +219,13 @@ export function CommunityPage() {
                     <CardTitle>커뮤니티</CardTitle>
                     {viewMode === "list" ? (
                         <Button onClick={() => setViewMode("new")}>글쓰기</Button>
-                    ) : (
+                    ) :
+                        (
                         <Button variant="outline" onClick={() => setViewMode("list")}>
                             목록
                         </Button>
-                    )}
+                    )
+                    }
                 </CardHeader>
 
                 {viewMode === "list" && (
@@ -215,6 +250,7 @@ export function CommunityPage() {
                             onAddComment={addComment}
                             onUpdatePost={updatePost}
                             onDeletePost={deletePost}
+                            onToggleLike={togglePostLike}
                 />
             )}
 

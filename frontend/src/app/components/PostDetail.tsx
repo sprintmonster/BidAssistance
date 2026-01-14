@@ -14,6 +14,8 @@ interface PostDetailProps {
         patch: Partial<Pick<Post, "title" | "content" | "category" | "attachments">>
     ) => void;
     onDeletePost: (postId: string) => void;
+    onToggleLike: (postId: string) => void;
+
 }
 
 const categoryLabels = {
@@ -30,7 +32,7 @@ const categoryColors = {
   discussion: 'bg-orange-100 text-orange-800',
 };
 
-export function PostDetail({ post, onBack, onAddComment, onUpdatePost, onDeletePost}: PostDetailProps) {
+export function PostDetail({ post, onBack, onAddComment, onUpdatePost, onDeletePost, onToggleLike}: PostDetailProps) {
   const [commentText, setCommentText] = useState('');
     const [isEditing, setIsEditing] = useState(false);
     const [editTitle, setEditTitle] = useState(post.title);
@@ -284,10 +286,19 @@ export function PostDetail({ post, onBack, onAddComment, onUpdatePost, onDeleteP
           )}
 
         <div className="flex items-center gap-4 pt-6 border-t border-gray-200">
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors">
-            <ThumbsUp className="w-5 h-5" />
-            <span>좋아요 {post.likes}</span>
-          </button>
+            <button
+                type="button"
+                onClick={() => onToggleLike(post.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                    post.likedByMe
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                        : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                }`}
+            >
+                <ThumbsUp className="w-5 h-5" />
+                <span>좋아요 {post.likes}</span>
+            </button>
+
         </div>
       </div>
 
