@@ -11,27 +11,38 @@ import {
     CardTitle,
 } from "./ui/card";
 import { Building2 } from "lucide-react";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "./ui/select";
 
-// ====== 질문 ======
-type SecurityQuestionKey =
-    | "favorite_teacher"
-    | "first_pet"
-    | "birth_city"
-    | "favorite_food";
+// ====== 질문(0~3 고정 매핑) ======
+const SECURITY_QUESTIONS = [
+    "가장 기억에 남는 선생님 성함은?",
+    "첫 반려동물 이름은?",
+    "출생한 도시는?",
+    "가장 좋아하는 음식은?",
+] as const;
 
-const QUESTION_LABELS: Record<SecurityQuestionKey, string> = {
-    favorite_teacher: "가장 기억에 남는 선생님 성함은?",
-    first_pet: "첫 반려동물 이름은?",
-    birth_city: "출생한 도시는?",
-    favorite_food: "가장 좋아하는 음식은?",
+// legacy(키 문자열 저장) → 숫자 인덱스로 변환(과거 데이터 호환용)
+const LEGACY_KEY_TO_INDEX: Record<string, number> = {
+    favorite_teacher: 0,
+    first_pet: 1,
+    birth_city: 2,
+    favorite_food: 3,
 };
+
+function resolveQuestionIndex(recoveryQA: {
+    questionIndex?: number;
+    question?: string;
+}): number | null {
+    const idx = recoveryQA?.questionIndex;
+    if (Number.isInteger(idx) && idx >= 0 && idx < SECURITY_QUESTIONS.length) {
+        return idx;
+    }
+
+    const legacy = (recoveryQA?.question ?? "").trim();
+    if (legacy && legacy in LEGACY_KEY_TO_INDEX) {
+        return LEGACY_KEY_TO_INDEX[legacy];
+    }
+    return null;
+}
 
 // ====== localStorage user shape (SignupPage랑 맞춤) ======
 type LocalUser = {
@@ -46,7 +57,8 @@ type LocalUser = {
         marketingOptional: boolean;
     };
     recoveryQA: {
-        question: string; // key 저장(예: "first_pet")
+        questionIndex?: number; // 0~3
+        question?: string; // legacy
         answer: string;
     };
 };
@@ -77,142 +89,172 @@ interface ResetPasswordPageProps {
 }
 
 export function ResetPasswordPage({ onNavigateToLogin }: ResetPasswordPageProps) {
-    // 단계: verify -> setPassword
-    const [step, setStep] = useState<"verify" | "setPassword">("verify");
-    const [verifiedEmail, setVerifiedEmail] = useState<string>("");
+    // 단계: identify(email+birthDate) -> challenge(question+answer)
+    const [step, setStep] = useState<"identify" | "challenge">("identify");
+
+    const [identifiedEmail, setIdentifiedEmail] = useState<string>("");
+    const [questionIndex, setQuestionIndex] = useState<number | null>(null);
 
     const [formData, setFormData] = useState({
         email: "",
-        name: "",
         birthDate: "",
-        questionKey: "" as SecurityQuestionKey | "",
         answer: "",
     });
 
-    const [pwData, setPwData] = useState({
-        newPassword: "",
-        confirmNewPassword: "",
-    });
-
-    const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
+    const [message, setMessage] = useState<{
+        type: "error" | "success";
+        text: string;
+    } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const canVerify = useMemo(() => {
-        return Boolean(
-            formData.email &&
-            formData.name &&
-            formData.birthDate &&
-            formData.questionKey &&
-            formData.answer
-        );
-    }, [formData]);
+    const canIdentify = useMemo(() => {
+        return Boolean(formData.email && formData.birthDate);
+    }, [formData.email, formData.birthDate]);
 
-    const canSetPassword = useMemo(() => {
-        if (!pwData.newPassword) return false;
-        if (pwData.newPassword !== pwData.confirmNewPassword) return false;
-        if (pwData.newPassword.length < 8) return false;
-        return true;
-    }, [pwData]);
+    const canChallenge = useMemo(() => {
+        return Boolean(questionIndex !== null && formData.answer);
+    }, [questionIndex, formData.answer]);
 
-    const passwordGuideMessage = useMemo(() => {
-        if (!pwData.newPassword && !pwData.confirmNewPassword) {
-            return "새 비밀번호를 입력해 주세요.";
+    function generateTempPassword(length = 6) {
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        let out = "";
+
+        const cryptoObj = (globalThis as unknown as { crypto?: Crypto }).crypto;
+        if (cryptoObj?.getRandomValues) {
+            const buf = new Uint32Array(length);
+            cryptoObj.getRandomValues(buf);
+            for (let i = 0; i < length; i += 1) {
+                out += chars[buf[i] % chars.length];
+            }
+            return out;
         }
 
-        if (pwData.newPassword.length > 0 && pwData.newPassword.length < 8) {
-            return "비밀번호는 8자 이상이어야 합니다.";
+        for (let i = 0; i < length; i += 1) {
+            out += chars[Math.floor(Math.random() * chars.length)];
         }
+        return out;
+    }
 
-        if (
-            pwData.newPassword &&
-            pwData.confirmNewPassword &&
-            pwData.newPassword !== pwData.confirmNewPassword
-        ) {
-            return "비밀번호와 비밀번호 확인이 일치하지 않습니다.";
-        }
-
-        return null; // 모든 조건 통과
-    }, [pwData]);
-
-
-    const handleVerify = async (e: React.FormEvent) => {
+    const handleIdentify = async (e: React.FormEvent) => {
         e.preventDefault();
         setMessage(null);
 
-        if (!canVerify) return;
+        if (!canIdentify) return;
 
         try {
             setIsSubmitting(true);
 
             const users = readUsers();
-            const target = users.find((u) => normalize(u.email) === normalize(formData.email));
+            const target = users.find(
+                (u) => normalize(u.email) === normalize(formData.email)
+            );
 
             if (!target) {
-                setMessage({ type: "error", text: "해당 이메일로 가입된 계정을 찾을 수 없어요." });
+                setMessage({
+                    type: "error",
+                    text: "해당 이메일로 가입된 계정을 찾을 수 없어요.",
+                });
                 return;
             }
 
-            // 이름/생년월일 비교
-            if (normalize(target.name) !== normalize(formData.name)) {
-                setMessage({ type: "error", text: "이름이 일치하지 않아요." });
-                return;
-            }
             if (target.birthDate !== formData.birthDate) {
                 setMessage({ type: "error", text: "생년월일이 일치하지 않아요." });
                 return;
             }
 
-            // 질문/답변 비교 (Signup에서 question은 key 형태로 저장했음)
-            if (target.recoveryQA?.question !== formData.questionKey) {
-                setMessage({ type: "error", text: "선택한 질문이 가입 정보와 일치하지 않아요." });
-                return;
-            }
-            if (normalize(target.recoveryQA?.answer ?? "") !== normalize(formData.answer)) {
-                setMessage({ type: "error", text: "질문 답변이 일치하지 않아요." });
+            const qIndex = resolveQuestionIndex(target.recoveryQA);
+            if (qIndex === null) {
+                setMessage({
+                    type: "error",
+                    text: "계정에 비밀번호 찾기 질문이 설정되어 있지 않아요. 고객센터에 문의해 주세요.",
+                });
                 return;
             }
 
-            // 검증 성공 → 비밀번호 설정 단계로 이동
-            setVerifiedEmail(target.email);
-            setStep("setPassword");
-            setMessage({ type: "success", text: "본인 확인이 완료됐어요. 새 비밀번호를 설정해 주세요." });
+            setIdentifiedEmail(target.email);
+            setQuestionIndex(qIndex);
+            setStep("challenge");
+            setMessage({
+                type: "success",
+                text: "확인 완료. 가입 시 설정한 질문에 답변해 주세요.",
+            });
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    const handleSetPassword = async (e: React.FormEvent) => {
+    const handleSendTempPassword = async (e: React.FormEvent) => {
         e.preventDefault();
         setMessage(null);
 
-        if (!canSetPassword) {
-            setMessage({ type: "error", text: "새 비밀번호를 확인해 주세요. (8자 이상, 두 칸 일치)" });
-            return;
-        }
+        if (!canChallenge) return;
 
         try {
             setIsSubmitting(true);
 
             const users = readUsers();
-            const idx = users.findIndex((u) => normalize(u.email) === normalize(verifiedEmail));
+            const idx = users.findIndex(
+                (u) => normalize(u.email) === normalize(identifiedEmail)
+            );
 
             if (idx < 0) {
-                setMessage({ type: "error", text: "계정을 찾을 수 없어요. 다시 시도해 주세요." });
-                setStep("verify");
+                setMessage({
+                    type: "error",
+                    text: "계정을 찾을 수 없어요. 다시 시도해 주세요.",
+                });
+                setStep("identify");
                 return;
             }
 
-            users[idx] = {
-                ...users[idx],
-                password: pwData.newPassword, // ✅ 여기서 실제로 변경
-            };
+            const target = users[idx];
 
+            if (target.birthDate !== formData.birthDate) {
+                setMessage({
+                    type: "error",
+                    text: "정보가 변경되었어요. 다시 시도해 주세요.",
+                });
+                setStep("identify");
+                return;
+            }
+
+            const storedQIndex = resolveQuestionIndex(target.recoveryQA);
+            if (storedQIndex === null || storedQIndex !== questionIndex) {
+                setMessage({
+                    type: "error",
+                    text: "질문 정보가 일치하지 않아요. 다시 시도해 주세요.",
+                });
+                setStep("identify");
+                return;
+            }
+
+            if (normalize(target.recoveryQA?.answer ?? "") !== normalize(formData.answer)) {
+                setMessage({ type: "error", text: "질문 답변이 일치하지 않아요." });
+                return;
+            }
+
+            // ✅ 임시 비밀번호 생성 (6자리, 영어+숫자)
+            const tempPassword = generateTempPassword(6);
+
+            // ✅ (데모/로컬) 임시 비밀번호로 교체
+            // 실제 서비스에서는 서버에서 비밀번호를 재설정하고 이메일 발송까지 처리해야 합니다.
+            users[idx] = {
+                ...target,
+                password: tempPassword,
+            };
             writeUsers(users);
 
-            setMessage({ type: "success", text: "비밀번호가 변경되었습니다. 로그인해 주세요." });
+            // ✅ 실제 이메일 전송은 백엔드에서 처리해야 합니다.
+            // 프론트에서는 성공 메시지만 보여주고, DEV 모드에서만 임시 비밀번호를 노출(테스트 편의).
+            const devHint = import.meta.env.DEV
+                ? ` (DEV: 임시 비밀번호: ${tempPassword})`
+                : "";
 
-            // 바로 로그인 페이지로 보내고 싶으면:
-            setTimeout(() => onNavigateToLogin(), 300);
+            setMessage({
+                type: "success",
+                text: `임시 비밀번호가 이메일로 전송되었습니다. 메일을 확인해 주세요.${devHint}`,
+            });
+
+            setTimeout(() => onNavigateToLogin(), 400);
         } finally {
             setIsSubmitting(false);
         }
@@ -227,13 +269,13 @@ export function ResetPasswordPage({ onNavigateToLogin }: ResetPasswordPageProps)
                             <Building2 className="w-8 h-8 text-white" />
                         </div>
                     </div>
-                    <CardTitle className="text-2xl text-center">비밀번호 재설정</CardTitle>
+                    <CardTitle className="text-2xl text-center">비밀번호 찾기</CardTitle>
                     <CardDescription className="text-center">
-                        본인 확인 후 새 비밀번호를 설정합니다
+                        본인 확인 후 임시 비밀번호를 이메일로 전송합니다
                     </CardDescription>
                 </CardHeader>
 
-                <form onSubmit={step === "verify" ? handleVerify : handleSetPassword}>
+                <form onSubmit={step === "identify" ? handleIdentify : handleSendTempPassword}>
                     <CardContent className="space-y-4">
                         {message && (
                             <div
@@ -249,7 +291,7 @@ export function ResetPasswordPage({ onNavigateToLogin }: ResetPasswordPageProps)
                             </div>
                         )}
 
-                        {step === "verify" ? (
+                        {step === "identify" ? (
                             <>
                                 <div className="space-y-2">
                                     <Label htmlFor="email">이메일</Label>
@@ -258,17 +300,9 @@ export function ResetPasswordPage({ onNavigateToLogin }: ResetPasswordPageProps)
                                         type="email"
                                         placeholder="name@company.com"
                                         value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        required
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="name">이름</Label>
-                                    <Input
-                                        id="name"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, email: e.target.value })
+                                        }
                                         required
                                     />
                                 </div>
@@ -279,38 +313,9 @@ export function ResetPasswordPage({ onNavigateToLogin }: ResetPasswordPageProps)
                                         id="birthDate"
                                         type="date"
                                         value={formData.birthDate}
-                                        onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
-                                        required
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="question">가입할 때 설정한 질문</Label>
-                                    <Select
-                                        value={formData.questionKey}
-                                        onValueChange={(value) =>
-                                            setFormData({ ...formData, questionKey: value as SecurityQuestionKey })
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, birthDate: e.target.value })
                                         }
-                                    >
-                                        <SelectTrigger id="question">
-                                            <SelectValue placeholder="선택하세요" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {Object.entries(QUESTION_LABELS).map(([key, label]) => (
-                                                <SelectItem key={key} value={key}>
-                                                    {label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="answer">답변</Label>
-                                    <Input
-                                        id="answer"
-                                        value={formData.answer}
-                                        onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
                                         required
                                     />
                                 </div>
@@ -318,28 +323,24 @@ export function ResetPasswordPage({ onNavigateToLogin }: ResetPasswordPageProps)
                         ) : (
                             <>
                                 <div className="text-sm text-muted-foreground">
-                                    계정: <span className="font-medium">{verifiedEmail}</span>
+                                    계정: <span className="font-medium">{identifiedEmail}</span>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="newPassword">새 비밀번호</Label>
-                                    <Input
-                                        id="newPassword"
-                                        type="password"
-                                        value={pwData.newPassword}
-                                        onChange={(e) => setPwData({ ...pwData, newPassword: e.target.value })}
-                                        required
-                                    />
-                                    <div className="text-xs text-gray-500">8자 이상 권장</div>
+                                    <Label>가입 시 설정한 질문</Label>
+                                    <div className="rounded-md border bg-white px-3 py-2 text-sm">
+                                        {questionIndex !== null ? SECURITY_QUESTIONS[questionIndex] : ""}
+                                    </div>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="confirmNewPassword">새 비밀번호 확인</Label>
+                                    <Label htmlFor="answer">답변</Label>
                                     <Input
-                                        id="confirmNewPassword"
-                                        type="password"
-                                        value={pwData.confirmNewPassword}
-                                        onChange={(e) => setPwData({ ...pwData, confirmNewPassword: e.target.value })}
+                                        id="answer"
+                                        value={formData.answer}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, answer: e.target.value })
+                                        }
                                         required
                                     />
                                 </div>
@@ -349,13 +350,18 @@ export function ResetPasswordPage({ onNavigateToLogin }: ResetPasswordPageProps)
                                     variant="outline"
                                     className="w-full"
                                     onClick={() => {
-                                        setStep("verify");
-                                        setVerifiedEmail("");
-                                        setPwData({ newPassword: "", confirmNewPassword: "" });
+                                        setStep("identify");
+                                        setIdentifiedEmail("");
+                                        setQuestionIndex(null);
+                                        setFormData({
+                                            email: formData.email,
+                                            birthDate: formData.birthDate,
+                                            answer: "",
+                                        });
                                         setMessage(null);
                                     }}
                                 >
-                                    다시 본인 확인하기
+                                    다시 입력하기
                                 </Button>
                             </>
                         )}
@@ -365,15 +371,18 @@ export function ResetPasswordPage({ onNavigateToLogin }: ResetPasswordPageProps)
                         <Button
                             type="submit"
                             className="w-full"
-                            disabled={(step === "verify" && (!canVerify || isSubmitting)) || (step === "setPassword" && (!canSetPassword || isSubmitting))}
+                            disabled={
+                                (step === "identify" && (!canIdentify || isSubmitting)) ||
+                                (step === "challenge" && (!canChallenge || isSubmitting))
+                            }
                         >
-                            {step === "verify"
+                            {step === "identify"
                                 ? isSubmitting
                                     ? "확인 중..."
-                                    : "본인 확인"
+                                    : "다음"
                                 : isSubmitting
-                                    ? "변경 중..."
-                                    : "비밀번호 변경"}
+                                    ? "전송 중..."
+                                    : "임시 비밀번호 전송"}
                         </Button>
 
                         <div className="text-sm text-center text-gray-600">

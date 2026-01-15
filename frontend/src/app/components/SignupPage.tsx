@@ -24,14 +24,21 @@ interface SignupPageProps {
     onNavigateToLogin: () => void;
 }
 
+// ====== 질문(0~3 고정 매핑) ======
+const SECURITY_QUESTIONS = [
+    "가장 기억에 남는 선생님 성함은?",
+    "첫 반려동물 이름은?",
+    "출생한 도시는?",
+    "가장 좋아하는 음식은?",
+] as const;
+
 // ==============================
-//  [추가] 로컬 "DB"(localStorage) 유틸
+//  로컬 "DB"(localStorage) 유틸
 // ==============================
 type LocalUser = {
     email: string;
     password: string;
     companyName: string;
-    // companyType: string;
     birthDate: string;
     name: string;
     createdAt: string;
@@ -39,9 +46,9 @@ type LocalUser = {
         privacyRequired: boolean;
         marketingOptional: boolean;
     };
-    //  [추가] 계정 찾기용 질문/답변 저장
     recoveryQA: {
-        question: string;
+        questionIndex?: number; // 0~3 (신규)
+        question?: string; // legacy 호환용(과거 키 저장)
         answer: string;
     };
 };
@@ -86,59 +93,42 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
         password: "",
         confirmPassword: "",
         companyName: "",
-        // companyType: "",
         birthDate: "",
         name: "",
-        //  [추가] 계정 찾기 질문/답변 입력값
-        recoveryQuestion: "",
+        // 숫자 인덱스를 문자열로 들고 있다가 저장 시 Number()로 변환
+        recoveryQuestion: "", // "0" | "1" | "2" | "3"
         recoveryAnswer: "",
     });
 
-    type SecurityQuestionKey =
-        | "favorite_teacher"
-        | "first_pet"
-        | "birth_city"
-        | "favorite_food";
-
-    const QUESTION_LABELS: Record<SecurityQuestionKey, string> = {
-        favorite_teacher: "가장 기억에 남는 선생님 성함은?",
-        first_pet: "첫 반려동물 이름은?",
-        birth_city: "출생한 도시는?",
-        favorite_food: "가장 좋아하는 음식은?",
-    };
-
     // ==============================
-    //  [추가] 개인정보 동의 상태
+    //  개인정보 동의 상태
     // ==============================
     const [consents, setConsents] = useState({
         privacyRequired: false,
         marketingOptional: false,
     });
 
-    //  [추가] 에러/상태 메시지
+    //  에러/상태 메시지
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    //  [수정] 버튼 활성 조건에 질문/답변 필수 포함
     const canSubmit = useMemo(() => {
         if (!formData.name.trim()) return false;
         if (!formData.email.trim()) return false;
         if (!formData.companyName.trim()) return false;
-        // if (!formData.companyType.trim()) return false;
         if (!formData.password) return false;
         if (formData.password !== formData.confirmPassword) return false;
         if (!consents.privacyRequired) return false;
 
         if (!formData.birthDate) return false;
-        //  [추가] 계정 찾기 질문/답변 필수
+
         if (!formData.recoveryQuestion.trim()) return false;
         if (!formData.recoveryAnswer.trim()) return false;
 
         return true;
     }, [formData, consents.privacyRequired]);
 
-    //  [추가] 입력 변경 시 메시지 초기화
     useEffect(() => {
         setError(null);
         setSuccess(null);
@@ -152,31 +142,21 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
         setSuccess(null);
 
         try {
-            //  [추가] 필수 동의 체크
             if (!consents.privacyRequired) {
                 setError("개인정보 수집·이용(필수)에 동의해야 가입할 수 있어요.");
                 return;
             }
 
-            //  [추가] 비밀번호 확인
             if (formData.password !== formData.confirmPassword) {
                 setError("비밀번호와 비밀번호 확인이 일치하지 않아요.");
                 return;
             }
-
-            //  [추가] 회사 유형 선택 확인
-            // if (!formData.companyType) {
-            //     setError("회사 유형을 선택해 주세요.");
-            //     return;
-            // }
 
             if (!formData.birthDate) {
                 setError("생년월일을 입력해 주세요.");
                 return;
             }
 
-
-            //  [추가] 계정 찾기 질문/답변 검증
             if (!formData.recoveryQuestion.trim()) {
                 setError("계정 찾기 질문을 선택해 주세요.");
                 return;
@@ -186,19 +166,26 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
                 return;
             }
 
-            //  [추가] 이메일 중복 검사
+            const questionIndex = Number(formData.recoveryQuestion);
+            if (
+                !Number.isInteger(questionIndex) ||
+                questionIndex < 0 ||
+                questionIndex > 3
+            ) {
+                setError("계정 찾기 질문을 다시 선택해 주세요.");
+                return;
+            }
+
             const existing = findUserByEmail(formData.email);
             if (existing) {
                 setError("이미 가입된 이메일이에요. 로그인해 주세요.");
                 return;
             }
 
-            //  [수정] 로컬 DB 저장 데이터에 recoveryQA 포함
             const newUser: LocalUser = {
                 email: formData.email.trim(),
                 password: formData.password,
                 companyName: formData.companyName.trim(),
-                // companyType: formData.companyType,
                 birthDate: formData.birthDate,
                 name: formData.name.trim(),
                 createdAt: new Date().toISOString(),
@@ -207,7 +194,7 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
                     marketingOptional: consents.marketingOptional,
                 },
                 recoveryQA: {
-                    question: formData.recoveryQuestion.trim(),
+                    questionIndex,
                     answer: formData.recoveryAnswer.trim(),
                 },
             };
@@ -216,9 +203,9 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
 
             setSuccess("가입이 완료됐어요! 로그인 페이지로 이동합니다.");
 
-            // onSignup(newUser.email); // 기존 콜백 유지 (추적/토스트 등 용도)
+            // 필요 시 활용(현재 UI 흐름은 로그인 페이지로 이동)
+            // onSignup(newUser.email);
 
-            // 가입 성공 시 로그인으로 이동
             setTimeout(() => {
                 onNavigateToLogin();
             }, 300);
@@ -244,7 +231,6 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
 
                 <form onSubmit={handleSubmit}>
                     <CardContent className="space-y-4">
-                        {/* [추가] 에러/성공 메시지 */}
                         {error && (
                             <div className="text-sm rounded-md bg-red-50 text-red-700 px-3 py-2">
                                 {error}
@@ -294,36 +280,18 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
                             />
                         </div>
 
-                        {/*<div className="space-y-2">*/}
-                        {/*    <Label htmlFor="companyType">회사 유형</Label>*/}
-                        {/*    <Select*/}
-                        {/*        value={formData.companyType}*/}
-                        {/*        onValueChange={(value) =>*/}
-                        {/*            setFormData({ ...formData, companyType: value })*/}
-                        {/*        }*/}
-                        {/*    >*/}
-                        {/*        <SelectTrigger id="companyType">*/}
-                        {/*            <SelectValue placeholder="선택하세요" />*/}
-                        {/*        </SelectTrigger>*/}
-                        {/*        <SelectContent>*/}
-                        {/*            <SelectItem value="small">소형 건설사</SelectItem>*/}
-                        {/*            <SelectItem value="medium">중형 건설사</SelectItem>*/}
-                        {/*            <SelectItem value="large">대형 건설사</SelectItem>*/}
-                        {/*        </SelectContent>*/}
-                        {/*    </Select>*/}
-                        {/*</div>*/}
-
                         <div className="space-y-2">
                             <Label htmlFor="birthDate">생년월일</Label>
                             <Input
                                 id="birthDate"
                                 type="date"
                                 value={formData.birthDate}
-                                onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+                                onChange={(e) =>
+                                    setFormData({ ...formData, birthDate: e.target.value })
+                                }
                                 required
                             />
                         </div>
-
 
                         <div className="space-y-2">
                             <Label htmlFor="password">비밀번호</Label>
@@ -354,9 +322,7 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
                             />
                         </div>
 
-                        {/* ==============================
-                 [추가] 계정 찾기 질문/답변 섹션
-               ============================== */}
+                        {/* 계정 찾기 질문/답변 */}
                         <div className="space-y-2 pt-2">
                             <Label htmlFor="recoveryQuestion">계정 찾기 질문</Label>
                             <Select
@@ -369,8 +335,8 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
                                     <SelectValue placeholder="질문을 선택하세요" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {Object.entries(QUESTION_LABELS).map(([key, label]) => (
-                                        <SelectItem key={key} value={key}>
+                                    {SECURITY_QUESTIONS.map((label, idx) => (
+                                        <SelectItem key={String(idx)} value={String(idx)}>
                                             {label}
                                         </SelectItem>
                                     ))}
@@ -394,9 +360,7 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
                             </div>
                         </div>
 
-                        {/* ==============================
-                 [추가] 개인정보 동의 섹션
-               ============================== */}
+                        {/* 약관 동의 */}
                         <div className="space-y-3 pt-2">
                             <div className="text-sm font-medium">약관 동의</div>
 
@@ -413,14 +377,14 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
                                     }
                                 />
                                 <span>
-                  <span className="font-medium">
-                    개인정보 수집·이용 동의(필수)
-                  </span>
-                  <span className="text-red-600"> *</span>
-                  <div className="text-xs text-gray-500 mt-1">
-                    회원가입 및 서비스 제공을 위해 필요합니다.
-                  </div>
-                </span>
+                                    <span className="font-medium">
+                                        개인정보 수집·이용 동의(필수)
+                                    </span>
+                                    <span className="text-red-600"> *</span>
+                                    <div className="text-xs text-gray-500 mt-1">
+                                        회원가입 및 서비스 제공을 위해 필요합니다.
+                                    </div>
+                                </span>
                             </label>
 
                             <label className="flex items-start gap-2 text-sm text-gray-700">
@@ -436,11 +400,11 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
                                     }
                                 />
                                 <span>
-                  마케팅 정보 수신 동의(선택)
-                  <div className="text-xs text-gray-500 mt-1">
-                    이벤트/혜택 알림을 받아볼 수 있어요.
-                  </div>
-                </span>
+                                    마케팅 정보 수신 동의(선택)
+                                    <div className="text-xs text-gray-500 mt-1">
+                                        이벤트/혜택 알림을 받아볼 수 있어요.
+                                    </div>
+                                </span>
                             </label>
                         </div>
                     </CardContent>
@@ -449,7 +413,7 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
                         <Button
                             type="submit"
                             className="w-full"
-                            disabled={!canSubmit || isSubmitting} //  [유지/추가] 필수 조건 충족 전 비활성화
+                            disabled={!canSubmit || isSubmitting}
                         >
                             {isSubmitting ? "가입 처리 중..." : "가입하기"}
                         </Button>
