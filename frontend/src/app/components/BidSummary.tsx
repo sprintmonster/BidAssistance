@@ -396,7 +396,7 @@ export function BidSummary({ bidId, onNavigate }: BidSummaryProps) {
 						<div className="flex items-center gap-3">
 							<div>
 								<p className="text-sm text-muted-foreground">첨부파일</p>
-								<p className="mt-1 text-blue-600" onClick={handleDownloadNotice}>
+								<p className="mt-1 text-blue-600 cursor-pointer hover:underline" onClick={handleDownloadNotice}>
 									{bid.documentFileName}
 								</p>
 							</div>
