@@ -356,13 +356,6 @@ export function BidSummary({ bidId, onNavigate }: BidSummaryProps) {
 							<CardTitle className="text-2xl mb-2">{bid.title}</CardTitle>
 							<CardDescription>{bid.description}</CardDescription>
 						</div>
-
-						{/* <div className="shrink-0">
-							<Button className="gap-2" onClick={handleDownloadNotice}>
-								<Download className="h-4 w-4" />
-								공고문 다운로드
-							</Button>
-						</div> */}
 					</div>
 				</CardHeader>
 
