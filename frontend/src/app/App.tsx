@@ -3,7 +3,7 @@ import { AppLayout } from "./layout/AppLayout";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { PublicRoute } from "./routes/PublicRoute";
 
-import { Dashboard } from "./components/Dashboard";
+import { Dashboard } from "./components/dashboard/Dashboard";
 import { LoginPage } from "./components/LoginPage";
 import { HomePage } from "./components/HomePage";
 import { BidDiscovery } from "./components/BidDiscovery";
