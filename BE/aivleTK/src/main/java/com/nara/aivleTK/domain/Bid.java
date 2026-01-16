@@ -24,7 +24,7 @@ public class Bid {
     private String name;
     @Column
     private LocalDateTime startDate;
-    @Column
+    @Column(nullable=true)
     private LocalDateTime endDate;
     @Column
     private LocalDateTime openDate;
@@ -40,6 +40,4 @@ public class Bid {
     private String bidURL;
     @Column(name = "bid_report_URL")
     private String bidReportURL;
-
-
 }

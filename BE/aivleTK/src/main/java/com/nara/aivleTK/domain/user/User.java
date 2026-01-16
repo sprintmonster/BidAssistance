@@ -24,19 +24,19 @@ public class User {
     @JoinColumn(name = "company_id")
     private Company company;
 
-    @Column(length=25, nullable=false)
+    @Column(length = 25, nullable = false)
     private String email;
 
-    @Column(length=10, nullable=false)
+    @Column(length = 10, nullable = false)
     private String name;
 
-    @Column(length=20, nullable=false)
+    @Column(length = 60, nullable = false)
     private String password;
 
-    @Column(length=50, nullable=false)
+    @Column(length = 50, nullable = false)
     private String question;
 
-    @Column(length=50, nullable=false)
+    @Column(length = 50, nullable = false)
     private String answer;
 
     private LocalDate birth;

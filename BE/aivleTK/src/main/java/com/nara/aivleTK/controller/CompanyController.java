@@ -6,13 +6,12 @@ import com.nara.aivleTK.service.CompanyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
-@RequestMapping("/api/compnay")
+@RequestMapping("/api/company")
 @RequiredArgsConstructor
 public class CompanyController {
     private final CompanyService companyService;
@@ -23,4 +22,15 @@ public class CompanyController {
         return ResponseEntity.status(HttpStatus.CREATED).body(company);
     }
 
+    @GetMapping // 회사 전체 조회
+    public ResponseEntity<List<CompanyResponse>> getALLCompanies() {
+        List<CompanyResponse> list = companyService.getAllCompanies();
+        return ResponseEntity.ok(list);
+    }
+
+    @GetMapping("/{id}") // 회사 상세 조회
+    public ResponseEntity<CompanyResponse> getCompany(@PathVariable("id") Integer id) {
+        CompanyResponse company = companyService.getCompany(id);
+        return ResponseEntity.ok(company);
+    }
 }

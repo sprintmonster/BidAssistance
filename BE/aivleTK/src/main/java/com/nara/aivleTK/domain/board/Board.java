@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name="board")
+@Table(name = "board")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,32 +20,32 @@ public class Board extends AutoTimeRecode {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name="board_id")
+    @Column(name = "board_id")
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name="user_id", nullable=false)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @Builder.Default
-    @OneToMany(mappedBy="board", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "board", cascade = CascadeType.ALL)
     private List<Comment> comments = new ArrayList<>();
 
-    @Column(nullable=false, length=50)
+    @Column(nullable = false, length = 50)
     private String title;
 
-    @Column(nullable=false, length=50)
+    @Column(nullable = false, length = 50)
     private String content;
 
-    @Column(columnDefinition="BIT(3)")
+    @Column(columnDefinition = "BIT(3)")
     private Integer category;
 
-    @Column(name="like_count", nullable = false)
+    @Column(name = "like_count", nullable = false)
     private Integer likeCount;
 
-    @Column(name="view_count", nullable = false)
+    @Column(name = "view_count", nullable = false)
     private Integer viewCount;
 
-    @Column(name="file_path", nullable=false)
+    @Column(name = "file_path", nullable = true)
     private String filePath;
 }
