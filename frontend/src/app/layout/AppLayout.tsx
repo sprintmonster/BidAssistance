@@ -49,21 +49,20 @@ export function AppLayout() {
         <div className="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between gap-4">
           {/* Left: Logo */}
           <div className="flex items-center gap-3 min-w-[260px]">
-            <div
-              className="flex items-center gap-3 cursor-pointer select-none"
+            <button
+              type="button"
               onClick={() => navigate("/")}
               aria-label="홈으로"
+              className="h-16 flex items-center"
             >
-              <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-sm">
-                <span className="text-sm font-extrabold">B</span>
-              </div>
-              <div className="leading-tight">
-                <div className="font-semibold tracking-tight">입찰인사이트</div>
-                <div className="text-[11px] text-slate-300">
-                  Smart Procurement Platform
-                </div>
-              </div>
-            </div>
+              <span className="h-12 flex items-center px-3 bg-white rounded-md">
+                <img
+                  src="/logo.png"
+                  alt="입찰인사이트 로고"
+                  className="h-10 w-auto block"
+                />
+              </span>
+            </button>
           </div>
 
           {/* Center: MENU (홈에서는 숨김, 다른 페이지에서만 보임) */}
@@ -100,7 +99,6 @@ export function AppLayout() {
             <HeaderPill onClick={() => navigate("/notice")} label="공지사항" />
             <HeaderPill onClick={() => navigate("/notifications")} label="알림" />
 
-            {/* 홈에서는 로그인 박스가 있으니 헤더 로그인 버튼은 안 둠 */}
             {isAuthed && (
               <>
                 <HeaderPill onClick={() => navigate("/profile")} label="마이" />
@@ -129,7 +127,7 @@ export function AppLayout() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="AI로 공고를 검색해보세요 (예: 서울/경기 10억~50억 시설공사, 마감 임박)"
-                  className="w-full h-12 rounded-full  bg-white text-slate-900 placeholder:text-slate-400 pl-5 pr-14
+                  className="w-full h-12 rounded-full bg-white text-slate-900 placeholder:text-slate-400 pl-5 pr-14
                              border border-blue-500/80 focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20 outline-none"
                 />
                 <button
