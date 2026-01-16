@@ -1,4 +1,5 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { ChatbotFloatingButton } from "../components/ChatbotFloatingButton";
 
 export function AppLayout() {
   const navigate = useNavigate();
@@ -53,6 +54,7 @@ export function AppLayout() {
       <footer className="border-t py-6 text-sm text-gray-500 text-center">
         © 2026 입찰인사이트. All rights reserved.
       </footer>
+      <ChatbotFloatingButton />
     </div>
   );
 }
