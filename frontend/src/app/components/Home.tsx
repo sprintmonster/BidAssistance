@@ -1,11 +1,11 @@
 import { useNavigate } from "react-router-dom";
 
-export function Dashboard() {
+export function Home() {
   const navigate = useNavigate();
 
   return (
     <div className="space-y-8">
-      {/* ===== Top Cards (4개만) ===== */}
+      {/* 상단 카드 4개 */}
       <div className="grid grid-cols-4 gap-4">
         <Card title="대시보드" onClick={() => navigate("/dashboard")} />
         <Card title="공고 찾기" onClick={() => navigate("/bids")} />
@@ -13,14 +13,11 @@ export function Dashboard() {
         <Card title="커뮤니티" onClick={() => navigate("/community")} />
       </div>
 
-      {/* ===== Main Content ===== */}
+      {/* 메인 영역 */}
       <div className="grid grid-cols-3 gap-6">
-        {/* AI Search */}
+        {/* AI 검색 */}
         <div className="col-span-2 border rounded-xl p-6 space-y-4">
-          <div className="font-semibold flex items-center gap-2">
-            ✨ AI 기반 공고 검색
-          </div>
-
+          <h2 className="font-semibold">✨ AI 기반 공고 검색</h2>
           <p className="text-sm text-gray-600">
             자연어로 입력하면 조건을 해석해 공고 탐색/분석 흐름으로 연결합니다.
           </p>
@@ -41,41 +38,28 @@ export function Dashboard() {
               공고 리스트로 이동
             </button>
           </div>
-
-          <p className="text-xs text-gray-500">
-            현재는 AI 챗봇 화면으로 검색을 전달합니다. 추후 이 패널에서
-            바로 결과 리스트/필터를 렌더링하도록 확장할 수 있습니다.
-          </p>
         </div>
 
-        {/* Login Card */}
+        {/* 로그인 카드 */}
         <div className="border rounded-xl p-6 space-y-4">
           <h3 className="font-semibold text-lg">로그인</h3>
           <p className="text-sm text-gray-600">
             로그인하면 장바구니/알림/AI 기능을 이용할 수 있습니다.
           </p>
 
-          <input
-            className="w-full h-10 rounded-md px-3 bg-gray-50"
-            placeholder="이메일"
-          />
-          <input
-            type="password"
-            className="w-full h-10 rounded-md px-3 bg-gray-50"
-            placeholder="비밀번호"
-          />
+          <button
+            className="w-full bg-black text-white py-2 rounded-md"
+            onClick={() => navigate("/login")}
+          >
+            로그인 페이지로 이동
+          </button>
 
-          <div className="flex gap-2">
-            <button className="flex-1 bg-black text-white py-2 rounded-md">
-              로그인
-            </button>
-            <button
-              className="flex-1 border py-2 rounded-md"
-              onClick={() => navigate("/register")}
-            >
-              회원가입
-            </button>
-          </div>
+          <button
+            className="w-full border py-2 rounded-md"
+            onClick={() => navigate("/register")}
+          >
+            회원가입
+          </button>
         </div>
       </div>
     </div>
@@ -92,7 +76,7 @@ function Card({
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-3 border rounded-xl p-4 hover:bg-gray-50 transition"
+      className="flex items-center gap-3 border rounded-xl p-4 hover:bg-gray-50"
     >
       <div className="w-10 h-10 bg-gray-100 rounded-lg" />
       <span className="font-medium">{title}</span>
