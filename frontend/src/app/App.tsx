@@ -13,8 +13,8 @@ import { ChatbotPage } from "./components/ChatbotPage";
 import { BidSummary } from "./components/BidSummary";
 
 /* ===== UI ===== */
-import { Toast } from "./ui/Toast";
-import { useToast } from "./ui/useToast";
+import { Toast } from "./components//ui/Toast";
+import { useToast } from "./components//ui/useToast";
 
 export default function App() {
   /* ===== 인증 ===== */
