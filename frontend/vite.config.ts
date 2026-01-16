@@ -10,6 +10,15 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+      proxy: {
+          // '/api'로 시작하는 요청이 오면 8080으로 보내라!
+          '/api': {
+              target: 'http://localhost:8080',
+              changeOrigin: true,
+          },
+      },
+  },
   resolve: {
     alias: {
       // Alias @ to the src directory
