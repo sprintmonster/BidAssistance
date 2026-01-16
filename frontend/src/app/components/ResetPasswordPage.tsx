@@ -20,93 +20,6 @@ const SECURITY_QUESTIONS = [
     "가장 좋아하는 음식은?",
 ] as const;
 
-// legacy(키 문자열 저장) → 숫자 인덱스로 변환(과거 데이터 호환용)
-const LEGACY_KEY_TO_INDEX: Record<string, number> = {
-    favorite_teacher: 0,
-    first_pet: 1,
-    birth_city: 2,
-    favorite_food: 3,
-};
-
-// function resolveQuestionIndex(recoveryQA: {
-//     questionIndex?: number;
-//     question?: string;
-// }): number | null {
-//     const idx = recoveryQA?.questionIndex;
-//     if (Number.isInteger(idx) && idx >= 0 && idx < SECURITY_QUESTIONS.length) {
-//         return idx;
-//     }
-//
-//     const legacy = (recoveryQA?.question ?? "").trim();
-//     if (legacy && legacy in LEGACY_KEY_TO_INDEX) {
-//         return LEGACY_KEY_TO_INDEX[legacy];
-//     }
-//     return null;
-// }
-function resolveQuestionIndex(recoveryQA: {
-    questionIndex?: number;
-    question?: string;
-}): number | null {
-    const idx = recoveryQA?.questionIndex;
-
-    // TS가 idx를 number로 확실히 알게 만들기
-    if (
-        typeof idx === "number" &&
-        Number.isInteger(idx) &&
-        idx >= 0 &&
-        idx < SECURITY_QUESTIONS.length
-    ) {
-        return idx;
-    }
-
-    const legacy = (recoveryQA?.question ?? "").trim();
-    if (legacy && Object.prototype.hasOwnProperty.call(LEGACY_KEY_TO_INDEX, legacy)) {
-        return LEGACY_KEY_TO_INDEX[legacy as keyof typeof LEGACY_KEY_TO_INDEX];
-    }
-
-    return null;
-}
-
-// ====== localStorage user shape (SignupPage랑 맞춤) ======
-type LocalUser = {
-    email: string;
-    password: string;
-    nickName: string;
-    name: string;
-    birthDate: string; // YYYY-MM-DD
-    createdAt: string;
-    consents: {
-        privacyRequired: boolean;
-        marketingOptional: boolean;
-    };
-    recoveryQA: {
-        questionIndex?: number; // 0~3
-        question?: string; // legacy
-        answer: string;
-    };
-};
-
-const LS_USERS_KEY = "bidassistance_users_v1";
-
-function readUsers(): LocalUser[] {
-    try {
-        const raw = localStorage.getItem(LS_USERS_KEY);
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? (parsed as LocalUser[]) : [];
-    } catch {
-        return [];
-    }
-}
-
-function writeUsers(users: LocalUser[]) {
-    localStorage.setItem(LS_USERS_KEY, JSON.stringify(users));
-}
-
-function normalize(s: string) {
-    return s.trim().toLowerCase();
-}
-
 interface ResetPasswordPageProps {
     onNavigateToLogin: () => void;
 }
@@ -117,6 +30,7 @@ export function ResetPasswordPage({ onNavigateToLogin }: ResetPasswordPageProps)
 
     const [identifiedEmail, setIdentifiedEmail] = useState<string>("");
     const [questionIndex, setQuestionIndex] = useState<number | null>(null);
+    const [recoverySessionId, setRecoverySessionId] = useState<string>("");
 
     const [formData, setFormData] = useState({
         email: "",
@@ -140,25 +54,25 @@ export function ResetPasswordPage({ onNavigateToLogin }: ResetPasswordPageProps)
         return Boolean(questionIndex !== null && formData.answer);
     }, [questionIndex, formData.answer]);
 
-    function generateTempPassword(length = 6) {
-        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        let out = "";
-
-        const cryptoObj = (globalThis as unknown as { crypto?: Crypto }).crypto;
-        if (cryptoObj?.getRandomValues) {
-            const buf = new Uint32Array(length);
-            cryptoObj.getRandomValues(buf);
-            for (let i = 0; i < length; i += 1) {
-                out += chars[buf[i] % chars.length];
-            }
-            return out;
-        }
-
-        for (let i = 0; i < length; i += 1) {
-            out += chars[Math.floor(Math.random() * chars.length)];
-        }
-        return out;
-    }
+    // function generateTempPassword(length = 6) {
+    //     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    //     let out = "";
+    //
+    //     const cryptoObj = (globalThis as unknown as { crypto?: Crypto }).crypto;
+    //     if (cryptoObj?.getRandomValues) {
+    //         const buf = new Uint32Array(length);
+    //         cryptoObj.getRandomValues(buf);
+    //         for (let i = 0; i < length; i += 1) {
+    //             out += chars[buf[i] % chars.length];
+    //         }
+    //         return out;
+    //     }
+    //
+    //     for (let i = 0; i < length; i += 1) {
+    //         out += chars[Math.floor(Math.random() * chars.length)];
+    //     }
+    //     return out;
+    // }
 
     const handleIdentify = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -169,125 +83,130 @@ export function ResetPasswordPage({ onNavigateToLogin }: ResetPasswordPageProps)
         try {
             setIsSubmitting(true);
 
-            const users = readUsers();
-            const target = users.find(
-                (u) => normalize(u.email) === normalize(formData.email)
-            );
+            const payload = {
+                email: formData.email.trim(),
+                name: formData.name.trim(),
+                birth: formData.birthDate, // LocalDate: "YYYY-MM-DD"
+            };
 
-            if (!target) {
-                setMessage({
-                    type: "error",
-                    text: "해당 이메일로 가입된 계정을 찾을 수 없어요.",
-                });
-                return;
-            }
-            if (normalize(target.name) !== normalize(formData.name)) {
-                setMessage({ type: "error", text: "이름이 일치하지 않아요." });
-                return;
-            }
+            const res = await fetch("/api/users/recovery_question", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
 
-            if (target.birthDate !== formData.birthDate) {
-                setMessage({ type: "error", text: "생년월일이 일치하지 않아요." });
-                return;
-            }
+            const json = await res.json().catch(() => null);
 
-            const qIndex = resolveQuestionIndex(target.recoveryQA);
-            if (qIndex === null) {
-                setMessage({
-                    type: "error",
-                    text: "계정에 비밀번호 찾기 질문이 설정되어 있지 않아요. 고객센터에 문의해 주세요.",
-                });
+            if (!res.ok || json?.status === "error") {
+                // 정의서: 401 / 404
+                const msg =
+                    json?.message ??
+                    (res.status === 401
+                        ? "본인 확인에 실패했습니다."
+                        : res.status === 404
+                            ? "가입된 계정을 찾을 수 없습니다."
+                            : "요청에 실패했습니다. 다시 시도해 주세요.");
+                setMessage({ type: "error", text: msg });
                 return;
             }
 
-            setIdentifiedEmail(target.email);
-            setQuestionIndex(qIndex);
+            // 성공: { recoverySessionId, questionId }
+            const sid = json?.data?.recoverySessionId;
+            const qid = json?.data?.questionId;
+
+            if (typeof sid !== "string" || typeof qid !== "number") {
+                setMessage({ type: "error", text: "서버 응답 형식이 올바르지 않아요." });
+                return;
+            }
+
+            setRecoverySessionId(sid);
+            setQuestionIndex(qid); // questionId를 questionIndex로 그대로 사용 (0~3이면 OK)
             setStep("challenge");
+
             setMessage({
                 type: "success",
                 text: "확인 완료. 가입 시 설정한 질문에 답변해 주세요.",
+            });
+        } catch {
+            setMessage({
+                type: "error",
+                text: "서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요.",
             });
         } finally {
             setIsSubmitting(false);
         }
     };
+
 
     const handleSendTempPassword = async (e: React.FormEvent) => {
         e.preventDefault();
         setMessage(null);
 
         if (!canChallenge) return;
+        if (!recoverySessionId) {
+            setMessage({ type: "error", text: "세션 정보가 없어요. 다시 시도해 주세요." });
+            setStep("identify");
+            return;
+        }
 
         try {
             setIsSubmitting(true);
 
-            const users = readUsers();
-            const idx = users.findIndex(
-                (u) => normalize(u.email) === normalize(identifiedEmail)
-            );
-
-            if (idx < 0) {
-                setMessage({
-                    type: "error",
-                    text: "계정을 찾을 수 없어요. 다시 시도해 주세요.",
-                });
-                setStep("identify");
-                return;
-            }
-
-            const target = users[idx];
-
-            if (target.birthDate !== formData.birthDate) {
-                setMessage({
-                    type: "error",
-                    text: "정보가 변경되었어요. 다시 시도해 주세요.",
-                });
-                setStep("identify");
-                return;
-            }
-
-            const storedQIndex = resolveQuestionIndex(target.recoveryQA);
-            if (storedQIndex === null || storedQIndex !== questionIndex) {
-                setMessage({
-                    type: "error",
-                    text: "질문 정보가 일치하지 않아요. 다시 시도해 주세요.",
-                });
-                setStep("identify");
-                return;
-            }
-
-            if (normalize(target.recoveryQA?.answer ?? "") !== normalize(formData.answer)) {
-                setMessage({ type: "error", text: "질문 답변이 일치하지 않아요." });
-                return;
-            }
-
-            //  임시 비밀번호 생성 (6자리, 영어+숫자)
-            const tempPassword = generateTempPassword(6);
-
-            //  (데모/로컬) 임시 비밀번호로 교체
-            // 실제 서비스에서는 서버에서 비밀번호를 재설정하고 이메일 발송까지 처리
-            users[idx] = {
-                ...target,
-                password: tempPassword,
+            const payload = {
+                recoverySessionId,
+                answer: formData.answer.trim(),
             };
-            writeUsers(users);
 
-            //  실제 이메일 전송은 백엔드에서 처리
-            // 프론트에서는 성공 메시지만 보여주고, DEV 모드에서만 임시 비밀번호를 노출(테스트 편의).
-            const devHint = import.meta.env.DEV
-                ? ` (DEV: 임시 비밀번호: ${tempPassword})`
-                : "";
-
-            setMessage({
-                type: "success",
-                text: `임시 비밀번호가 이메일로 전송되었습니다. 메일을 확인해 주세요.${devHint}`,
+            const res = await fetch("/api/users/reset_password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
             });
 
+            const json = await res.json().catch(() => null);
+
+            if (!res.ok || json?.status === "error") {
+                // 정의서: 401 / 410 / 429
+                const msg =
+                    json?.message ??
+                    (res.status === 401
+                        ? "답변이 일치하지 않습니다."
+                        : res.status === 410
+                            ? "요청이 만료되었습니다. 다시 시도해 주세요."
+                            : res.status === 429
+                                ? "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."
+                                : "요청에 실패했습니다. 다시 시도해 주세요.");
+                setMessage({ type: "error", text: msg });
+
+                // 만료면 identify로 되돌리는게 UX 좋음
+                if (res.status === 410) {
+                    setStep("identify");
+                    setRecoverySessionId("");
+                    setQuestionIndex(null);
+                    setFormData((prev) => ({ ...prev, answer: "" }));
+                }
+                return;
+            }
+
+            // 성공: { data: { message } }
+            const serverMsg =
+                json?.data?.message ??
+                "임시 비밀번호가 발급되었습니다. 이메일을 확인해 주세요.";
+
+            setMessage({ type: "success", text: serverMsg });
+
+            // 원하면 성공 후 로그인 페이지 이동
             // setTimeout(() => onNavigateToLogin(), 400);
+        } catch {
+            setMessage({
+                type: "error",
+                text: "서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요.",
+            });
         } finally {
             setIsSubmitting(false);
         }
     };
+
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -392,6 +311,7 @@ export function ResetPasswordPage({ onNavigateToLogin }: ResetPasswordPageProps)
                                         setStep("identify");
                                         setIdentifiedEmail("");
                                         setQuestionIndex(null);
+                                        setRecoverySessionId("");
                                         setFormData({
                                             name : formData.name,
                                             email: formData.email,

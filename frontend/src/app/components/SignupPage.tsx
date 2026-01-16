@@ -32,60 +32,6 @@ const SECURITY_QUESTIONS = [
     "가장 좋아하는 음식은?",
 ] as const;
 
-// ==============================
-//  로컬 "DB"(localStorage) 유틸
-// ==============================
-type LocalUser = {
-    email: string;
-    password: string;
-    nickName: string;
-    birthDate: string;
-    name: string;
-    createdAt: string;
-    consents: {
-        privacyRequired: boolean;
-        marketingOptional: boolean;
-    };
-    recoveryQA: {
-        questionIndex?: number; // 0~3 (신규)
-        question?: string; // legacy 호환용(과거 키 저장)
-        answer: string;
-    };
-};
-
-const LS_USERS_KEY = "bidassistance_users_v1";
-
-function readUsers(): LocalUser[] {
-    try {
-        const raw = localStorage.getItem(LS_USERS_KEY);
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? (parsed as LocalUser[]) : [];
-    } catch {
-        return [];
-    }
-}
-
-function writeUsers(users: LocalUser[]) {
-    localStorage.setItem(LS_USERS_KEY, JSON.stringify(users));
-}
-
-function findUserByEmail(email: string): LocalUser | undefined {
-    const users = readUsers();
-    const normalized = email.trim().toLowerCase();
-    return users.find((u) => u.email.trim().toLowerCase() === normalized);
-}
-
-function upsertUser(user: LocalUser) {
-    const users = readUsers();
-    const normalized = user.email.trim().toLowerCase();
-    const idx = users.findIndex(
-        (u) => u.email.trim().toLowerCase() === normalized
-    );
-    if (idx >= 0) users[idx] = user;
-    else users.push(user);
-    writeUsers(users);
-}
 
 export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
     const [formData, setFormData] = useState({
@@ -166,49 +112,60 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
                 return;
             }
 
+
             const questionIndex = Number(formData.recoveryQuestion);
-            if (
-                !Number.isInteger(questionIndex) ||
-                questionIndex < 0 ||
-                questionIndex > 3
-            ) {
+            if (!Number.isInteger(questionIndex) || questionIndex < 0 || questionIndex > 3) {
                 setError("계정 찾기 질문을 다시 선택해 주세요.");
                 return;
             }
 
-            const existing = findUserByEmail(formData.email);
-            if (existing) {
-                setError("이미 가입된 이메일이에요. 로그인해 주세요.");
+// API 정의서 필드명에 맞춤
+            const payload = {
+                email: formData.email.trim(),
+                password: formData.password,
+                name: formData.name.trim(),
+                nickname: formData.nickName.trim(), // nickName -> nickname
+                role: 0, //  기본: 일반 유저 (00을 int로 쓰면 보통 0)
+                question: questionIndex, //  int
+                answer: formData.recoveryAnswer.trim(),
+                birth: formData.birthDate, //  birthDate -> birth (YYYY-MM-DD)
+                tag: 0, // 기본 태그 (규칙 확정되면 바꿔)
+            };
+
+            try {
+                const res = await fetch("/api/users", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+
+                const json = await res.json().catch(() => null);
+
+                if (!res.ok) {
+                    // 정의서: 401, 500
+                    const msg =
+                        json?.message ??
+                        (res.status === 401
+                            ? "이메일 또는 비밀번호가 올바르지 않습니다."
+                            : res.status === 500
+                                ? "서버 내부 오류가 발생했습니다. 관리자에게 문의하세요."
+                                : "가입에 실패했어요. 입력값을 확인해 주세요.");
+                    setError(msg);
+                    return;
+                }
+
+                // 성공: code 200 { data: { userId, email, nickname } }
+                setSuccess("가입이 완료됐어요! 로그인 페이지로 이동합니다.");
+
+                // 필요 시 상위로 전달
+                // onSignup(json?.data?.email ?? payload.email);
+
+                setTimeout(() => onNavigateToLogin(), 300);
+            } catch {
+                setError("서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요.");
                 return;
             }
 
-            const newUser: LocalUser = {
-                email: formData.email.trim(),
-                password: formData.password,
-                nickName: formData.nickName.trim(),
-                birthDate: formData.birthDate,
-                name: formData.name.trim(),
-                createdAt: new Date().toISOString(),
-                consents: {
-                    privacyRequired: consents.privacyRequired,
-                    marketingOptional: consents.marketingOptional,
-                },
-                recoveryQA: {
-                    questionIndex,
-                    answer: formData.recoveryAnswer.trim(),
-                },
-            };
-
-            upsertUser(newUser);
-
-            setSuccess("가입이 완료됐어요! 로그인 페이지로 이동합니다.");
-
-            // 필요 시 활용(현재 UI 흐름은 로그인 페이지로 이동)
-            // onSignup(newUser.email);
-
-            setTimeout(() => {
-                onNavigateToLogin();
-            }, 300);
         } finally {
             setIsSubmitting(false);
         }

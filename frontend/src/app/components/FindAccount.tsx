@@ -21,56 +21,6 @@ const LEGACY_KEY_TO_INDEX: Record<string, number> = {
     favorite_food: 3,
 };
 
-type LocalUser = {
-    email: string;
-    name: string;
-    birthDate: string;
-    recoveryQA: {
-        questionIndex?: number;
-        question?: string; // legacy
-        answer: string;
-    };
-};
-
-const LS_USERS_KEY = "bidassistance_users_v1";
-
-function readUsers(): LocalUser[] {
-    try {
-        const raw = localStorage.getItem(LS_USERS_KEY);
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? (parsed as LocalUser[]) : [];
-    } catch {
-        return [];
-    }
-}
-
-function normalize(s: string) {
-    return s.trim().toLowerCase();
-}
-
-function resolveQuestionIndex(recoveryQA: {
-    questionIndex?: number;
-    question?: string;
-}): number | null {
-    const idx = recoveryQA?.questionIndex;
-
-    if (
-        typeof idx === "number" &&
-        Number.isInteger(idx) &&
-        idx >= 0 &&
-        idx < SECURITY_QUESTIONS.length
-    ) {
-        return idx;
-    }
-
-    const legacy = (recoveryQA?.question ?? "").trim();
-    if (legacy && Object.prototype.hasOwnProperty.call(LEGACY_KEY_TO_INDEX, legacy)) {
-        return LEGACY_KEY_TO_INDEX[legacy as keyof typeof LEGACY_KEY_TO_INDEX];
-    }
-
-    return null;
-}
 
 interface FindAccountPageProps {
     onFindAccount: (payload: {
@@ -92,84 +42,78 @@ export function FindAccountPage({ onFindAccount, onNavigateToLogin }: FindAccoun
     const [step, setStep] = useState<"identify" | "answer" | "result">("identify");
     const [questionIndex, setQuestionIndex] = useState<number | null>(null);
     const [identifiedEmail, setIdentifiedEmail] = useState<string>(""); // 결과로 보여줄 계정(이메일)
-    const [targetEmail, setTargetEmail] = useState<string>("");
+    // const [targetEmail, setTargetEmail] = useState<string>("");
+    const [requestId, setRequestId] = useState<string>("");
 
-    // const handleSubmit = (e: React.FormEvent) => {
-    //     e.preventDefault();
-    //     if (!formData.name || !formData.birthDate || !formData.questionIndex || !formData.answer) return;
-    //
-    //     onFindAccount({
-    //         name: formData.name,
-    //         birthDate: formData.birthDate,
-    //         questionIndex: formData.questionIndex,
-    //         answer: formData.answer,
-    //     });
-    // };
-    const handleIdentify = (e: React.FormEvent) => {
+    const handleIdentify = async (e: React.FormEvent) => {
         e.preventDefault();
 
         const name = formData.name.trim();
-        const birthDate = formData.birthDate;
+        const birth = formData.birthDate; // YYYY-MM-DD
 
-        if (!name || !birthDate) return;
+        if (!name || !birth) return;
 
-        const users = readUsers();
+        try {
+            const qs = new URLSearchParams({ name, birth }).toString();
 
-        // 이름+생년월일로 후보 찾기 (운영이면 추가 식별자 더 받는 걸 추천)
-        const target = users.find(
-            (u) => normalize(u.name) === normalize(name) && u.birthDate === birthDate
-        );
+            const res = await fetch(`/api/users/find_email/identify?${qs}`, {
+                method: "GET",
+            });
 
-        if (!target) {
-            // 여기서는 간단히 alert 대신 상태 메시지 UI로 바꾸면 더 좋음
-            alert("일치하는 계정을 찾을 수 없어요.");
-            return;
+            const json = await res.json().catch(() => null);
+
+            if (!res.ok || json?.status === "error") {
+                alert(json?.message ?? "해당 계정이 없습니다.");
+                return;
+            }
+
+            const rid = json?.data?.requestId;
+            const qIndex = json?.data?.questionIndex;
+
+            if (typeof rid !== "string" || typeof qIndex !== "number") {
+                alert("서버 응답 형식이 올바르지 않아요.");
+                return;
+            }
+
+            setRequestId(rid);
+            setQuestionIndex(qIndex);
+            setStep("answer");
+        } catch {
+            alert("서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요.");
         }
-
-        const qIndex = resolveQuestionIndex(target.recoveryQA);
-        if (qIndex === null) {
-            alert("계정에 복구 질문이 설정되어 있지 않아요.");
-            return;
-        }
-
-        setTargetEmail(target.email);
-        setQuestionIndex(qIndex);
-        setStep("answer");
     };
 
-    const handleVerifyAnswer = (e: React.FormEvent) => {
+    const handleVerifyAnswer = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (questionIndex === null) return;
-
         const answer = formData.answer.trim();
-        if (!answer) return;
+        if (!requestId || !answer) return;
 
-        const users = readUsers();
-        const target = users.find((u) => normalize(u.email) === normalize(targetEmail));
+        try {
+            const qs = new URLSearchParams({ requestId, answer }).toString();
 
-        if (!target) {
-            alert("계정을 찾을 수 없어요. 다시 시도해 주세요.");
-            setStep("identify");
-            return;
+            const res = await fetch(`/api/users/find_email/verify?${qs}`, {
+                method: "GET",
+            });
+
+            const json = await res.json().catch(() => null);
+
+            if (!res.ok || json?.status === "error") {
+                alert(json?.message ?? "답변이 일치하지 않습니다.");
+                return;
+            }
+
+            const email = json?.data?.email;
+            if (typeof email !== "string") {
+                alert("서버 응답 형식이 올바르지 않아요.");
+                return;
+            }
+
+            setIdentifiedEmail(email);
+            setStep("result");
+        } catch {
+            alert("서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요.");
         }
-
-        // 질문 인덱스가 바뀌었는지(데이터 꼬임 방지)
-        const storedQIndex = resolveQuestionIndex(target.recoveryQA);
-        if (storedQIndex === null || storedQIndex !== questionIndex) {
-            alert("질문 정보가 일치하지 않아요. 다시 시도해 주세요.");
-            setStep("identify");
-            return;
-        }
-
-        // 답변 비교 (운영이면 해시 비교해야 함)
-        if (normalize(target.recoveryQA.answer) !== normalize(answer)) {
-            alert("답변이 일치하지 않아요.");
-            return;
-        }
-
-        setIdentifiedEmail(target.email);
-        setStep("result");
     };
 
     return (
@@ -242,7 +186,7 @@ export function FindAccountPage({ onFindAccount, onNavigateToLogin }: FindAccoun
                                     onClick={() => {
                                         setStep("identify");
                                         setQuestionIndex(null);
-                                        setTargetEmail("");
+                                        setRequestId("");
                                         setIdentifiedEmail("");
                                         setFormData({ ...formData, answer: "" });
                                     }}
@@ -274,7 +218,7 @@ export function FindAccountPage({ onFindAccount, onNavigateToLogin }: FindAccoun
                                     onClick={() => {
                                         setStep("identify");
                                         setQuestionIndex(null);
-                                        setTargetEmail("");
+                                        setRequestId("");
                                         setIdentifiedEmail("");
                                         setFormData({ name: "", birthDate: "", answer: "" });
                                     }}
