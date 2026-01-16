@@ -1,199 +1,232 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { ShoppingCart, Trash2, FileText, Calendar, DollarSign, Building } from "lucide-react";
-import { Separator } from "./ui/separator";
+import {
+  ShoppingCart,
+  Trash2,
+  Calendar,
+  DollarSign,
+} from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { useState } from "react";
 import type { Page } from "../../types/navigation";
 
-// interface CartPageProps {
-//   cartItems: number[];
-//   onRemoveFromCart: (bidId: number) => void;
-//   onNavigate: (page: string, bidId?: number) => void;
-// }
+/* =====================
+   Types
+===================== */
+
+export type BidStage =
+  | "INTEREST"
+  | "REVIEW"
+  | "DECIDED"
+  | "DOC_PREP"
+  | "SUBMITTED"
+  | "WON"
+  | "LOST";
+
 export type Bid = {
-    id: number;
-    title: string;
-    agency: string;
-    region: string;
-    budget: string;
-    budgetValue: number;
-    deadline: string;
-    type: string;
-    status: string;
-    announcementDate: string;
+  id: number;
+  title: string;
+  agency: string;
+  budget: string;
+  budgetValue: number;
+  deadline: string;
+  stage: BidStage;
 };
 
 interface CartPageProps {
-    cartItems: number[];
-    onRemoveFromCart: (bidId: number) => void;
-    onNavigate: (page: Page, bidId?: number) => void;
-    bids : Bid[];
+  cartItems: number[];
+  bids: Bid[];
+  onRemoveFromCart: (bidId: number) => void;
+  onNavigate: (page: Page, bidId?: number) => void;
 }
 
-export function CartPage({ cartItems, onRemoveFromCart, onNavigate, bids }: CartPageProps) {
+/* =====================
+   Constants
+===================== */
 
-    // // Mock data - in real app, would fetch based on cartItems IDs
-  // const allBids = [
-  //   {
-  //     id: 1,
-  //     title: "서울시 강남구 도로 보수공사",
-  //     agency: "서울특별시 강남구청",
-  //     region: "서울",
-  //     budget: "35억 원",
-  //     budgetValue: 35,
-  //     deadline: "2026-01-08",
-  //     type: "공사",
-  //     status: "진행중",
-  //   },
-  //   {
-  //     id: 2,
-  //     title: "경기도 성남시 공공건물 신축공사",
-  //     agency: "경기도 성남시청",
-  //     region: "경기",
-  //     budget: "87억 원",
-  //     budgetValue: 87,
-  //     deadline: "2026-01-15",
-  //     type: "공사",
-  //     status: "진행중",
-  //   },
-  //   {
-  //     id: 3,
-  //     title: "인천광역시 연수구 학교시설 개선공사",
-  //     agency: "인천광역시 교육청",
-  //     region: "인천",
-  //     budget: "12억 원",
-  //     budgetValue: 12,
-  //     deadline: "2026-01-10",
-  //     type: "공사",
-  //     status: "진행중",
-  //   },
-  // ];
+const STAGES: { key: BidStage; label: string }[] = [
+  { key: "INTEREST", label: "관심" },
+  { key: "REVIEW", label: "검토중" },
+  { key: "DECIDED", label: "참여결정" },
+  { key: "DOC_PREP", label: "서류준비" },
+  { key: "SUBMITTED", label: "제출완료" },
+  { key: "WON", label: "낙찰" },
+  { key: "LOST", label: "탈락" },
+];
 
-  const savedBids = bids.filter(bid => cartItems.includes(bid.id));
-  const totalBudget = savedBids.reduce((sum, bid) => sum + bid.budgetValue, 0);
+/* =====================
+   Component
+===================== */
 
-  const getDaysUntilDeadline = (deadline: string) => {
-    const today = new Date();
-    const deadlineDate = new Date(deadline);
-    const diffTime = deadlineDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+export function CartPage({
+  cartItems,
+  bids,
+  onRemoveFromCart,
+  onNavigate,
+}: CartPageProps) {
+  const [sortBy, setSortBy] = useState<"BUDGET" | "DEADLINE">("DEADLINE");
+
+  const savedBids = bids.filter((b) => cartItems.includes(b.id));
+
+  /* 상태 변경 (임시) */
+  const updateStage = (bidId: number, stage: BidStage) => {
+    const bid = bids.find((b) => b.id === bidId);
+    if (bid) bid.stage = stage;
   };
+
+  /* 정렬 적용 */
+  const sortedBids = [...savedBids].sort((a, b) => {
+    if (sortBy === "BUDGET") {
+      return b.budgetValue - a.budgetValue;
+    }
+    return (
+      new Date(a.deadline).getTime() -
+      new Date(b.deadline).getTime()
+    );
+  });
+
+  /* 상태별 개수 */
+  const stageCount = STAGES.reduce((acc, s) => {
+    acc[s.key] = savedBids.filter((b) => b.stage === s.key).length;
+    return acc;
+  }, {} as Record<BidStage, number>);
+
+  if (savedBids.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-16 flex flex-col items-center">
+          <ShoppingCart className="h-14 w-14 text-muted-foreground mb-4" />
+          <p className="mb-4">장바구니가 비어있습니다</p>
+          <Button onClick={() => onNavigate("bids")}>
+            공고 찾아보기
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      {/* ===== Title ===== */}
       <div>
-        <h2 className="text-3xl mb-2">관심 공고 장바구니</h2>
-        <p className="text-muted-foreground">저장한 입찰 공고를 관리하세요</p>
+        <h2 className="text-3xl mb-1">장바구니</h2>
+        <p className="text-muted-foreground">
+          장바구니에 담은 공고를 관리하세요
+        </p>
       </div>
 
-      {savedBids.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <ShoppingCart className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">장바구니가 비어있습니다</h3>
-            <p className="text-muted-foreground mb-6">관심있는 공고를 담아보세요</p>
-            <Button onClick={() => onNavigate("bids")}>새로운 공고를 찾아보세요</Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          {/* Summary Card */}
-          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50">
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">저장된 공고</p>
-                  <p className="text-3xl font-bold">{savedBids.length}건</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">총 예산 규모</p>
-                  <p className="text-3xl font-bold">{totalBudget}억 원</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">긴급 마감</p>
-                  <p className="text-3xl font-bold text-red-600">
-                    {savedBids.filter(bid => getDaysUntilDeadline(bid.deadline) <= 3).length}건
-                  </p>
+      {/* ===== 진행 단계 요약 (위로 이동) ===== */}
+      <Card>
+        <CardContent className="py-4">
+          <div className="grid grid-cols-2 md:grid-cols-7 gap-4 text-center">
+            {STAGES.map((s) => (
+              <div key={s.key}>
+                <p className="text-sm text-muted-foreground">
+                  {s.label}
+                </p>
+                <p className="text-xl font-bold">
+                  {stageCount[s.key]}건
+                </p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ===== 장바구니 공고 목록 ===== */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>장바구니 공고 목록</CardTitle>
+
+          {/* 정렬 Select */}
+          <Select
+            value={sortBy}
+            onValueChange={(v) =>
+              setSortBy(v as "BUDGET" | "DEADLINE")
+            }
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="정렬" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="DEADLINE">
+                마감일순
+              </SelectItem>
+              <SelectItem value="BUDGET">
+                금액순
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </CardHeader>
+
+        <CardContent className="space-y-3">
+          {sortedBids.map((bid) => (
+            <div
+              key={bid.id}
+              className="flex items-center justify-between border rounded-md p-3"
+            >
+              <div className="space-y-1">
+                <p className="font-semibold">{bid.title}</p>
+                <div className="text-sm text-muted-foreground flex gap-4">
+                  <span className="flex items-center gap-1">
+                    <DollarSign className="h-3 w-3" />
+                    {bid.budget}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    {bid.deadline}
+                  </span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Saved Bids List */}
-          <div className="space-y-4">
-            {savedBids.map((bid) => {
-              const daysLeft = getDaysUntilDeadline(bid.deadline);
-              const isUrgent = daysLeft <= 3;
+              <div className="flex items-center gap-3">
+                {/* 상태 변경 */}
+                <Select
+                  value={bid.stage}
+                  onValueChange={(v) =>
+                    updateStage(bid.id, v as BidStage)
+                  }
+                >
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STAGES.map((s) => (
+                      <SelectItem key={s.key} value={s.key}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-              return (
-                <Card key={bid.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge>{bid.type}</Badge>
-                          {isUrgent && <Badge variant="destructive">마감임박</Badge>}
-                          <Badge variant="outline">{bid.status}</Badge>
-                        </div>
-                        <CardTitle className="text-xl mb-2">{bid.title}</CardTitle>
-                        <CardDescription>
-                          <div className="flex items-center gap-4 flex-wrap">
-                            <span className="flex items-center gap-1">
-                              <Building className="h-4 w-4" />
-                              {bid.agency}
-                            </span>
-                            <span>{bid.region}</span>
-                          </div>
-                        </CardDescription>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onRemoveFromCart(bid.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div className="flex gap-6 text-sm">
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-semibold">{bid.budget}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span>마감: {bid.deadline}</span>
-                          <span className={isUrgent ? "text-red-600 font-semibold" : "text-muted-foreground"}>
-                            (D-{daysLeft})
-                          </span>
-                        </div>
-                      </div>
-                      <Button size="sm" onClick={() => onNavigate("summary", bid.id)}>
-                        <FileText className="h-4 w-4 mr-1" />
-                        상세보기
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-
-          <Separator />
-
-          <div className="flex justify-between items-center">
-            <Button variant="outline" onClick={() => onNavigate("bids")}>
-              공고 더 찾아보기
-            </Button>
-            <div className="text-sm text-muted-foreground">
-              총 {savedBids.length}개 공고 · {totalBudget}억 원
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onRemoveFromCart(bid.id)}
+                >
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                </Button>
+              </div>
             </div>
-          </div>
-        </>
-      )}
+          ))}
+        </CardContent>
+      </Card>
+
+      <Button variant="outline" onClick={() => onNavigate("bids")}>
+        공고 더 찾아보기
+      </Button>
     </div>
   );
 }
