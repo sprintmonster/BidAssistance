@@ -48,9 +48,6 @@ export interface NoticeItem {
 
 const STORAGE_KEY = "notices.v1";
 
-/**
- * 프로토타입 기본 데이터(초기 시드).
- */
 const DEFAULT_NOTICES: NoticeItem[] = [
 	{
 		id: 1,
@@ -228,13 +225,9 @@ export function NoticePage({
 		const name = linkName.trim();
 		const url = linkUrl.trim();
 
-		if (!name || !url) {
-			toast.info("링크 이름과 URL을 입력해 주세요.");
-			return;
-		}
+		if (!name || !url) return toast.info("링크 이름과 URL을 입력해 주세요.");
 		if (!/^https?:\/\//i.test(url)) {
-			toast.error("링크 URL은 http:// 또는 https://로 시작해야 합니다.");
-			return;
+			return toast.error("링크 URL은 http:// 또는 https://로 시작해야 합니다.");
 		}
 
 		setFormAttachments((prev) => [
@@ -285,10 +278,7 @@ export function NoticePage({
 	};
 
 	const createNotice = () => {
-		if (!canWrite) {
-			toast.error("운영자만 공지를 작성할 수 있습니다.");
-			return;
-		}
+		if (!canWrite) return toast.error("운영자만 공지를 작성할 수 있습니다.");
 
 		const title = formTitle.trim();
 		const author = formAuthor.trim();
@@ -321,16 +311,18 @@ export function NoticePage({
 	};
 
 	const deleteNotice = (id: number) => {
-		if (!canWrite) {
-			toast.error("운영자만 삭제할 수 있습니다.");
-			return;
-		}
+		if (!canWrite) return toast.error("운영자만 삭제할 수 있습니다.");
 		const ok = window.confirm("이 공지사항을 삭제할까요?");
 		if (!ok) return;
 
 		setNotices((prev) => prev.filter((n) => n.id !== id));
 		setSelectedId((prev) => (prev === id ? null : prev));
 		toast.success("삭제되었습니다.");
+	};
+
+	const onSearchSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		// 로컬 필터링이라 추가 동작 없음 (추후 서버 검색이면 여기서 fetch)
 	};
 
 	const AttachmentIcon = ({ kind }: { kind: AttachmentKind }) => {
@@ -400,41 +392,11 @@ export function NoticePage({
 
 	return (
 		<div className="space-y-4">
-			{/* ===== Header ===== */}
-			<Card className="border bg-white">
-				<CardHeader className="space-y-1">
-					<div className="flex items-start justify-between gap-4">
-						<div>
-							<div className="flex items-center gap-2">
-								<Megaphone className="h-5 w-5 text-slate-900" />
-								<CardTitle className="text-xl">공지사항</CardTitle>
-							</div>
-							<CardDescription>
-								서비스 업데이트, 점검, 정책 변경 소식을 확인하세요.
-							</CardDescription>
-						</div>
-
-						{/* ✅ 운영자만 버튼이 보이고, 비운영자는 오른쪽 영역 자체가 없어 깔끔 */}
-						{canWrite ? (
-							<Button className="gap-2" onClick={openCompose}>
-								<Plus className="h-4 w-4" />
-								공지 작성
-							</Button>
-						) : null}
-					</div>
-				</CardHeader>
-			</Card>
-
-			{/* ===== Detail View (목록/필터 접기 + breadcrumb) ===== */}
+			{/* ===== Detail View ===== */}
 			{selected ? (
 				<div className="space-y-3">
-					{/* Breadcrumb */}
 					<div className="flex items-center gap-2 text-sm text-muted-foreground">
-						<button
-							type="button"
-							onClick={goList}
-							className="hover:text-slate-900 transition"
-						>
+						<button type="button" onClick={goList} className="hover:text-slate-900 transition">
 							공지사항
 						</button>
 						<ChevronRight className="h-4 w-4" />
@@ -500,9 +462,67 @@ export function NoticePage({
 					</Card>
 				</div>
 			) : (
-				/* ===== List View (필터 상단 고정) ===== */
 				<>
-					{/* 작성 폼: 목록 화면에서만, 운영자만 */}
+					{/* ===== Header + Search/Filter : 한 박스에 합침 ===== */}
+					<Card className="border bg-white">
+						<CardHeader className="space-y-1">
+							<div className="flex items-start justify-between gap-4">
+								<div>
+									<div className="flex items-center gap-2">
+										<Megaphone className="h-5 w-5 text-slate-900" />
+										<CardTitle className="text-xl">공지사항</CardTitle>
+									</div>
+									<CardDescription>
+										서비스 업데이트, 점검, 정책 변경 소식을 확인하세요.
+									</CardDescription>
+								</div>
+
+								{canWrite ? (
+									<Button className="gap-2" onClick={openCompose}>
+										<Plus className="h-4 w-4" />
+										공지 작성
+									</Button>
+								) : null}
+							</div>
+						</CardHeader>
+
+						<CardContent className="space-y-4 pt-0">
+							{/* ✅ “검색” 라벨 제거 + 검색 버튼 추가 */}
+							<form onSubmit={onSearchSubmit} className="space-y-3">
+								<div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+									<div className="relative flex-1">
+										<Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+										<Input
+											placeholder="예: 점검, 업데이트, 정책, 관리자"
+											value={query}
+											onChange={(e) => setQuery(e.target.value)}
+											className="pl-9"
+										/>
+									</div>
+
+									<Button type="submit" className="sm:w-auto w-full">
+										검색
+									</Button>
+								</div>
+
+								<div className="flex flex-wrap gap-2">
+									{categories.map((c) => (
+										<Button
+											key={c}
+											size="sm"
+											variant={category === c ? "default" : "outline"}
+											onClick={() => setCategory(c)}
+											type="button"
+										>
+											{c}
+										</Button>
+									))}
+								</div>
+							</form>
+						</CardContent>
+					</Card>
+
+					{/* 작성 폼: 운영자만 */}
 					{composeOpen && canWrite && (
 						<Card>
 							<CardHeader>
@@ -531,10 +551,7 @@ export function NoticePage({
 									</div>
 									<div className="space-y-2">
 										<Label>날짜 (YYYY-MM-DD)</Label>
-										<Input
-											value={formDate}
-											onChange={(e) => setFormDate(e.target.value)}
-										/>
+										<Input value={formDate} onChange={(e) => setFormDate(e.target.value)} />
 									</div>
 									<div className="space-y-2">
 										<Label>카테고리</Label>
@@ -545,6 +562,7 @@ export function NoticePage({
 													size="sm"
 													variant={formCategory === c ? "default" : "outline"}
 													onClick={() => setFormCategory(c)}
+													type="button"
 												>
 													{c}
 												</Button>
@@ -603,9 +621,7 @@ export function NoticePage({
 														<div className="flex items-center gap-2 min-w-0">
 															<AttachmentIcon kind={a.kind} />
 															<div className="min-w-0">
-																<div className="text-sm font-medium truncate">
-																	{a.name}
-																</div>
+																<div className="text-sm font-medium truncate">{a.name}</div>
 																<div className="text-xs text-muted-foreground">
 																	{a.kind.toUpperCase()}
 																	{typeof a.size === "number"
@@ -614,11 +630,7 @@ export function NoticePage({
 																</div>
 															</div>
 														</div>
-														<Button
-															variant="ghost"
-															size="sm"
-															onClick={() => removeAttachment(a.id)}
-														>
+														<Button variant="ghost" size="sm" onClick={() => removeAttachment(a.id)}>
 															<Trash2 className="h-4 w-4" />
 														</Button>
 													</div>
@@ -631,67 +643,25 @@ export function NoticePage({
 								<div className="space-y-2">
 									<Label>외부 링크 첨부(선택)</Label>
 									<div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-										<Input
-											value={linkName}
-											onChange={(e) => setLinkName(e.target.value)}
-											placeholder="링크 이름"
-										/>
-										<Input
-											value={linkUrl}
-											onChange={(e) => setLinkUrl(e.target.value)}
-											placeholder="https://..."
-										/>
-										<Button variant="outline" onClick={addLinkAttachment}>
+										<Input value={linkName} onChange={(e) => setLinkName(e.target.value)} placeholder="링크 이름" />
+										<Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." />
+										<Button variant="outline" onClick={addLinkAttachment} type="button">
 											링크 추가
 										</Button>
 									</div>
 								</div>
 
 								<div className="flex gap-2 justify-end pt-2">
-									<Button variant="outline" onClick={() => setComposeOpen(false)}>
+									<Button variant="outline" onClick={() => setComposeOpen(false)} type="button">
 										취소
 									</Button>
-									<Button onClick={createNotice}>등록</Button>
+									<Button onClick={createNotice} type="button">
+										등록
+									</Button>
 								</div>
 							</CardContent>
 						</Card>
 					)}
-
-					{/* ✅ 검색/필터: 목록 화면에서 "상단"으로 고정 */}
-					<Card>
-						<CardHeader className="pb-3">
-							<CardTitle className="text-base">검색 및 필터</CardTitle>
-							<CardDescription>제목/내용/작성자로 검색할 수 있습니다.</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-4">
-							<div className="space-y-2">
-								<Label htmlFor="notice-search">검색</Label>
-								<div className="relative">
-									<Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-									<Input
-										id="notice-search"
-										placeholder="예: 점검, 업데이트, 정책, 관리자"
-										value={query}
-										onChange={(e) => setQuery(e.target.value)}
-										className="pl-9"
-									/>
-								</div>
-							</div>
-
-							<div className="flex flex-wrap gap-2">
-								{categories.map((c) => (
-									<Button
-										key={c}
-										size="sm"
-										variant={category === c ? "default" : "outline"}
-										onClick={() => setCategory(c)}
-									>
-										{c}
-									</Button>
-								))}
-							</div>
-						</CardContent>
-					</Card>
 
 					{/* 목록 */}
 					<div className="space-y-3">
@@ -717,9 +687,7 @@ export function NoticePage({
 													<span className="text-xs text-muted-foreground">·</span>
 													<span className="text-xs text-muted-foreground">{n.author}</span>
 													{attachCount > 0 && (
-														<span className="text-xs text-muted-foreground">
-															· 첨부 {attachCount}개
-														</span>
+														<span className="text-xs text-muted-foreground">· 첨부 {attachCount}개</span>
 													)}
 												</div>
 
