@@ -221,7 +221,7 @@ export function AppLayout() {
 					</aside>
 
 					<main className="flex-1 min-w-0 min-h-0 bg-slate-50">
-						<div className="h-full min-h-0 p-6">
+						<div className="h-full min-h-0 pl-0 pr-6 py-6">
 							<Outlet />
 						</div>
 					</main>
