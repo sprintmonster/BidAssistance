@@ -222,8 +222,10 @@ export function AppLayout() {
 
 					<main className="flex-1 min-w-0 min-h-0 bg-slate-50">
 						<div className="h-full min-h-0 pl-0 pr-6 py-6">
+              <div className="w-full max-w-[1280px] pl-8">
 							<Outlet />
 						</div>
+          </div>  
 					</main>
 				</div>
 			)}
