@@ -10,7 +10,6 @@ import {
     CardHeader,
     CardTitle,
 } from "./ui/card";
-import { Building2 } from "lucide-react";
 import {
     Select,
     SelectContent,
@@ -22,6 +21,7 @@ import {
 interface SignupPageProps {
     onSignup: (email: string) => void;
     onNavigateToLogin: () => void;
+    onNavigateToHome: () => void;
 }
 
 // ====== 질문(0~3 고정 매핑) ======
@@ -33,7 +33,7 @@ const SECURITY_QUESTIONS = [
 ] as const;
 
 
-export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
+export function SignupPage({ onSignup, onNavigateToLogin, onNavigateToHome, }: SignupPageProps) {
     const [formData, setFormData] = useState({
         email: "",
         password: "",
@@ -172,14 +172,16 @@ export function SignupPage({ onSignup, onNavigateToLogin }: SignupPageProps) {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
             <Card className="w-full max-w-md">
                 <CardHeader className="space-y-1">
                     <div className="flex items-center justify-center mb-4">
                         <img
                             src="/logo_mini.png"
                             alt="입찰인사이트 로고(축소판)"
-                            className="h-20 w-auto block object-contain"
+                            className="h-20 w-auto block object-contain cursor-pointer hover:opacity-80 hover:scale-105 transition-all duration-200"
+                            onClick={onNavigateToHome}
+                            title="홈페이지 이동하기"  // 툴팁 추가
                         />
                     </div>
                     <CardTitle className="text-2xl text-center">회원가입</CardTitle>

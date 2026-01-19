@@ -3,7 +3,6 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./ui/card";
-import { Building2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 const SECURITY_QUESTIONS = [
@@ -30,9 +29,10 @@ interface FindAccountPageProps {
         answer: string;
     }) => void | Promise<void>;
     onNavigateToLogin: () => void;
+    onNavigateToHome: () => void;
 }
 
-export function FindAccountPage({ onFindAccount, onNavigateToLogin }: FindAccountPageProps) {
+export function FindAccountPage({ onFindAccount, onNavigateToLogin, onNavigateToHome, }: FindAccountPageProps) {
     const [formData, setFormData] = useState({
         name: "",
         birthDate: "",
@@ -117,14 +117,16 @@ export function FindAccountPage({ onFindAccount, onNavigateToLogin }: FindAccoun
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
             <Card className="w-full max-w-md">
                 <CardHeader className="space-y-1">
                     <div className="flex items-center justify-center mb-4">
                         <img
                             src="/logo_mini.png"
                             alt="입찰인사이트 로고(축소판)"
-                            className="h-20 w-auto block object-contain"
+                            className="h-20 w-auto block object-contain cursor-pointer hover:opacity-80 hover:scale-105 transition-all duration-200"
+                            onClick={onNavigateToHome}
+                            title="홈페이지 이동하기"  // 툴팁 추가
                         />
                     </div>
                     <CardTitle className="text-2xl text-center">계정 찾기</CardTitle>

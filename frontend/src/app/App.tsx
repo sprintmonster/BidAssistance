@@ -29,6 +29,7 @@ function SignupRoute() {
     <SignupPage
       onSignup={() => navigate("/login")}
       onNavigateToLogin={() => navigate("/login")}
+      onNavigateToHome={() => navigate("/")}
     />
   );
 }
@@ -39,13 +40,19 @@ function FindAccountRoute() {
     <FindAccountPage
       onFindAccount={async () => {}}
       onNavigateToLogin={() => navigate("/login")}
+      onNavigateToHome={() => navigate("/")}
     />
   );
 }
 
 function ResetPasswordRoute() {
   const navigate = useNavigate();
-  return <ResetPasswordPage onNavigateToLogin={() => navigate("/login")} />;
+  return (
+    <ResetPasswordPage 
+      onNavigateToLogin={() => navigate("/login")} 
+      onNavigateToHome={() => navigate("/")}
+    />
+  );
 }
 
 export default function App() {
