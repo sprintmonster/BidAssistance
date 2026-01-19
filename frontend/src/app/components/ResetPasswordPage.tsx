@@ -213,9 +213,11 @@ export function ResetPasswordPage({ onNavigateToLogin }: ResetPasswordPageProps)
             <Card className="w-full max-w-md">
                 <CardHeader className="space-y-1">
                     <div className="flex items-center justify-center mb-4">
-                        <div className="bg-blue-600 p-3 rounded-lg">
-                            <Building2 className="w-8 h-8 text-white" />
-                        </div>
+                        <img
+                            src="/logo_mini.png"
+                            alt="입찰인사이트 로고(축소판)"
+                            className="h-20 w-auto block object-contain"
+                        />
                     </div>
                     <CardTitle className="text-2xl text-center">비밀번호 찾기</CardTitle>
                     <CardDescription className="text-center">
