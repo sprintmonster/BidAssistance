@@ -1,11 +1,17 @@
 import { api } from "./client";
 
 export interface Bid {
-  id: number;
-  title: string;
-  agency: string;
-  budget: string;
-  deadline: string;
+    id: number;
+    realId: string;
+    name: string;
+    startDate: string;   // LocalDateTime -> JSON string
+    endDate: string;
+    openDate: string;
+    region: string;
+    organization: string;
+    bidURL: string;
+    bidReportURL: string;
+    estimatePrice : bigint;
 }
 
 export function fetchBids() {
