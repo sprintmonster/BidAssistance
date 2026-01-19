@@ -203,15 +203,20 @@ function TopNavButton({
     <button
       onClick={onClick}
       className={[
-        "relative px-4 h-10 rounded-full text-sm transition",
+        "relative h-11 px-6",
+        "min-w-[120px] whitespace-nowrap",
+        "rounded-md",
+        "border border-slate-200",
+        "text-[16px] font-semibold",
+        "transition",
         active
-          ? "bg-blue-600 text-white"
-          : "bg-white/10 hover:bg-white/15 text-white",
+          ? "bg-slate-400 text-slate-900 border-slate-400"
+          : "bg-white text-slate-900 hover:bg-slate-100",
       ].join(" ")}
     >
       {label}
       {!!badge && badge > 0 && (
-        <span className="absolute -right-1 -top-1 min-w-[18px] h-[18px] px-1 rounded-full bg-white text-slate-900 text-[11px] font-bold flex items-center justify-center">
+        <span className="absolute -right-2 -top-2 min-w-[20px] h-[20px] px-1 rounded-full bg-blue-600 text-white text-[12px] font-bold flex items-center justify-center">
           {badge}
         </span>
       )}
