@@ -55,11 +55,11 @@ export function AppLayout() {
               aria-label="홈으로"
               className="h-16 flex items-center"
             >
-              <span className="h-12 flex items-center px-3 bg-white rounded-md">
+              <span className="h-16 w-auto block object-contain">
                 <img
                   src="/logo.png"
                   alt="입찰인사이트 로고"
-                  className="h-10 w-auto block"
+                  className="h-16 w-auto block object-contain"
                 />
               </span>
             </button>
