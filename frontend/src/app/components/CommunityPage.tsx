@@ -7,7 +7,13 @@ import { NewPostForm } from "./NewPostForm";
 
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Card, CardContent, CardHeader } from "./ui/card";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "./ui/card";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import {
 	Select,
@@ -288,21 +294,19 @@ export function CommunityPage() {
 
 	const onSubmitSearch = (e: React.FormEvent) => {
 		e.preventDefault();
-		// 현재는 로컬 필터링이므로 별도 동작 없음.
-		// 추후 서버 검색 붙이면 여기에서 fetch 트리거하면 됨.
 	};
 
 	return (
 		<div className="space-y-4">
 			{viewMode === "list" && (
-				<Card className="border bg-white">
-					<CardHeader className="pb-3">
+				<Card>
+					<CardHeader className="space-y-1">
 						<div className="flex items-start justify-between gap-4">
 							<div>
-								<div className="text-lg font-semibold text-gray-900">커뮤니티</div>
-								<div className="mt-1 text-sm text-gray-600">
+								<CardTitle className="text-xl">커뮤니티</CardTitle>
+								<CardDescription>
 									입찰 실무 노하우/질문/정보를 빠르게 공유하고 검색하세요.
-								</div>
+								</CardDescription>
 							</div>
 
 							<div className="shrink-0">
@@ -318,7 +322,7 @@ export function CommunityPage() {
 						</div>
 					</CardHeader>
 
-					<CardContent className="pt-0 space-y-3">
+					<CardContent className="space-y-3">
 						<Tabs
 							value={category}
 							onValueChange={(v) => setCategory(v as CategoryFilter)}
@@ -370,7 +374,6 @@ export function CommunityPage() {
 							</div>
 						</Tabs>
 
-						{/* ✅ 검색 버튼 포함: form으로 감싸고 버튼 추가 */}
 						<form
 							onSubmit={onSubmitSearch}
 							className="flex flex-col md:flex-row md:items-center gap-2"

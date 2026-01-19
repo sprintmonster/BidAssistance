@@ -211,7 +211,7 @@ export function BidDiscovery({
 				<CardHeader className="space-y-1">
 					<CardTitle className="text-xl">공고 찾기</CardTitle>
 					<CardDescription>
-						키워드/기관/정렬 기반으로 공고를 빠르게 좁히고, 장바구니에
+						키워드/기관/정렬 기반으로 공고를 빠르게 찾고, 장바구니에
 						담아 관리하세요.
 					</CardDescription>
 				</CardHeader>
@@ -298,12 +298,12 @@ export function BidDiscovery({
 						<Table>
 							<TableHeader>
 								<TableRow>
-									<TableHead className="w-[120px]">마감</TableHead>
+									<TableHead className="w-[120px] pl-6">마감</TableHead>
 									<TableHead>공고명</TableHead>
 									<TableHead className="w-[220px]">발주기관</TableHead>
 									<TableHead className="w-[160px] text-right">예산</TableHead>
 									<TableHead className="w-[140px]">상태</TableHead>
-									<TableHead className="w-[160px] text-right">액션</TableHead>
+									<TableHead className="w-[160px] pr-6 text-right">액션</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>

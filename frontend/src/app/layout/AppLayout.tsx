@@ -231,13 +231,13 @@ export function AppLayout() {
 			)}
 
 			{/* ===== Footer ===== */}
-			<footer className="border-t bg-white py-5 text-sm text-gray-500">
+			<footer className="border-t bg-white py-3 text-sm text-gray-500">
 				<div className="w-full px-5 flex items-center justify-between">
 					<div>© 2026 입찰인사이트. All rights reserved.</div>
-					<div className="flex gap-4">
-						<button className="hover:text-gray-700">이용약관</button>
-						<button className="hover:text-gray-700">개인정보처리방침</button>
-						<button className="hover:text-gray-700">고객지원</button>
+					<div className="flex gap-4 text-xs">
+						<button className="hover:text-gray-500">이용약관</button>
+						<button className="hover:text-gray-500">개인정보처리방침</button>
+						<button className="hover:text-gray-500">고객지원</button>
 					</div>
 				</div>
 			</footer>
@@ -274,7 +274,7 @@ function SideBarContent({
 	return (
 		<div className="h-full w-full flex flex-col">
 			<div className="px-5 py-4">
-				<div className="text-xs font-semibold text-slate-300">메뉴</div>
+				<div className="text-sm font-semibold tracking-wide text-slate-200">MENU</div>
 			</div>
 
 			<nav className="px-4 flex flex-col gap-1">
