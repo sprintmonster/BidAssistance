@@ -301,9 +301,9 @@ export function BidDiscovery({
 									<TableHead className="w-[120px] pl-6">마감</TableHead>
 									<TableHead>공고명</TableHead>
 									<TableHead className="w-[220px]">발주기관</TableHead>
-									<TableHead className="w-[160px] text-right">예산</TableHead>
+									<TableHead className="w-[160px]">예산</TableHead>
 									<TableHead className="w-[140px]">상태</TableHead>
-									<TableHead className="w-[160px] pr-6 text-right">액션</TableHead>
+									<TableHead className="w-[160px]">액션</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
