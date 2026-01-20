@@ -70,6 +70,13 @@ function formatDday(deadline: string) {
 	return `D+${Math.abs(days)}`;
 }
 
+// ✅ 프론트 필터용: 마감(종료) 공고 판단
+function isEnded(deadline: string) {
+	const d = parseDate(deadline);
+	if (!d) return false; // 파싱 불가면 일단 제외하지 않음(안전)
+	return d.getTime() < Date.now();
+}
+
 export function BidDiscovery({
 	setGlobalLoading,
 	showToast,
@@ -90,64 +97,48 @@ export function BidDiscovery({
 	const [page, setPage] = useState<number>(1);
 	const [pageSize, setPageSize] = useState<number>(10);
 	const [selected, setSelected] = useState<Bid | null>(null);
-	// const [addingId, setAddingId] = useState<number | null>(null);
-	// const [addedIds, setAddedIds] = useState<Set<number>>(() => new Set());
-    const [addingId, setAddingId] = useState<string | null>(null);
-    const [addedIds, setAddedIds] = useState<Set<string>>(() => new Set());
+
+	const [addingId, setAddingId] = useState<string | null>(null);
+	const [addedIds, setAddedIds] = useState<Set<string>>(() => new Set());
 
 	useEffect(() => {
 		setKeyword(urlQuery);
 		setPage(1);
 	}, [urlQuery]);
 
-	// const load = async () => {
-	// 	try {
-	// 		setGlobalLoading(true);
-	// 		const list = await fetchBids();
-	// 		setBids(list);
-	// 	} catch {
-	// 		showToast("공고 목록을 불러오지 못했습니다.", "error");
-	// 	} finally {
-	// 		setGlobalLoading(false);
-	// 	}
-	// };
+	const load = async () => {
+		try {
+			setGlobalLoading(true);
 
-    const load = async () => {
-        try {
-            setGlobalLoading(true);
+			const res = await fetchBids();
 
-            const res = await fetchBids();
+			// res 예상 형태:
+			// { status: "success", data: { items: [...] } }
+			const items = Array.isArray(res)
+				? res
+				: Array.isArray((res as any)?.data?.items)
+					? (res as any).data.items
+					: [];
 
-            // res 예상 형태:
-            // { status: "success", data: { items: [...] } }
-            const items = Array.isArray(res)
-                ? res
-                : Array.isArray((res as any)?.data?.items)
-                    ? (res as any).data.items
-                    : [];
+			// 화면용 Bid로 매핑
+			const mapped: Bid[] = items.map((it: any) => ({
+				id: String(it.bidNo ?? ""),
+				title: String(it.title ?? ""),
+				agency: String(it.agency ?? ""),
+				budget: it.baseAmount != null ? String(it.baseAmount) : "",
+				deadline: String(it.bidEnd ?? ""),
+			}));
 
-            // 화면용 Bid로 매핑
-            const mapped: Bid[] = items.map((it: any) => ({
-                // id는 화면에서 key/Set용으로 쓰이니까 고유값 필요
-                // 명세상 bidNo가 고유값이니 그걸 사용(문자열이면 Bid 타입도 맞춰야 함)
-                id: String(it.bidNo ?? ""),
-                title: String(it.title ?? ""),
-                agency: String(it.agency ?? ""),
-                budget: it.baseAmount != null ? String(it.baseAmount) : "",
-                deadline: String(it.bidEnd ?? ""),
-            }));
+			setBids(mapped);
+		} catch {
+			showToast("공고 목록을 불러오지 못했습니다.", "error");
+			setBids([]);
+		} finally {
+			setGlobalLoading(false);
+		}
+	};
 
-            setBids(mapped);
-        } catch {
-            showToast("공고 목록을 불러오지 못했습니다.", "error");
-            setBids([]); // 안전
-        } finally {
-            setGlobalLoading(false);
-        }
-    };
-
-
-    useEffect(() => {
+	useEffect(() => {
 		void load();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
@@ -165,6 +156,8 @@ export function BidDiscovery({
 		const q = keyword.trim().toLowerCase();
 		let list = bids.slice();
 
+		list = list.filter((b) => !isEnded(b.deadline));
+
 		if (agency !== "all") {
 			list = list.filter((b) => (b.agency || "").trim() === agency);
 		}
@@ -176,20 +169,19 @@ export function BidDiscovery({
 			});
 		}
 
-        list.sort((a, b) => {
-            if (sortKey === "title_asc") {
-                const at = String(a.title ?? "");
-                const bt = String(b.title ?? "");
-                return at.localeCompare(bt);
-            }
+		list.sort((a, b) => {
+			if (sortKey === "title_asc") {
+				const at = String(a.title ?? "");
+				const bt = String(b.title ?? "");
+				return at.localeCompare(bt);
+			}
 
-            const ad = parseDate(a.deadline)?.getTime() ?? Number.POSITIVE_INFINITY;
-            const bd = parseDate(b.deadline)?.getTime() ?? Number.POSITIVE_INFINITY;
-            return sortKey === "deadline_desc" ? bd - ad : ad - bd;
-        });
+			const ad = parseDate(a.deadline)?.getTime() ?? Number.POSITIVE_INFINITY;
+			const bd = parseDate(b.deadline)?.getTime() ?? Number.POSITIVE_INFINITY;
+			return sortKey === "deadline_desc" ? bd - ad : ad - bd;
+		});
 
-
-        return list;
+		return list;
 	}, [bids, agency, keyword, sortKey]);
 
 	const total = filtered.length;
@@ -296,7 +288,6 @@ export function BidDiscovery({
 
 						<div className="flex flex-col gap-2 sm:flex-row sm:items-center">
 							<div className="flex items-center gap-2">
-
 								<Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
 									<SelectTrigger className="w-[200px]">
 										<SelectValue placeholder="정렬" />
@@ -356,8 +347,7 @@ export function BidDiscovery({
 								) : (
 									paged.map((b) => {
 										const dday = formatDday(b.deadline);
-										// const alreadyAdded = addedIds.has(b.id);
-                                        const alreadyAdded = addedIds.has(String(b.id));
+										const alreadyAdded = addedIds.has(String(b.id));
 
 										return (
 											<TableRow

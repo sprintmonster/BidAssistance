@@ -53,14 +53,10 @@ export function ChatbotPage() {
             responseText =
                 "마감 3일 이내 공고는 8건입니다. ⚠️\n\n긴급:\n• 서울 강남구 도로공사 (D-2, 35억원)\n• 인천 연수구 학교시설 (D-4, 12억원)\n• 경기 성남시 건축공사 (D-5, 87억원)\n\n서류 준비를 서둘러주세요!";
             suggestions = ["체크리스트 확인", "투찰가 가이드", "장바구니 담기"];
-        } else if (input.includes("낙찰") || input.includes("분석")) {
-            responseText =
-                "최근 6개월 낙찰률 분석 결과:\n\n• 평균 낙찰률: 84.2%\n• 낙찰 건수: 186건\n• 평균 경쟁률: 3.8:1\n• 유찰률: 7.2%\n\n금액대별로는 10~30억원 구간에서 가장 높은 성공률(84.5%)을 보이고 있습니다.";
-            suggestions = ["기관별 분석", "월별 추이", "경쟁사 분석"];
         } else {
             responseText =
                 '죄송합니다. 질문을 이해하지 못했습니다. 다음과 같이 질문해주세요:\n\n• "서울 지역 공고 알려줘"\n• "30억 이하 공사 찾아줘"\n• "마감 임박한 공고는?"\n• "최근 낙찰률 분석해줘"';
-            suggestions = ["서울 지역 신규 공고", "30억 이하 공사", "마감 임박 공고", "낙찰률 분석"];
+            suggestions = ["서울 지역 신규 공고", "30억 이하 공사", "마감 임박 공고"];
         }
 
         return {
@@ -226,17 +222,6 @@ export function ChatbotPage() {
                             <div className="text-left">
                                 <p className="font-semibold">마감 임박 공고</p>
                                 <p className="text-xs text-muted-foreground">긴급 입찰 기회 확인</p>
-                            </div>
-                        </Button>
-
-                        <Button
-                            variant="outline"
-                            className="justify-start h-auto py-3"
-                            onClick={() => handleSuggestionClick("최근 낙찰률 분석해줘")}
-                        >
-                            <div className="text-left">
-                                <p className="font-semibold">낙찰 분석</p>
-                                <p className="text-xs text-muted-foreground">트렌드 및 패턴 파악</p>
                             </div>
                         </Button>
                     </div>
