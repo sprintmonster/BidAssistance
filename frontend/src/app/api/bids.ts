@@ -1,7 +1,7 @@
 import { api } from "./client";
 
 export interface Bid {
-  id: number;
+  id: string;
   title: string;
   agency: string;
   budget: string;
