@@ -1,6 +1,7 @@
 import { api } from "./client";
 
 export interface Bid {
+    bidId: number;
     id: number;
     realId: string;
     name: string;

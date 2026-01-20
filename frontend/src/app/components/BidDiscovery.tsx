@@ -192,22 +192,55 @@ export function BidDiscovery({
         setPage(1);
     };
 
+    // const addToCart = async (bidId: number) => {
+    //     try {
+    //         setAddingId(bidId);
+    //         setGlobalLoading(true);
+    //         await api("/wishlist/toggle", {
+    //             method: "POST",
+    //             const userId = Number(localStorage.getItem("userId"));
+    //             body: JSON.stringify({ userId, bidId })
+    //         });
+    //         setAddedIds((prev) => {
+    //             const next = new Set(prev);
+    //             next.add(bidId);
+    //             return next;
+    //         });
+    //         showToast("장바구니에 추가됨", "success");
+    //     } catch {
+    //         showToast("추가 실패", "error");
+    //     } finally {
+    //         setGlobalLoading(false);
+    //         setAddingId(null);
+    //     }
+    // };
     const addToCart = async (bidId: number) => {
         try {
+            const userId = Number(localStorage.getItem("userId"));
+            if (!Number.isFinite(userId)) {
+                showToast("userId가 없습니다. 다시 로그인 해주세요.", "error");
+                return;
+            }
+
             setAddingId(bidId);
             setGlobalLoading(true);
-            await api("/wishlist", {
+
+            await api("/wishlist/toggle", {
                 method: "POST",
-                body: JSON.stringify({ bidId }),
+                body: JSON.stringify({ userId, bidId }),
             });
+
             setAddedIds((prev) => {
                 const next = new Set(prev);
-                next.add(bidId);
+                // 토글이니까: 이미 있으면 제거 / 없으면 추가
+                if (next.has(bidId)) next.delete(bidId);
+                else next.add(bidId);
                 return next;
             });
-            showToast("장바구니에 추가됨", "success");
+
+            showToast("찜 상태가 변경되었습니다.", "success");
         } catch {
-            showToast("추가 실패", "error");
+            showToast("찜 처리 실패", "error");
         } finally {
             setGlobalLoading(false);
             setAddingId(null);
@@ -391,8 +424,7 @@ export function BidDiscovery({
                                                             className={cn(alreadyAdded && "opacity-70")}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                void addToCart(b.id);
-                                                            }}
+                                                                void addToCart(b.bidId)                                                            }}
                                                         >
                                                             <Plus className="mr-2 size-4" />
                                                             {alreadyAdded ? "담김" : "담기"}
