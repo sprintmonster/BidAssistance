@@ -17,11 +17,20 @@ public class BidController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<BidResponse>>> getBids(
-            @RequestParam(name = "name", required = false) String name,
-            @RequestParam(name = "region", required = false) String region,
-            @RequestParam(name = "organization", required = false) String organization) {
-        List<BidResponse> bids = bidService.searchBid(name, region, organization);
+            @RequestParam(name="name", required=false) String name,
+            @RequestParam(name="region", required=false) String region,
+            @RequestParam(name="organization", required=false) String organization
+    ) {
+        List<BidResponse> bids =
+                (isBlank(name) && isBlank(region) && isBlank(organization))
+                        ? bidService.getAllBid()
+                        : bidService.searchBid(name, region, organization);
+
         return ResponseEntity.ok(ApiResponse.success(bids));
+    }
+
+    private boolean isBlank(String s) {
+        return s == null || s.isBlank();
     }
 
     @GetMapping("/{bidId}")

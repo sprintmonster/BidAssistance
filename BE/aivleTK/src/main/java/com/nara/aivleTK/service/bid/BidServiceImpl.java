@@ -23,11 +23,23 @@ public class BidServiceImpl implements BidService {
     private final AnalysisResultRepository analysisResultRepository;
     @Override
     public List<BidResponse> searchBid(String name, String region, String organization) {
-        List<Bid> result = bidRepository.findByNameContainingOrOrganizationContainingOrRegionContaining(name, region, organization);
+
+        boolean noFilter =
+                (name == null || name.isBlank()) &&
+                        (region == null || region.isBlank()) &&
+                        (organization == null || organization.isBlank());
+
+        List<Bid> result = noFilter
+                ? bidRepository.findAll()
+                : bidRepository.findByNameContainingOrOrganizationContainingOrRegionContaining(
+                name == null ? "" : name,
+                organization == null ? "" : organization,
+                region == null ? "" : region
+        );
+
         return result.stream()
                 .map(BidResponse::new)
-                .collect(Collectors.toList());
-
+                .toList();
     }
 
     @Override
