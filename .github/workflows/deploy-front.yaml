@@ -3,7 +3,7 @@ name: Frontend Deploy to Azure Static Web Apps
 on:
   push:
     branches:
-      - frontend
+      - FrontEnd
 
 jobs:
   build_and_deploy_job:
