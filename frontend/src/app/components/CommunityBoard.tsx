@@ -1,5 +1,5 @@
 import { ChevronRight, Eye, MessageSquare, Paperclip, ThumbsUp } from "lucide-react";
-import type { Post } from "./CommunityPage";
+import type { Post } from "../types/community";
 
 import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
@@ -10,7 +10,7 @@ interface CommunityBoardProps {
 	onSelectPost: (post: Post) => void;
 }
 
-const categoryLabels: Record<Post["category"], string> = {
+const categoryLabels: Record<NonNullable<Post["category"]>, string> = {
 	question: "질문",
 	info: "정보",
 	review: "후기",
@@ -42,7 +42,6 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 					<Table>
 						<TableHeader>
 							<TableRow className="bg-slate-50 hover:bg-slate-50">
-								{/* ✅ '유형' 왼쪽 여백 */}
 								<TableHead className="w-[90px] pl-6">유형</TableHead>
 								<TableHead>제목</TableHead>
 								<TableHead className="w-[140px]">작성자</TableHead>
@@ -56,7 +55,8 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 
 						<TableBody>
 							{posts.map((post) => {
-								const hasFile = (post.attachments?.length ?? 0) > 0;
+								const commentCount = post.commentCount ?? (post.comments?.length ?? 0);
+								const hasFile = (post.attachmentCount ?? (post.attachments?.length ?? 0)) > 0;
 
 								return (
 									<TableRow
@@ -64,7 +64,6 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 										onClick={() => onSelectPost(post)}
 										className="cursor-pointer"
 									>
-										{/* ✅ 첫 컬럼도 동일하게 pl-6 */}
 										<TableCell className="pl-6">
 											<CategoryBadge category={post.category} />
 										</TableCell>
@@ -74,19 +73,15 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 												<div className="font-medium text-gray-900 truncate">
 													{post.title}
 												</div>
-												{hasFile && (
-													<Paperclip className="h-4 w-4 text-gray-400 shrink-0" />
-												)}
+												{hasFile && <Paperclip className="h-4 w-4 text-gray-400 shrink-0" />}
 											</div>
 											<div className="mt-0.5 text-xs text-gray-500 line-clamp-1">
-												{post.content}
+												{post.contentPreview ?? post.content ?? ""}
 											</div>
 										</TableCell>
 
-										<TableCell className="text-gray-700">{post.author}</TableCell>
-										<TableCell className="text-gray-500 tabular-nums">
-											{post.createdAt}
-										</TableCell>
+										<TableCell className="text-gray-700">{post.authorName}</TableCell>
+										<TableCell className="text-gray-500 tabular-nums">{post.createdAt}</TableCell>
 
 										<TableCell className="text-right text-gray-600 tabular-nums">
 											<span className="inline-flex items-center gap-1 justify-end">
@@ -98,7 +93,7 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 										<TableCell className="text-right text-gray-600 tabular-nums">
 											<span className="inline-flex items-center gap-1 justify-end">
 												<MessageSquare className="h-4 w-4 text-gray-400" />
-												{post.comments.length}
+												{commentCount}
 											</span>
 										</TableCell>
 
@@ -128,37 +123,42 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 				</Card>
 			</div>
 
-			{/* 모바일은 기존 카드 유지 (원하면 모바일도 패딩 맞춰줄 수 있음) */}
+			{/* 모바일 카드 */}
 			<div className="md:hidden space-y-3">
-				{posts.map((post) => (
-					<div
-						key={post.id}
-						onClick={() => onSelectPost(post)}
-						className="bg-white rounded-lg border border-gray-200 p-4 hover:border-blue-300 hover:shadow-sm transition cursor-pointer"
-					>
-						<div className="flex items-center gap-2 mb-2">
-							<CategoryBadge category={post.category} />
-							<span className="text-xs text-gray-500">{post.author}</span>
-							<span className="text-xs text-gray-400">·</span>
-							<span className="text-xs text-gray-500">{post.createdAt}</span>
-						</div>
+				{posts.map((post) => {
+					const commentCount = post.commentCount ?? (post.comments?.length ?? 0);
+					return (
+						<div
+							key={post.id}
+							onClick={() => onSelectPost(post)}
+							className="bg-white rounded-lg border border-gray-200 p-4 hover:border-blue-300 hover:shadow-sm transition cursor-pointer"
+						>
+							<div className="flex items-center gap-2 mb-2">
+								<CategoryBadge category={post.category} />
+								<span className="text-xs text-gray-500">{post.authorName}</span>
+								<span className="text-xs text-gray-400">·</span>
+								<span className="text-xs text-gray-500">{post.createdAt}</span>
+							</div>
 
-						<div className="font-semibold text-gray-900 mb-1">{post.title}</div>
-						<div className="text-sm text-gray-600 line-clamp-2">{post.content}</div>
+							<div className="font-semibold text-gray-900 mb-1">{post.title}</div>
+							<div className="text-sm text-gray-600 line-clamp-2">
+								{post.contentPreview ?? post.content ?? ""}
+							</div>
 
-						<div className="mt-3 flex items-center gap-3 text-xs text-gray-500 tabular-nums">
-							<span className="inline-flex items-center gap-1">
-								<Eye className="h-4 w-4" /> {post.views}
-							</span>
-							<span className="inline-flex items-center gap-1">
-								<MessageSquare className="h-4 w-4" /> {post.comments.length}
-							</span>
-							<span className="inline-flex items-center gap-1">
-								<ThumbsUp className="h-4 w-4" /> {post.likes}
-							</span>
+							<div className="mt-3 flex items-center gap-3 text-xs text-gray-500 tabular-nums">
+								<span className="inline-flex items-center gap-1">
+									<Eye className="h-4 w-4" /> {post.views}
+								</span>
+								<span className="inline-flex items-center gap-1">
+									<MessageSquare className="h-4 w-4" /> {commentCount}
+								</span>
+								<span className="inline-flex items-center gap-1">
+									<ThumbsUp className="h-4 w-4" /> {post.likes}
+								</span>
+							</div>
 						</div>
-					</div>
-				))}
+					);
+				})}
 
 				{posts.length === 0 && (
 					<div className="text-center py-12 text-gray-500">
