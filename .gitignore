@@ -7,7 +7,7 @@ build/
 
 # env
 .env
-.env.*
+frontend/.env.development
 
 # logs
 npm-debug.log*
