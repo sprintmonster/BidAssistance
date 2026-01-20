@@ -50,7 +50,7 @@ type SortKey = "deadline_asc" | "deadline_desc" | "title_asc";
 
 type UiBid = {
 	bidId: number;
-	bidRealId: string;
+	realId: string;
 	title: string;
 	agency: string;
 	budget: string;
@@ -128,12 +128,12 @@ export function BidDiscovery({
 			const mapped: UiBid[] = items
 				.map((it: any) => {
 					const bidId = Number(it.bidId ?? it.id ?? it.bidNo); // ✅ int
-					const bidRealId = String(it.bidRealId ?? it.realId ?? it.bidNo ?? "");
+					const realId = String(it.realId ?? it.realId ?? it.bidNo ?? "");
 					if (!Number.isFinite(bidId)) return null;
 
 					return {
 						bidId,
-						bidRealId,
+						realId,
 						title: String(it.title ?? it.name ?? ""),
 						agency: String(it.agency ?? it.organization ?? ""),
 						budget:
@@ -180,7 +180,7 @@ export function BidDiscovery({
 
 		if (q) {
 			list = list.filter((b) => {
-				const hay = `${b.title} ${b.agency} ${b.budget} ${b.deadline} ${b.bidRealId}`.toLowerCase();
+				const hay = `${b.title} ${b.agency} ${b.budget} ${b.deadline} ${b.realId}`.toLowerCase();
 				return hay.includes(q);
 			});
 		}
@@ -376,7 +376,7 @@ export function BidDiscovery({
 
 										return (
 											<TableRow
-												key={`${b.bidId}-${b.bidRealId}`}
+												key={`${b.bidId}-${b.realId}`}
 												className="cursor-pointer"
 												onClick={() => setSelected(b)}
 											>
@@ -391,7 +391,7 @@ export function BidDiscovery({
 
 												<TableCell className="whitespace-normal">
 													<div className="line-clamp-2 font-medium">{b.title}</div>
-													<div className="text-xs text-muted-foreground">{b.bidRealId}</div>
+													<div className="text-xs text-muted-foreground">{b.realId}</div>
 												</TableCell>
 
 												<TableCell className="whitespace-normal">

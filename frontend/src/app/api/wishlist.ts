@@ -8,7 +8,7 @@ type WishlistListResponse = {
     data?: {
         items?: Array<{
             bidId: number;
-            bidNo: string;
+            realId: string;
             title: string;
             agency: string;
             baseAmount: unknown;
@@ -27,7 +27,7 @@ export async function fetchWishlist(userId: number): Promise<WishlistItem[]> {
 
     return items.map((it) => ({
         bidId: it.bidId,
-        bidNo: it.bidNo,
+        realId: it.realId,
         title: it.title,
         agency: it.agency,
         baseAmount: String(it.baseAmount ?? ""),
