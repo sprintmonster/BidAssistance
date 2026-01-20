@@ -49,11 +49,12 @@ import { cn } from "./ui/utils";
 type SortKey = "deadline_asc" | "deadline_desc" | "title_asc";
 
 type UiBid = {
-	id: string; // bidNo 기반
+	bidId: number;
+	bidRealId: string;
 	title: string;
 	agency: string;
 	budget: string;
-	deadline: string; // bidEnd
+	deadline: string;
 };
 
 function parseDate(value: string) {
@@ -78,10 +79,9 @@ function formatDday(deadline: string) {
 	return `D+${Math.abs(days)}`;
 }
 
-// ✅ 프론트 필터용: 마감(종료) 공고 판단
 function isEnded(deadline: string) {
 	const d = parseDate(deadline);
-	if (!d) return false; // 파싱 불가면 일단 제외하지 않음(안전)
+	if (!d) return false;
 	return d.getTime() < Date.now();
 }
 
@@ -106,8 +106,8 @@ export function BidDiscovery({
 	const [pageSize, setPageSize] = useState<number>(10);
 	const [selected, setSelected] = useState<UiBid | null>(null);
 
-	const [addingId, setAddingId] = useState<string | null>(null);
-	const [addedIds, setAddedIds] = useState<Set<string>>(() => new Set());
+	const [addingId, setAddingId] = useState<number | null>(null);
+	const [addedIds, setAddedIds] = useState<Set<number>>(() => new Set());
 
 	useEffect(() => {
 		setKeyword(urlQuery);
@@ -119,23 +119,31 @@ export function BidDiscovery({
 			setGlobalLoading(true);
 
 			const res = await fetchBids();
-
-			// res 예상 형태:
-			// 1) array
-			// 2) { status:"success", data:{ items:[...] } }
 			const items = Array.isArray(res)
 				? res
 				: Array.isArray((res as any)?.data?.items)
 					? (res as any).data.items
 					: [];
 
-			const mapped: UiBid[] = items.map((it: any) => ({
-				id: String(it.bidNo ?? ""),
-				title: String(it.title ?? ""),
-				agency: String(it.agency ?? ""),
-				budget: it.baseAmount != null ? String(it.baseAmount) : "",
-				deadline: String(it.bidEnd ?? ""),
-			}));
+			const mapped: UiBid[] = items
+				.map((it: any) => {
+					const bidId = Number(it.bidId ?? it.id ?? it.bidNo); // ✅ int
+					const bidRealId = String(it.bidRealId ?? it.realId ?? it.bidNo ?? "");
+					if (!Number.isFinite(bidId)) return null;
+
+					return {
+						bidId,
+						bidRealId,
+						title: String(it.title ?? it.name ?? ""),
+						agency: String(it.agency ?? it.organization ?? ""),
+						budget:
+							it.baseAmount != null ? String(it.baseAmount) :
+							it.estimatePrice != null ? String(it.estimatePrice) :
+							"",
+						deadline: String(it.bidEnd ?? it.endDate ?? ""),
+					} as UiBid;
+				})
+				.filter(Boolean) as UiBid[];
 
 			setBids(mapped);
 		} catch {
@@ -164,7 +172,6 @@ export function BidDiscovery({
 		const q = keyword.trim().toLowerCase();
 		let list = bids.slice();
 
-		// ✅ 종료(마감 지난) 공고는 프론트에서 제외
 		list = list.filter((b) => !isEnded(b.deadline));
 
 		if (agency !== "all") {
@@ -173,17 +180,13 @@ export function BidDiscovery({
 
 		if (q) {
 			list = list.filter((b) => {
-				const hay = `${b.title} ${b.agency} ${b.budget} ${b.deadline}`.toLowerCase();
+				const hay = `${b.title} ${b.agency} ${b.budget} ${b.deadline} ${b.bidRealId}`.toLowerCase();
 				return hay.includes(q);
 			});
 		}
 
 		list.sort((a, b) => {
-			if (sortKey === "title_asc") {
-				const at = String(a.title ?? "");
-				const bt = String(b.title ?? "");
-				return at.localeCompare(bt);
-			}
+			if (sortKey === "title_asc") return a.title.localeCompare(b.title);
 
 			const ad = parseDate(a.deadline)?.getTime() ?? Number.POSITIVE_INFINITY;
 			const bd = parseDate(b.deadline)?.getTime() ?? Number.POSITIVE_INFINITY;
@@ -214,7 +217,7 @@ export function BidDiscovery({
 		setPage(1);
 	};
 
-	const addToCart = async (bidId: string) => {
+	const addToCart = async (bidId: number) => {
 		try {
 			setAddingId(bidId);
 			setGlobalLoading(true);
@@ -271,9 +274,7 @@ export function BidDiscovery({
 										setKeyword(e.target.value);
 										setPage(1);
 									}}
-									placeholder={
-										urlQuery ? `검색어: ${urlQuery}` : "키워드 검색 (공고명/기관/예산/마감)"
-									}
+									placeholder={urlQuery ? `검색어: ${urlQuery}` : "키워드 검색 (공고명/기관/예산/마감)"}
 									className="pl-8"
 								/>
 							</div>
@@ -290,8 +291,13 @@ export function BidDiscovery({
 						</div>
 
 						<div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-							{/* ✅ 기관 필터 (noUnusedLocals 방지 + 실제 필터 기능 제공) */}
-							<Select value={agency} onValueChange={(v) => { setAgency(v); setPage(1); }}>
+							<Select
+								value={agency}
+								onValueChange={(v) => {
+									setAgency(v);
+									setPage(1);
+								}}
+							>
 								<SelectTrigger className="w-[220px]">
 									<SelectValue placeholder="기관" />
 								</SelectTrigger>
@@ -363,15 +369,14 @@ export function BidDiscovery({
 								) : (
 									paged.map((b) => {
 										const dday = formatDday(b.deadline);
-										const alreadyAdded = addedIds.has(b.id);
+										const alreadyAdded = addedIds.has(b.bidId);
 
 										const statusVariant = dday === "D-DAY" ? "destructive" : "secondary";
-										const statusLabel =
-											dday === "D-DAY" ? "오늘 마감" : dday ? "진행중" : "확인 필요";
+										const statusLabel = dday === "D-DAY" ? "오늘 마감" : dday ? "진행중" : "확인 필요";
 
 										return (
 											<TableRow
-												key={b.id}
+												key={`${b.bidId}-${b.bidRealId}`}
 												className="cursor-pointer"
 												onClick={() => setSelected(b)}
 											>
@@ -386,6 +391,7 @@ export function BidDiscovery({
 
 												<TableCell className="whitespace-normal">
 													<div className="line-clamp-2 font-medium">{b.title}</div>
+													<div className="text-xs text-muted-foreground">{b.bidRealId}</div>
 												</TableCell>
 
 												<TableCell className="whitespace-normal">
@@ -414,11 +420,11 @@ export function BidDiscovery({
 
 														<Button
 															size="sm"
-															disabled={addingId === b.id || alreadyAdded}
+															disabled={addingId === b.bidId || alreadyAdded}
 															className={cn(alreadyAdded && "opacity-70")}
 															onClick={(e) => {
 																e.stopPropagation();
-																void addToCart(b.id);
+																void addToCart(b.bidId);
 															}}
 														>
 															<Plus className="mr-2 size-4" />
@@ -521,11 +527,11 @@ export function BidDiscovery({
 										닫기
 									</Button>
 									<Button
-										disabled={addingId === selected.id || addedIds.has(selected.id)}
-										onClick={() => void addToCart(selected.id)}
+										disabled={addingId === selected.bidId || addedIds.has(selected.bidId)}
+										onClick={() => void addToCart(selected.bidId)}
 									>
 										<Plus className="mr-2 size-4" />
-										{addedIds.has(selected.id) ? "담김" : "트래킹에 담기"}
+										{addedIds.has(selected.bidId) ? "담김" : "트래킹에 담기"}
 									</Button>
 								</div>
 							</div>
