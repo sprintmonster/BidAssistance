@@ -127,8 +127,8 @@ export function BidDiscovery({
 
 			const mapped: UiBid[] = items
 				.map((it: any) => {
-					const bidId = Number(it.bidId ?? it.id ?? it.bidNo); // ✅ int
-					const realId = String(it.realId ?? it.realId ?? it.bidNo ?? "");
+					const bidId = Number(it.bidId ?? it.id); // ✅ int
+					const realId = String(it.realId ?? it.bidNo ?? "");
 					if (!Number.isFinite(bidId)) return null;
 
 					return {
