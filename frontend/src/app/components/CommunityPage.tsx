@@ -105,7 +105,7 @@ export function CommunityPage() {
 		}
 	};
 
-	const loadDetail = async (postId: string) => {
+	const loadDetail = async (postId: number) => {
 		setDetailLoading(true);
 		setDetailError(null);
 
@@ -191,7 +191,7 @@ export function CommunityPage() {
 		}
 	};
 
-	const addComment = async (postId: string, content: string) => {
+	const addComment = async (postId: number, content: string) => {
 		if (!authed) return goLogin();
 
 		try {
@@ -233,7 +233,7 @@ export function CommunityPage() {
 		}
 	};
 
-	const deletePost = async (postId: string) => {
+	const deletePost = async (postId: number) => {
 		if (!authed) return goLogin();
 
 		try {
@@ -274,7 +274,7 @@ export function CommunityPage() {
 		}
 	};
 
-	const deleteComment = async (postId: string, commentId: string) => {
+	const deleteComment = async (postId: number, commentId: string) => {
 		if (!authed) return goLogin();
 
 		try {

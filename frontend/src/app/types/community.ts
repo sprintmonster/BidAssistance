@@ -1,7 +1,7 @@
 export type PostCategory = "question" | "info" | "review" | "discussion";
 
 export interface Attachment {
-	id: string;
+	id: number;
 	name: string;
 	type: string;
 	url: string;
@@ -10,7 +10,7 @@ export interface Attachment {
 }
 
 export interface Comment {
-	id: string;
+	id: number;
 	authorId?: string;
 	authorName: string;
 	content: string;
@@ -20,7 +20,7 @@ export interface Comment {
 }
 
 export interface Post {
-	id: string;
+	id: number;
 	title: string;
 
 	content?: string;
