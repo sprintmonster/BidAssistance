@@ -90,27 +90,64 @@ export function BidDiscovery({
 	const [page, setPage] = useState<number>(1);
 	const [pageSize, setPageSize] = useState<number>(10);
 	const [selected, setSelected] = useState<Bid | null>(null);
-	const [addingId, setAddingId] = useState<number | null>(null);
-	const [addedIds, setAddedIds] = useState<Set<number>>(() => new Set());
+	// const [addingId, setAddingId] = useState<number | null>(null);
+	// const [addedIds, setAddedIds] = useState<Set<number>>(() => new Set());
+    const [addingId, setAddingId] = useState<string | null>(null);
+    const [addedIds, setAddedIds] = useState<Set<string>>(() => new Set());
 
 	useEffect(() => {
 		setKeyword(urlQuery);
 		setPage(1);
 	}, [urlQuery]);
 
-	const load = async () => {
-		try {
-			setGlobalLoading(true);
-			const list = await fetchBids();
-			setBids(list);
-		} catch {
-			showToast("공고 목록을 불러오지 못했습니다.", "error");
-		} finally {
-			setGlobalLoading(false);
-		}
-	};
+	// const load = async () => {
+	// 	try {
+	// 		setGlobalLoading(true);
+	// 		const list = await fetchBids();
+	// 		setBids(list);
+	// 	} catch {
+	// 		showToast("공고 목록을 불러오지 못했습니다.", "error");
+	// 	} finally {
+	// 		setGlobalLoading(false);
+	// 	}
+	// };
 
-	useEffect(() => {
+    const load = async () => {
+        try {
+            setGlobalLoading(true);
+
+            const res = await fetchBids();
+
+            // res 예상 형태:
+            // { status: "success", data: { items: [...] } }
+            const items = Array.isArray(res)
+                ? res
+                : Array.isArray((res as any)?.data?.items)
+                    ? (res as any).data.items
+                    : [];
+
+            // 화면용 Bid로 매핑
+            const mapped: Bid[] = items.map((it: any) => ({
+                // id는 화면에서 key/Set용으로 쓰이니까 고유값 필요
+                // 명세상 bidNo가 고유값이니 그걸 사용(문자열이면 Bid 타입도 맞춰야 함)
+                id: String(it.bidNo ?? ""),
+                title: String(it.title ?? ""),
+                agency: String(it.agency ?? ""),
+                budget: it.baseAmount != null ? String(it.baseAmount) : "",
+                deadline: String(it.bidEnd ?? ""),
+            }));
+
+            setBids(mapped);
+        } catch {
+            showToast("공고 목록을 불러오지 못했습니다.", "error");
+            setBids([]); // 안전
+        } finally {
+            setGlobalLoading(false);
+        }
+    };
+
+
+    useEffect(() => {
 		void load();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
@@ -139,17 +176,20 @@ export function BidDiscovery({
 			});
 		}
 
-		list.sort((a, b) => {
-			if (sortKey === "title_asc") {
-				return a.title.localeCompare(b.title);
-			}
+        list.sort((a, b) => {
+            if (sortKey === "title_asc") {
+                const at = String(a.title ?? "");
+                const bt = String(b.title ?? "");
+                return at.localeCompare(bt);
+            }
 
-			const ad = parseDate(a.deadline)?.getTime() ?? Number.POSITIVE_INFINITY;
-			const bd = parseDate(b.deadline)?.getTime() ?? Number.POSITIVE_INFINITY;
-			return sortKey === "deadline_desc" ? bd - ad : ad - bd;
-		});
+            const ad = parseDate(a.deadline)?.getTime() ?? Number.POSITIVE_INFINITY;
+            const bd = parseDate(b.deadline)?.getTime() ?? Number.POSITIVE_INFINITY;
+            return sortKey === "deadline_desc" ? bd - ad : ad - bd;
+        });
 
-		return list;
+
+        return list;
 	}, [bids, agency, keyword, sortKey]);
 
 	const total = filtered.length;
@@ -172,7 +212,7 @@ export function BidDiscovery({
 		setPage(1);
 	};
 
-	const addToCart = async (bidId: number) => {
+	const addToCart = async (bidId: string) => {
 		try {
 			setAddingId(bidId);
 			setGlobalLoading(true);
@@ -316,7 +356,8 @@ export function BidDiscovery({
 								) : (
 									paged.map((b) => {
 										const dday = formatDday(b.deadline);
-										const alreadyAdded = addedIds.has(b.id);
+										// const alreadyAdded = addedIds.has(b.id);
+                                        const alreadyAdded = addedIds.has(String(b.id));
 
 										return (
 											<TableRow

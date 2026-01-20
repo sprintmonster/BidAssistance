@@ -1,12 +1,32 @@
+// import type { BidStage } from "./bid";
+//
+// export interface WishlistItem {
+// 	wishlistId: number;
+// 	bidId: number;
+// 	title: string;
+// 	agency: string;
+// 	budget: string;
+// 	budgetValue: number;
+// 	deadline: string;
+// 	stage: BidStage;
+// }
+
+
+// types/wishlist.ts
 import type { BidStage } from "./bid";
 
-export interface WishlistItem {
-	wishlistId: number;
-	bidId: number;
-	title: string;
-	agency: string;
-	budget: string;
-	budgetValue: number;
-	deadline: string;
-	stage: BidStage;
-}
+export type WishlistItem = {
+    bidId: number;
+    bidNo: string;
+    title: string;
+    agency: string;
+    baseAmount: number | string; // BigInteger 대응(백엔드가 문자열로 줄 수도 있어서)
+    bidStart: string;            // LocalDateTime -> ISO/string
+    bidEnd: string;              // LocalDateTime -> ISO/string
+    openTime: string;            // LocalDateTime -> ISO/string
+    region: string;
+
+    // 서버 스펙에 없음: 기존 UI용이라면 optional로
+    stage?: BidStage;
+};
+
