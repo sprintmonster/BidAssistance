@@ -14,14 +14,14 @@ import type { Post, PostCategory } from "../types/community";
 interface PostDetailProps {
 	post: Post;
 	onBack: () => void;
-	onAddComment: (postId: string, content: string) => void;
+	onAddComment: (postId: number, content: string) => void;
 	onUpdatePost: (
 		postId: string,
 		patch: Partial<Pick<Post, "title" | "content" | "category">>,
 	) => void;
-	onDeletePost: (postId: string) => void;
-	onToggleLike: (postId: string) => void;
-	onDeleteComment: (postId: string, commentId: string) => void;
+	onDeletePost: (postId: number) => void;
+	onToggleLike: (postId: number) => void;
+	onDeleteComment: (postId: number, commentId: string) => void;
 
 	canEdit?: boolean;
 	canInteract?: boolean;

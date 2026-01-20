@@ -32,7 +32,7 @@ export function fetchCommunityPosts(opts: {
 	})}`).then(unwrap);
 }
 
-export function fetchCommunityPost(postId: string) {
+export function fetchCommunityPost(postId: number) {
 	return api<ApiResponse<Post>>(`/community/posts/${postId}`).then(unwrap);
 }
 
@@ -48,7 +48,7 @@ export function createCommunityPost(payload: {
 	}).then(unwrap);
 }
 
-export function updateCommunityPost(postId: string, payload: Partial<{
+export function updateCommunityPost(postId: number, payload: Partial<{
 	title: string;
 	content: string;
 	category: PostCategory;
@@ -60,32 +60,32 @@ export function updateCommunityPost(postId: string, payload: Partial<{
 	}).then(unwrap);
 }
 
-export function deleteCommunityPost(postId: string) {
+export function deleteCommunityPost(postId: number) {
 	return api<ApiResponse<{ message?: string }>>(`/community/posts/${postId}`, {
 		method: "DELETE",
 	}).then(unwrap);
 }
 
-export function likeCommunityPost(postId: string) {
+export function likeCommunityPost(postId: number) {
 	return api<ApiResponse<{ liked: true }>>(`/community/posts/${postId}/like`, {
 		method: "POST",
 	}).then(unwrap);
 }
 
-export function unlikeCommunityPost(postId: string) {
+export function unlikeCommunityPost(postId: number) {
 	return api<ApiResponse<{ liked: false }>>(`/community/posts/${postId}/like`, {
 		method: "DELETE",
 	}).then(unwrap);
 }
 
-export function createCommunityComment(postId: string, content: string) {
+export function createCommunityComment(postId: number, content: string) {
 	return api<ApiResponse<Comment>>(`/community/posts/${postId}/comments`, {
 		method: "POST",
 		body: JSON.stringify({ content }),
 	}).then(unwrap);
 }
 
-export function deleteCommunityComment(postId: string, commentId: string) {
+export function deleteCommunityComment(postId: number, commentId: string) {
 	return api<ApiResponse<{ message?: string }>>(`/community/posts/${postId}/comments/${commentId}`, {
 		method: "DELETE",
 	}).then(unwrap);
