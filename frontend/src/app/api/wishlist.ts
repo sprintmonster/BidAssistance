@@ -1,4 +1,3 @@
-// ../api/wishlist.ts
 import { api } from "./client";
 import type { WishlistItem } from "../types/wishlist";
 
