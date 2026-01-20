@@ -1,11 +1,14 @@
 package com.nara.aivleTK.controller;
 
+import com.nara.aivleTK.domain.board.Board;
 import com.nara.aivleTK.dto.ApiResponse;
-import com.nara.aivleTK.dto.board.BoardRequest;
-import com.nara.aivleTK.dto.board.BoardResponse;
 import com.nara.aivleTK.dto.board.BoardListRequest;
 import com.nara.aivleTK.dto.board.BoardListResponse;
+import com.nara.aivleTK.dto.board.BoardRequest;
+import com.nara.aivleTK.dto.board.BoardResponse;
 import com.nara.aivleTK.dto.user.UserResponse;
+import com.nara.aivleTK.exception.ResourceNotFoundException;
+import com.nara.aivleTK.repository.BoardRepository;
 import com.nara.aivleTK.service.BoardService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class BoardController {
     private final BoardService boardService;
+    private final BoardRepository boardRepository;
 
     @PostMapping // 게시글 작성
     public ResponseEntity<ApiResponse<BoardResponse>> createPost(@RequestBody BoardRequest br, HttpSession session) {
@@ -55,5 +59,21 @@ public class BoardController {
         Integer userId = user != null ? user.getId() : null;
 
         return ResponseEntity.ok(ApiResponse.success("게시글 목록입니다.", boardService.getBoardList(blr, userId)));
+    }
+
+    @PostMapping("/posts/{id}/like")
+    public ResponseEntity<ApiResponse<Object>> boardLike(@PathVariable Integer id) {
+        Board board = boardRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("게시글을 찾을 수 없습니다."));
+        boardRepository.addLikeCount(id);
+
+        return ResponseEntity.ok(ApiResponse.success("좋아요를 눌렀습니다."));
+    }
+
+    @PostMapping("/posts/{id}/dislike")
+    public ResponseEntity<ApiResponse<Object>> boardDislike(@PathVariable Integer id) {
+        Board board = boardRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("게시글을 찾을 수 없습니다."));
+        boardRepository.discardLikeCount(id);
+
+        return ResponseEntity.ok(ApiResponse.success("좋아요를 취소했습니다."));
     }
 }
