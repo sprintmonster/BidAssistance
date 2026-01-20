@@ -235,9 +235,9 @@ export function AppLayout() {
 				<div className="w-full px-5 flex items-center justify-between">
 					<div>© 2026 입찰인사이트. All rights reserved.</div>
 					<div className="flex gap-4 text-xs">
-						<button className="hover:text-gray-500">이용약관</button>
-						<button className="hover:text-gray-500">개인정보처리방침</button>
-						<button className="hover:text-gray-500">고객지원</button>
+						<button onClick={() => navigate("/terms")} className="hover:text-gray-500">이용약관</button>
+						<button onClick={() => navigate("/privacy")} className="hover:text-gray-500">개인정보처리방침</button>
+						<button onClick={() => navigate("/support")} className="hover:text-gray-500">고객지원</button>
 					</div>
 				</div>
 			</footer>

@@ -17,6 +17,9 @@ import { CommunityPage } from "./components/CommunityPage";
 import { NoticePage } from "./components/NoticePage";
 import { NotificationsPage } from "./components/NotificationsPage";
 import { ProfilePage } from "./components/ProfilePage";
+import { TermsAndConditionsPage } from "./components/TermsAndConditions";
+import { PrivacyPolicyPage} from "./components/PrivacyPolicy";
+import { CustomerSupportPage } from "./components/CustomerSupport";
 
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 
@@ -194,6 +197,33 @@ export default function App() {
 									<ProfilePage />
 								</PageContainer>
 							</ProtectedRoute>
+						}
+					/>
+
+					<Route
+						path="/terms"
+						element={
+							<PageContainer>
+								<TermsAndConditionsPage />
+							</PageContainer>
+						}
+					/>
+
+					<Route
+						path="/privacy"
+						element={
+							<PageContainer>
+								<PrivacyPolicyPage />
+							</PageContainer>
+						}
+					/>
+					
+					<Route
+						path="/support"
+						element={
+							<PageContainer>
+								<CustomerSupportPage />
+							</PageContainer>
 						}
 					/>
 				</Route>
