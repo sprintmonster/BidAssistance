@@ -13,9 +13,10 @@ export function CartPage({
     const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
     const userId = Number(localStorage.getItem("userId"));
 
+
     const loadWishlist = async () => {
         if (!Number.isFinite(userId)) {
-            showToast("userId가 없습니다. 다시 로그인 해주세요.", "error");
+            showToast("userId가 없습니다. 다시 로그인 해주세요." , "error");
             return;
         }
         const items = await fetchWishlist(userId);

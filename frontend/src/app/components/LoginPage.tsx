@@ -42,11 +42,12 @@ export function LoginPage() {
 
 			localStorage.setItem("accessToken", res.data.accessToken);
 			localStorage.setItem("refreshToken", res.data.refreshToken);
-			localStorage.setItem("userId", res.data.userId);
+			// localStorage.setItem("userId", res.data.userId);
 			localStorage.setItem("name", res.data.name);
 			localStorage.setItem("email", email.trim());
+            localStorage.setItem("userId", String(res.data.userId));
 
-			navigate(from, { replace: true });
+            navigate(from, { replace: true });
 		} catch (e: any) {
 			setErrorMsg(e?.message || "서버 내부 오류가 발생했습니다. 관리자에게 문의하세요.");
 		} finally {
