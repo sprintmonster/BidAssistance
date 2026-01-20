@@ -35,7 +35,7 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
 app:
   cors:
-    allowed-origins: http://localhost:5173
+    allowed-origins: "http://localhost:5173, https://calm-tree-0e8ee630f.4.azurestaticapps.net/"
 
 jwt:
   secret:

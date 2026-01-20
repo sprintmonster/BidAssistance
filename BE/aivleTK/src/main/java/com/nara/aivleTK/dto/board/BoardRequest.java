@@ -9,6 +9,6 @@ public class BoardRequest {
     private String title;
     private String content;
     private Integer userId; // 유저
-    private Integer category;
+    private String category;
     private String filePath;
 }

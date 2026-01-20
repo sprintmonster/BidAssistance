@@ -3,6 +3,8 @@ package com.nara.aivleTK.controller;
 import com.nara.aivleTK.dto.ApiResponse;
 import com.nara.aivleTK.dto.board.BoardRequest;
 import com.nara.aivleTK.dto.board.BoardResponse;
+import com.nara.aivleTK.dto.board.BoardListRequest;
+import com.nara.aivleTK.dto.board.BoardListResponse;
 import com.nara.aivleTK.dto.user.UserResponse;
 import com.nara.aivleTK.service.BoardService;
 import jakarta.servlet.http.HttpSession;
@@ -44,5 +46,14 @@ public class BoardController {
         boardService.deletePost(id, user.getId());
 
         return ResponseEntity.ok(ApiResponse.success("게시글이 삭제되었습니다."));
+    }
+
+    @GetMapping("/posts")
+    public ResponseEntity<ApiResponse<BoardListResponse>> boardList(@ModelAttribute BoardListRequest blr,
+            HttpSession session) {
+        UserResponse user = (UserResponse) session.getAttribute("loginUser");
+        Integer userId = user != null ? user.getId() : null;
+
+        return ResponseEntity.ok(ApiResponse.success("게시글 목록입니다.", boardService.getBoardList(blr, userId)));
     }
 }

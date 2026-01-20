@@ -38,7 +38,7 @@ public class Board extends AutoTimeRecode {
     private String content;
 
     @Column(columnDefinition="BIT(3)")
-    private Integer category;
+    private String category;
 
     @Column(name="like_count", nullable = false)
     private Integer likeCount;

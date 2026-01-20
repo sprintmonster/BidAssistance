@@ -56,6 +56,9 @@ CREATE TABLE IF NOT EXISTS `user` (
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
+INSERT INTO user (name, email, password, birth, question, answer, role, tag, company_id) 
+VALUES ('테스트사용자', 'test@example.com', 'password123', '1990-01-01', 1, '답변', 0, 1, NULL);
+
 
 -- -----------------------------------------------------
 -- Table `bid`
@@ -203,10 +206,13 @@ CREATE TABLE IF NOT EXISTS `board` (
   `user_id` INT NOT NULL,
   `title` VARCHAR(50) NOT NULL,
   `content` VARCHAR(500) NOT NULL,
+  `category` BIT(3) NOT NULL,
   `like_count` INT NOT NULL,
   `view_count` INT NOT NULL,
   `date` TIMESTAMP NOT NULL,
   `file_path` VARCHAR(300) NULL,
+  `created_at` Date Not NULL,
+  `updated_at` Date Not NULL,
   PRIMARY KEY (`board_id`),
   INDEX `fk_board_user1_idx` (`user_id` ASC) VISIBLE,
   UNIQUE INDEX `board_id_UNIQUE` (`board_id` ASC) VISIBLE,
@@ -216,6 +222,19 @@ CREATE TABLE IF NOT EXISTS `board` (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
+
+-- 테스트용 게시글 데이터 삽입
+
+-- 먼저 user 테이블에 테스트 사용자가 있는지 확인 (user_id=1 사용)
+
+-- 테스트 게시글 삽입
+INSERT INTO board (user_id, title, content, category, like_count, view_count, file_path, date, created_at, updated_at) 
+VALUES  
+(1, '첫 번째 질문입니다', '이것은 질문 카테고리의 테스트 게시글입니다. 내용이 100자를 넘어가면 미리보기가 잘리는지 확인하기 위한 긴 텍스트입니다.', 1, 5, 20, '/uploads/test1.jpg', NOW(), NOW(), NOW()), 
+(1, '정보 공유 게시글', '유용한 정보를 공유합니다. 이 게시글은 info 카테고리입니다.', 2, 10, 50, '/uploads/test2.jpg', NOW(), NOW(), NOW()), 
+(1, '리뷰 작성했습니다', '서비스 리뷰입니다. 리뷰 카테고리 테스트용 게시글입니다.', 3, 3, 15, '', NOW(), NOW(), NOW()), 
+(1, '토론 주제입니다', '함께 토론하고 싶은 주제가 있어서 올립니다.', 4, 8, 35, '/uploads/test4.jpg', NOW(), NOW(), NOW()), 
+(1, '인기 게시글', '조회수가 많은 인기 게시글입니다.', 1, 25, 150, '/uploads/test5.jpg', NOW(), NOW(), NOW());
 
 
 -- -----------------------------------------------------
