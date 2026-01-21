@@ -58,7 +58,7 @@ function generateBotResponse(userInput: string): { text: string; suggestions: st
 	return {
 		text:
 			"원하시는 질문을 조금만 더 구체적으로 적어주세요.\n\n예시:\n• “서울/경기 10~50억 시설공사, 마감 3일 이내”\n• “최근 6개월 낙찰률과 경쟁률 추이”\n• “마감 임박 공고 우선순위 기준”",
-		suggestions: ["서울 지역 공고 알려줘", "30억 이하 공사 찾아줘", "마감 임박 공고는?", "낙찰률 분석해줘"],
+		suggestions: ["서울 지역 공고 알려줘", "30억 이하 공사 찾아줘", "마감 임박 공고는?"],
 	};
 }
 
@@ -101,7 +101,6 @@ function Bubble({ message }: { message: Message }) {
 }
 
 export function ChatbotModal({ onClose }: { onClose: () => void }) {
-	// 현재는 "바깥 X"로만 닫도록 설계되어 내부에서는 onClose 미사용
 	void onClose;
 
 	const [messages, setMessages] = useState<Message[]>([
@@ -162,9 +161,9 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
 	return (
 		<div className="w-full h-[min(760px,calc(100vh-2rem))] max-w-[980px] bg-white border rounded-2xl shadow-2xl overflow-hidden flex">
 			{/* Left: Chat */}
-			<div className="flex-1 min-w-0 flex flex-col">
-				{/* Header (새대화/X 없음) */}
-				<div className="px-5 py-4 bg-slate-950 text-white flex items-center justify-between">
+			<div className="flex-1 min-w-0 flex flex-col min-h-0">
+				{/* Header */}
+				<div className="px-5 py-4 bg-slate-950 text-white flex items-center justify-between shrink-0">
 					<div className="flex items-center gap-3">
 						<div className="h-10 w-10 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center">
 							<Sparkles className="h-5 w-5" />
@@ -184,9 +183,8 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
 					<div className="hidden" />
 				</div>
 
-				{/* Messages */}
-				<ScrollArea className="flex-1 bg-white">
-					<div className="p-5 space-y-4">
+				<ScrollArea className="flex-1 min-h-0 bg-white">
+					<div className="p-5 space-y-4 pb-10">
 						{messages.map((m) => (
 							<div key={m.id}>
 								<Bubble message={m} />
@@ -210,8 +208,8 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
 					</div>
 				</ScrollArea>
 
-				{/* ✅ Input (겹치는 안내/추천 버튼 제거 버전) */}
-				<div className="border-t bg-white p-4">
+				{/* Input */}
+				<div className="border-t bg-white p-4 shrink-0">
 					<div className="flex gap-2 items-end">
 						<div className="flex-1">
 							<Textarea
@@ -232,8 +230,8 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
 			</div>
 
 			{/* Right: Quick Panel */}
-			<div className="hidden lg:flex w-[320px] border-l bg-slate-50 flex-col">
-				<div className="p-5">
+			<div className="hidden lg:flex w-[320px] border-l bg-slate-50 flex-col min-h-0">
+				<div className="p-5 shrink-0">
 					<div className="text-sm font-semibold text-slate-900">빠른 질문</div>
 					<div className="mt-1 text-xs text-slate-600">
 						자주 쓰는 질문을 한 번에 보내세요.
@@ -242,21 +240,22 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
 
 				<Separator />
 
-				<div className="p-4 space-y-2">
-					{QUICK_PROMPTS.map((p) => (
-						<button
-							key={p.title}
-							type="button"
-							onClick={() => send(p.text)}
-							className="w-full text-left rounded-xl border bg-white p-3 hover:border-slate-300 hover:shadow-sm transition"
-						>
-							<div className="text-sm font-semibold text-slate-900">{p.title}</div>
-							<div className="mt-0.5 text-xs text-slate-600">{p.desc}</div>
-							<div className="mt-2 text-[11px] text-slate-500">{p.text}</div>
-						</button>
-					))}
-				</div>
-
+				<ScrollArea className="flex-1 min-h-0">
+					<div className="p-4 space-y-2">
+						{QUICK_PROMPTS.map((p) => (
+							<button
+								key={p.title}
+								type="button"
+								onClick={() => send(p.text)}
+								className="w-full text-left rounded-xl border bg-white p-3 hover:border-slate-300 hover:shadow-sm transition"
+							>
+								<div className="text-sm font-semibold text-slate-900">{p.title}</div>
+								<div className="mt-0.5 text-xs text-slate-600">{p.desc}</div>
+								<div className="mt-2 text-[11px] text-slate-500">{p.text}</div>
+							</button>
+						))}
+					</div>
+				</ScrollArea>
 			</div>
 		</div>
 	);
