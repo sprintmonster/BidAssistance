@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { login } from "../api/auth";
 import { fetchWishlist } from "../api/wishlist";
+import { mask_name } from "../utils/masking";
 
 type AuthUser = {
   name: string;
@@ -91,14 +92,16 @@ export function Home() {
         localStorage.setItem("userName", String(res.data?.name ?? ""));
         localStorage.setItem("email", String(res.data?.email ?? email.trim()));
 
-// ⚠️ 아래 토큰들은 서버가 실제로 줄 때만 저장(없으면 저장하지 않기)
         const anyData = res.data as any;
         if (anyData?.userId) localStorage.setItem("userId", String(anyData.userId));
         if (anyData?.refreshToken) localStorage.setItem("refreshToken", String(anyData.refreshToken));
-
-
-
-        navigate("/dashboard");
+		// 홈에서 로그인했을 때는 홈에 그대로 머물며 UI만 로그인 상태로 갱신
+		setIsAuthed(true);
+		setUser({
+			name: String(res.data?.name ?? "사용자"),
+			email: String(res.data?.email ?? email.trim()),
+		});
+		navigate("/", { replace: true });
     } catch (e: any) {
       setErrorMsg(e?.message || "로그인 중 오류가 발생했습니다.");
     } finally {
@@ -194,7 +197,8 @@ export function Home() {
           </div>
 
           {/* RIGHT */}
-          <div className="col-span-12 lg:col-span-4">
+          {/* 데스크탑에서 우측 박스가 너무 위로 붙어 보이는 현상 방지 */}
+          <div className="col-span-12 lg:col-span-4 lg:pt-6">
             {!isAuthed ? (
               <aside className="bg-white border rounded-2xl p-5 shadow-sm">
                 <h3 className="text-lg font-semibold text-slate-900 mb-2">
@@ -269,39 +273,34 @@ export function Home() {
                 </div>
               </aside>
             ) : (
-              <aside className="bg-white border rounded-2xl p-5 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <div className="text-sm text-slate-500">환영합니다</div>
-                    <div className="text-lg font-semibold text-slate-900">
-                      {user?.name ?? "사용자"}
-                    </div>
-                    {user?.email && (
-                      <div className="text-sm text-slate-500">{user.email}</div>
-                    )}
-                  </div>
-                  <div className="w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
-                    {user?.name?.slice(0, 1) ?? "U"}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <MiniKpi label="장바구니" value={String(wishlistCount)} />
-                  <MiniKpi label="알림" value="0" />
-                </div>
+				<aside className="bg-white border rounded-2xl p-5 shadow-sm">
+					<div className="flex items-center justify-between mb-4">
+						<div>
+							<div className="text-sm text-slate-500">환영합니다</div>
+							<div className="text-lg font-semibold text-slate-900">
+								{mask_name(user?.name ?? "사용자")}
+							</div>
+							{user?.email && (
+								<div className="text-sm text-slate-500">{user.email}</div>
+							)}
+						</div>
+						<div className="w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
+							{user?.name?.slice(0, 1) ?? "U"}
+						</div>
+					</div>
 
                 <div className="space-y-2">
                   <button
-                    onClick={() => navigate("/dashboard")}
+                    onClick={() => navigate("/profile")}
                     className="w-full h-11 rounded-xl bg-slate-900 text-white hover:bg-slate-800"
                   >
-                    대시보드로 이동
+                    프로필 수정
                   </button>
                   <button
-                    onClick={() => navigate("/cart")}
+                    onClick={() => navigate("/notifications")}
                     className="w-full h-11 rounded-xl border hover:bg-slate-50"
                   >
-                    장바구니 보기
+                    알림
                   </button>
                   <button
                     onClick={onLogout}

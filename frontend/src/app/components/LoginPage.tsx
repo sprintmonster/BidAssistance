@@ -19,7 +19,9 @@ export function LoginPage() {
 	const navigate = useNavigate();
 	const location = useLocation() as any;
 
-	const from = location?.state?.from || "/dashboard";
+	// 로그인 성공 후 기본 이동 경로는 "홈(/)".
+	// (특정 페이지에서 로그인 페이지로 유도된 경우, state.from을 우선 사용)
+	const from = location?.state?.from || "/";
 
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -118,41 +120,39 @@ export function LoginPage() {
 						)}
 					</CardContent>
 
-					<CardFooter className="flex flex-col gap-3 pt-6">
+					<CardFooter className="flex flex-col gap-3 pt-0">
 						<Button
 							type="submit"
-							className="w-full h-11 text-base font-semibold"
+							className="w-full h-11 rounded-xl bg-slate-900 text-white hover:bg-slate-800"
 							disabled={submitting}
 						>
 							{submitting ? "로그인 중..." : "로그인"}
 						</Button>
 
-						<div className="text-sm text-center text-muted-foreground">
-							계정이 없으신가요?{" "}
+						<div className="w-full flex items-center justify-between text-sm text-slate-500">
 							<button
 								type="button"
-								onClick={() => navigate("/signup")}
-								className="font-medium text-slate-900 pt-6 hover:underline"
+								onClick={() => navigate("/")}
+								className="hover:text-blue-600 hover:underline"
 							>
-								회원가입
+								홈으로
 							</button>
-						</div>
-
-						<div className="flex justify-between gap-4 text-sm">
-							<button
-								type="button"
-								onClick={() => navigate("/find-account")}
-								className="text-muted-foreground hover:text-slate-900 hover:underline"
-							>
-								계정 찾기
-							</button>
-							<button
-								type="button"
-								onClick={() => navigate("/reset-password")}
-								className="text-muted-foreground hover:text-slate-900 hover:underline"
-							>
-								비밀번호 찾기
-							</button>
+							<div className="flex gap-3">
+								<button
+									type="button"
+									onClick={() => navigate("/find-account")}
+									className="hover:text-blue-600 hover:underline"
+								>
+									계정 찾기
+								</button>
+								<button
+									type="button"
+									onClick={() => navigate("/reset-password")}
+									className="hover:text-blue-600 hover:underline"
+								>
+									비밀번호 찾기
+								</button>
+							</div>
 						</div>
 					</CardFooter>
 				</form>
