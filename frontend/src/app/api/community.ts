@@ -60,8 +60,8 @@ export function updateCommunityPost(postId: number, payload: Partial<{
 	}).then(unwrap);
 }
 
-export function deleteCommunityPost(postId: number) {
-	return api<ApiResponse<{ message?: string }>>(`/board/${postId}`, {
+export function deleteCommunityPost(commentId: number) {
+	return api<ApiResponse<{ message?: string }>>(`/comments/${commentId}`, {
 		method: "DELETE",
 	}).then(unwrap);
 }
@@ -79,26 +79,24 @@ export function unlikeCommunityPost(postId: number) {
 }
 
 export function createCommunityComment(postId: number, content: string) {
-	return api<ApiResponse<Comment>>(`/community/posts/${postId}/comments`, {
+	return api<ApiResponse<Comment>>(`/boards/${postId}/comments`, {
 		method: "POST",
 		body: JSON.stringify({ content }),
 	}).then(unwrap);
 }
 
 export function deleteCommunityComment(postId: number, commentId: string) {
-	return api<ApiResponse<{ message?: string }>>(`/community/posts/${postId}/comments/${commentId}`, {
+	return api<ApiResponse<{ message?: string }>>(`/comments/${commentId}`, {
 		method: "DELETE",
 	}).then(unwrap);
 }
 
 export async function uploadCommunityAttachments(files: File[]) {
-	const token = localStorage.getItem("accessToken");
 	const fd = new FormData();
 	files.forEach((f) => fd.append("files", f));
 
-	const res = await fetch("/api/community/attachments", {
+	const res = await fetch("/api/board/attachments", {
 		method: "POST",
-		headers: token ? { Authorization: `Bearer ${token}` } : undefined,
 		body: fd,
 	});
 
