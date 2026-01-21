@@ -226,10 +226,9 @@ export function BidDiscovery({
 		try {
 			setAddingId(bidId);
 			setGlobalLoading(true);
-
-			await api("/wishlist", {
+            const userId = 2;
+			await api(`/wishlist/toggle?userId=${userId}&bidId=${bidId}`, {
 				method: "POST",
-				body: JSON.stringify({ bidId }),
 			});
 
 			setAddedIds((prev) => {
