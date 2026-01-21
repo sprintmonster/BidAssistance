@@ -68,8 +68,13 @@ export function AppLayout() {
 	};
 
 	const logout = () => {
+<<<<<<< HEAD
 		localStorage.removeItem("userId");
 		localStorage.removeItem("refreshToken");
+=======
+		// localStorage.removeItem("accessToken");
+		// localStorage.removeItem("refreshToken");
+>>>>>>> a0db5148cf0b0ec6530d38cbe3941a2ecf1dbf60
 		localStorage.removeItem("userId");
 		localStorage.removeItem("name");
 		localStorage.removeItem("email");

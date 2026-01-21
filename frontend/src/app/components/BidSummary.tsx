@@ -226,7 +226,7 @@ export function BidSummary() {
                 setError(null);
 
                 // ✅ API: GET /api/bid/{bidId}
-                const res = await api(`/bid/${numericBidId}`, { method: "GET" });
+                const res = await api(`/bids/${numericBidId}`, { method: "GET" });
 
                 const item =
                     (res as any)?.data?.items?.[0] ??
