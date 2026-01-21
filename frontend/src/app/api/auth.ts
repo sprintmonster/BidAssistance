@@ -6,8 +6,8 @@ export interface LoginSuccessData {
   userId: string;
   name: string;
   email: string;
-  accessToken: string;
-  refreshToken: string;
+  // accessToken: string;
+  // refreshToken: string;
 }
 
 export interface LoginApiResponse {

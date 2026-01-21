@@ -17,7 +17,6 @@ export async function api<T>(
     },
   });
 
-  /* 🔥 토큰 만료 처리 */
   if (res.status === 401) {
     localStorage.removeItem("userId");
     window.location.href = "/";
