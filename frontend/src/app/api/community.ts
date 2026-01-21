@@ -23,7 +23,7 @@ export function fetchCommunityPosts(opts: {
 	page?: number;
 	size?: number;
 }) {
-	return api<ApiResponse<PostListData>>(`/community/posts${qs({
+	return api<ApiResponse<PostListData>>(`/board/posts${qs({
 		category: opts.category,
 		q: opts.q,
 		sort: opts.sort,
@@ -33,7 +33,7 @@ export function fetchCommunityPosts(opts: {
 }
 
 export function fetchCommunityPost(postId: number) {
-	return api<ApiResponse<Post>>(`/community/posts/${postId}`).then(unwrap);
+	return api<ApiResponse<Post>>(`/board/posts/${postId}`).then(unwrap);
 }
 
 export function createCommunityPost(payload: {
@@ -42,7 +42,7 @@ export function createCommunityPost(payload: {
 	category: PostCategory;
 	attachmentIds?: string[];
 }) {
-	return api<ApiResponse<Post>>("/community/posts", {
+	return api<ApiResponse<Post>>("/board/posts", {
 		method: "POST",
 		body: JSON.stringify(payload),
 	}).then(unwrap);
@@ -54,26 +54,26 @@ export function updateCommunityPost(postId: number, payload: Partial<{
 	category: PostCategory;
 	attachmentIds: string[];
 }>) {
-	return api<ApiResponse<Post>>(`/community/posts/${postId}`, {
+	return api<ApiResponse<Post>>(`/board/${postId}`, {
 		method: "PATCH",
 		body: JSON.stringify(payload),
 	}).then(unwrap);
 }
 
 export function deleteCommunityPost(postId: number) {
-	return api<ApiResponse<{ message?: string }>>(`/community/posts/${postId}`, {
+	return api<ApiResponse<{ message?: string }>>(`/board/${postId}`, {
 		method: "DELETE",
 	}).then(unwrap);
 }
 
 export function likeCommunityPost(postId: number) {
-	return api<ApiResponse<{ liked: true }>>(`/community/posts/${postId}/like`, {
+	return api<ApiResponse<{ liked: true }>>(`/board/posts/${postId}/like`, {
 		method: "POST",
 	}).then(unwrap);
 }
 
 export function unlikeCommunityPost(postId: number) {
-	return api<ApiResponse<{ liked: false }>>(`/community/posts/${postId}/like`, {
+	return api<ApiResponse<{ liked: false }>>(`/board/posts/${postId}/dislike`, {
 		method: "DELETE",
 	}).then(unwrap);
 }
