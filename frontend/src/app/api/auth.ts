@@ -22,3 +22,16 @@ export function login(email: string, password: string) {
     body: JSON.stringify({ email, password }),
   });
 }
+
+export interface RegisterData {
+    email: string;
+    name: string;
+    password: string;
+}
+
+export function register(data: RegisterData) {
+    return api<any>("/users", {
+        method: "POST",
+        body: JSON.stringify(data),
+    });
+}
