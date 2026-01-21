@@ -4,7 +4,7 @@ export async function api<T>(
   url: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = localStorage.getItem("accessToken");
+  const token = localStorage.getItem("userId");
 
   const res = await fetch(`${BASE_URL}${url}`, {
     ...options,
@@ -16,12 +16,12 @@ export async function api<T>(
     },
   });
 
-  /* 🔥 토큰 만료 처리 */
-  if (res.status === 401) {
-    localStorage.removeItem("accessToken");
-    window.location.href = "/";
-    throw new Error("인증 만료");
-  }
+  // /* 🔥 토큰 만료 처리 */
+  // if (res.status === 401) {
+  //   localStorage.removeItem("accessToken");
+  //   window.location.href = "/";
+  //   throw new Error("인증 만료");
+  // }
 
   if (!res.ok) {
     const msg = await res.text();
