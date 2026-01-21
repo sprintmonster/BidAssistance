@@ -40,21 +40,27 @@ export function AppLayout() {
 		[location.pathname],
 	);
 
-	useEffect(() => {
-		if (!localStorage.getItem("accessToken")) {
-			setWishlistCount(0);
-			return;
-		}
-		fetchWishlist()
-			.then((items) => setWishlistCount(items.length))
-			.catch(() => setWishlistCount(0));
-	}, [location.pathname]);
+    useEffect(() => {
+        if (!localStorage.getItem("accessToken")) {
+            setWishlistCount(0);
+            return;
+        }
 
-	useEffect(() => {
-		setMobileOpen(false);
-	}, [location.pathname]);
+        const raw = localStorage.getItem("userId");
+        const userId = raw ? Number(raw) : NaN;
 
-	const onSubmitSearch = (e: FormEvent) => {
+        if (!Number.isFinite(userId)) {
+            setWishlistCount(0);
+            return;
+        }
+
+        fetchWishlist(userId)
+            .then((items) => setWishlistCount(items.length))
+            .catch(() => setWishlistCount(0));
+    }, [location.pathname]);
+
+
+    const onSubmitSearch = (e: FormEvent) => {
 		e.preventDefault();
 		const q = query.trim();
 		if (!q) return;

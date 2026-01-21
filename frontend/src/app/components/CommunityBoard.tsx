@@ -5,6 +5,8 @@ import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 
+import { mask_name } from "../utils/masking";
+
 interface CommunityBoardProps {
 	posts: Post[];
 	onSelectPost: (post: Post) => void;
@@ -80,7 +82,7 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 											</div>
 										</TableCell>
 
-										<TableCell className="text-gray-700">{post.authorName}</TableCell>
+									<TableCell className="text-gray-700">{mask_name(post.authorName)}</TableCell>
 										<TableCell className="text-gray-500 tabular-nums">{post.createdAt}</TableCell>
 
 										<TableCell className="text-right text-gray-600 tabular-nums">
@@ -135,7 +137,7 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 						>
 							<div className="flex items-center gap-2 mb-2">
 								<CategoryBadge category={post.category} />
-								<span className="text-xs text-gray-500">{post.authorName}</span>
+									<span className="text-xs text-gray-500">{mask_name(post.authorName)}</span>
 								<span className="text-xs text-gray-400">·</span>
 								<span className="text-xs text-gray-500">{post.createdAt}</span>
 							</div>

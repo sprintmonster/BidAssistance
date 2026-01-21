@@ -1,23 +1,9 @@
-// import type { BidStage } from "./bid";
-//
-// export interface WishlistItem {
-// 	wishlistId: number;
-// 	bidId: number;
-// 	title: string;
-// 	agency: string;
-// 	budget: string;
-// 	budgetValue: number;
-// 	deadline: string;
-// 	stage: BidStage;
-// }
-
-
 // types/wishlist.ts
 import type { BidStage } from "./bid";
 
 export type WishlistItem = {
     bidId: number;
-    bidNo: string;
+    realId: string;
     title: string;
     agency: string;
     baseAmount: number | string; // BigInteger 대응(백엔드가 문자열로 줄 수도 있어서)

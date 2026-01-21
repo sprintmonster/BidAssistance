@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { Progress } from "./ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import type { Page } from "../../types/navigation";
+import type { Page } from "../types/navigation";
 import { toast } from "sonner";
 
 interface BidSummaryProps {

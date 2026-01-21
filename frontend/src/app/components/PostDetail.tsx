@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import type { Post, PostCategory } from "../types/community";
 
+import { mask_name } from "../utils/masking";
+
 interface PostDetailProps {
 	post: Post;
 	onBack: () => void;
@@ -70,8 +72,7 @@ export function PostDetail({
 	const attachments = useMemo(() => post.attachments ?? [], [post.attachments]);
 	const commentCount = post.commentCount ?? comments.length;
 
-	const authorName =
-		(post as any).authorName ?? (post as any).author ?? "—";
+	const authorName = (post as any).authorName ?? (post as any).author ?? "—";
 
 	const [commentText, setCommentText] = useState("");
 	const [isEditing, setIsEditing] = useState(false);
@@ -241,7 +242,7 @@ export function PostDetail({
 				</div>
 
 				<div className="flex items-center gap-4 text-sm text-gray-500 mb-6 pb-6 border-b border-gray-200">
-					<span className="font-medium text-gray-700">{authorName}</span>
+					<span className="font-medium text-gray-700">{mask_name(authorName)}</span>
 					<span>·</span>
 					<span>{post.createdAt}</span>
 					<span>·</span>
@@ -385,7 +386,7 @@ export function PostDetail({
 							>
 								<div className="flex items-center justify-between mb-2">
 									<div className="flex items-center gap-3">
-										<span className="font-medium text-gray-900">{commentAuthorName}</span>
+										<span className="font-medium text-gray-900">{mask_name(commentAuthorName)}</span>
 										<span className="text-sm text-gray-500">{comment.createdAt}</span>
 									</div>
 

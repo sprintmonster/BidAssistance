@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Eye, FilterX, Plus, RefreshCw, Search } from "lucide-react";
 
-import { fetchBids, type Bid } from "../api/bids";
+import { fetchBids } from "../api/bids";
 import { api } from "../api/client";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -48,6 +48,15 @@ import { cn } from "./ui/utils";
 
 type SortKey = "deadline_asc" | "deadline_desc" | "title_asc";
 
+type UiBid = {
+	bidId: number;
+	realId: string;
+	title: string;
+	agency: string;
+	budget: string;
+	deadline: string;
+};
+
 function parseDate(value: string) {
 	const trimmed = (value || "").trim();
 	if (!trimmed) return null;
@@ -70,6 +79,12 @@ function formatDday(deadline: string) {
 	return `D+${Math.abs(days)}`;
 }
 
+function isEnded(deadline: string) {
+	const d = parseDate(deadline);
+	if (!d) return false;
+	return d.getTime() < Date.now();
+}
+
 export function BidDiscovery({
 	setGlobalLoading,
 	showToast,
@@ -83,71 +98,68 @@ export function BidDiscovery({
 		return (q || "").trim();
 	}, [location.search]);
 
-	const [bids, setBids] = useState<Bid[]>([]);
+	const [bids, setBids] = useState<UiBid[]>([]);
 	const [keyword, setKeyword] = useState<string>(urlQuery);
 	const [agency, setAgency] = useState<string>("all");
 	const [sortKey, setSortKey] = useState<SortKey>("deadline_asc");
 	const [page, setPage] = useState<number>(1);
 	const [pageSize, setPageSize] = useState<number>(10);
-	const [selected, setSelected] = useState<Bid | null>(null);
-	// const [addingId, setAddingId] = useState<number | null>(null);
-	// const [addedIds, setAddedIds] = useState<Set<number>>(() => new Set());
-    const [addingId, setAddingId] = useState<string | null>(null);
-    const [addedIds, setAddedIds] = useState<Set<string>>(() => new Set());
+	const [selected, setSelected] = useState<UiBid | null>(null);
+
+	const [addingId, setAddingId] = useState<number | null>(null);
+	const [addedIds, setAddedIds] = useState<Set<number>>(() => new Set());
 
 	useEffect(() => {
 		setKeyword(urlQuery);
 		setPage(1);
 	}, [urlQuery]);
 
-	// const load = async () => {
-	// 	try {
-	// 		setGlobalLoading(true);
-	// 		const list = await fetchBids();
-	// 		setBids(list);
-	// 	} catch {
-	// 		showToast("공고 목록을 불러오지 못했습니다.", "error");
-	// 	} finally {
-	// 		setGlobalLoading(false);
-	// 	}
-	// };
-
-    const load = async () => {
-        try {
-            setGlobalLoading(true);
-
-            const res = await fetchBids();
-
-            // res 예상 형태:
-            // { status: "success", data: { items: [...] } }
+	const load = async () => {
+        console.log("load() start");
+		try {
+			setGlobalLoading(true);
+			const res = await fetchBids();
+            console.log("after fetchBids()");
+            console.log("fetchBids res:", res);
             const items = Array.isArray(res)
                 ? res
-                : Array.isArray((res as any)?.data?.items)
-                    ? (res as any).data.items
-                    : [];
+                : Array.isArray((res as any)?.data)
+                    ? (res as any).data
+                    : Array.isArray((res as any)?.data?.items)
+                        ? (res as any).data.items
+                        : [];
 
-            // 화면용 Bid로 매핑
-            const mapped: Bid[] = items.map((it: any) => ({
-                // id는 화면에서 key/Set용으로 쓰이니까 고유값 필요
-                // 명세상 bidNo가 고유값이니 그걸 사용(문자열이면 Bid 타입도 맞춰야 함)
-                id: String(it.bidNo ?? ""),
-                title: String(it.title ?? ""),
-                agency: String(it.agency ?? ""),
-                budget: it.baseAmount != null ? String(it.baseAmount) : "",
-                deadline: String(it.bidEnd ?? ""),
-            }));
+			const mapped: UiBid[] = items
+				.map((it: any) => {
+					const bidId = Number(it.bidId ?? it.id); // ✅ int
+					const realId = String(it.realId ?? it.bidNo ?? "");
+					if (!Number.isFinite(bidId)) return null;
 
-            setBids(mapped);
-        } catch {
-            showToast("공고 목록을 불러오지 못했습니다.", "error");
-            setBids([]); // 안전
-        } finally {
-            setGlobalLoading(false);
-        }
-    };
+					return {
+						bidId,
+						realId,
+						title: String(it.title ?? it.name ?? ""),
+						agency: String(it.agency ?? it.organization ?? ""),
+						budget:
+							it.baseAmount != null ? String(it.baseAmount) :
+							it.estimatePrice != null ? String(it.estimatePrice) :
+							"",
+						deadline: String(it.bidEnd ?? it.endDate ?? ""),
+					} as UiBid;
+				})
+				.filter(Boolean) as UiBid[];
 
+			setBids(mapped);
+		} catch (e){
+            console.error("load() failed:", e);
+			showToast("공고 목록을 불러오지 못했습니다.", "error");
+			setBids([]);
+		} finally {
+			setGlobalLoading(false);
+		}
+	};
 
-    useEffect(() => {
+	useEffect(() => {
 		void load();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
@@ -165,36 +177,34 @@ export function BidDiscovery({
 		const q = keyword.trim().toLowerCase();
 		let list = bids.slice();
 
+		list = list.filter((b) => !isEnded(b.deadline));
+
 		if (agency !== "all") {
 			list = list.filter((b) => (b.agency || "").trim() === agency);
 		}
 
 		if (q) {
 			list = list.filter((b) => {
-				const hay = `${b.title} ${b.agency} ${b.budget} ${b.deadline}`.toLowerCase();
+				const hay = `${b.title} ${b.agency} ${b.budget} ${b.deadline} ${b.realId}`.toLowerCase();
 				return hay.includes(q);
 			});
 		}
 
-        list.sort((a, b) => {
-            if (sortKey === "title_asc") {
-                const at = String(a.title ?? "");
-                const bt = String(b.title ?? "");
-                return at.localeCompare(bt);
-            }
+		list.sort((a, b) => {
+			if (sortKey === "title_asc") return a.title.localeCompare(b.title);
 
-            const ad = parseDate(a.deadline)?.getTime() ?? Number.POSITIVE_INFINITY;
-            const bd = parseDate(b.deadline)?.getTime() ?? Number.POSITIVE_INFINITY;
-            return sortKey === "deadline_desc" ? bd - ad : ad - bd;
-        });
+			const ad = parseDate(a.deadline)?.getTime() ?? Number.POSITIVE_INFINITY;
+			const bd = parseDate(b.deadline)?.getTime() ?? Number.POSITIVE_INFINITY;
+			return sortKey === "deadline_desc" ? bd - ad : ad - bd;
+		});
 
-
-        return list;
+		return list;
 	}, [bids, agency, keyword, sortKey]);
 
 	const total = filtered.length;
 	const totalPages = Math.max(1, Math.ceil(total / pageSize));
 	const safePage = Math.min(Math.max(1, page), totalPages);
+
 	const paged = useMemo(() => {
 		const start = (safePage - 1) * pageSize;
 		return filtered.slice(start, start + pageSize);
@@ -212,19 +222,22 @@ export function BidDiscovery({
 		setPage(1);
 	};
 
-	const addToCart = async (bidId: string) => {
+	const addToCart = async (bidId: number) => {
 		try {
 			setAddingId(bidId);
 			setGlobalLoading(true);
+
 			await api("/wishlist", {
 				method: "POST",
 				body: JSON.stringify({ bidId }),
 			});
+
 			setAddedIds((prev) => {
 				const next = new Set(prev);
 				next.add(bidId);
 				return next;
 			});
+
 			showToast("장바구니에 추가됨", "success");
 		} catch {
 			showToast("추가 실패", "error");
@@ -251,10 +264,10 @@ export function BidDiscovery({
 				<CardHeader className="space-y-1">
 					<CardTitle className="text-xl">공고 찾기</CardTitle>
 					<CardDescription>
-						키워드/기관/정렬 기반으로 공고를 빠르게 찾고, 장바구니에
-						담아 관리하세요.
+						키워드/기관/정렬 기반으로 공고를 빠르게 찾고, 장바구니에 담아 관리하세요.
 					</CardDescription>
 				</CardHeader>
+
 				<CardContent className="space-y-3">
 					<div className="flex flex-col gap-2 lg:flex-row lg:items-center">
 						<div className="flex flex-1 items-center gap-2">
@@ -266,48 +279,52 @@ export function BidDiscovery({
 										setKeyword(e.target.value);
 										setPage(1);
 									}}
-									placeholder={
-										urlQuery
-											? `검색어: ${urlQuery}`
-											: "키워드 검색 (공고명/기관/예산/마감)"
-									}
+									placeholder={urlQuery ? `검색어: ${urlQuery}` : "키워드 검색 (공고명/기관/예산/마감)"}
 									className="pl-8"
 								/>
 							</div>
-							<Button
-								variant="outline"
-								onClick={() => {
-									void load();
-								}}
-								className="shrink-0"
-							>
+
+							<Button variant="outline" onClick={() => void load()} className="shrink-0">
 								<RefreshCw className="mr-2 size-4" />
 								새로고침
 							</Button>
-							<Button
-								variant="ghost"
-								onClick={resetFilters}
-								className="shrink-0"
-							>
+
+							<Button variant="ghost" onClick={resetFilters} className="shrink-0">
 								<FilterX className="mr-2 size-4" />
 								필터 초기화
 							</Button>
 						</div>
 
 						<div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-							<div className="flex items-center gap-2">
+							<Select
+								value={agency}
+								onValueChange={(v) => {
+									setAgency(v);
+									setPage(1);
+								}}
+							>
+								<SelectTrigger className="w-[220px]">
+									<SelectValue placeholder="기관" />
+								</SelectTrigger>
+								<SelectContent>
+									{agencies.map((a) => (
+										<SelectItem key={a} value={a}>
+											{a === "all" ? "전체 기관" : a}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 
-								<Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
-									<SelectTrigger className="w-[200px]">
-										<SelectValue placeholder="정렬" />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="deadline_asc">마감 빠른 순</SelectItem>
-										<SelectItem value="deadline_desc">마감 늦은 순</SelectItem>
-										<SelectItem value="title_asc">공고명 A→Z</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
+							<Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+								<SelectTrigger className="w-[200px]">
+									<SelectValue placeholder="정렬" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="deadline_asc">마감 빠른 순</SelectItem>
+									<SelectItem value="deadline_desc">마감 늦은 순</SelectItem>
+									<SelectItem value="title_asc">공고명 A→Z</SelectItem>
+								</SelectContent>
+							</Select>
 
 							<div className="flex items-center gap-2 sm:ml-auto">
 								<Select
@@ -341,11 +358,12 @@ export function BidDiscovery({
 									<TableHead className="w-[120px] pl-6">마감</TableHead>
 									<TableHead>공고명</TableHead>
 									<TableHead className="w-[220px]">발주기관</TableHead>
-									<TableHead className="w-[160px]">예산</TableHead>
+									<TableHead className="w-[160px] text-right">예산</TableHead>
 									<TableHead className="w-[140px]">상태</TableHead>
-									<TableHead className="w-[160px]">액션</TableHead>
+									<TableHead className="w-[160px] text-right">액션</TableHead>
 								</TableRow>
 							</TableHeader>
+
 							<TableBody>
 								{paged.length === 0 ? (
 									<TableRow>
@@ -356,41 +374,41 @@ export function BidDiscovery({
 								) : (
 									paged.map((b) => {
 										const dday = formatDday(b.deadline);
-										// const alreadyAdded = addedIds.has(b.id);
-                                        const alreadyAdded = addedIds.has(String(b.id));
+										const alreadyAdded = addedIds.has(b.bidId);
+
+										const statusVariant = dday === "D-DAY" ? "destructive" : "secondary";
+										const statusLabel = dday === "D-DAY" ? "오늘 마감" : dday ? "진행중" : "확인 필요";
 
 										return (
 											<TableRow
-												key={b.id}
+												key={`${b.bidId}-${b.realId}`}
 												className="cursor-pointer"
 												onClick={() => setSelected(b)}
 											>
-												<TableCell className="whitespace-normal">
+												<TableCell className="whitespace-normal pl-6">
 													<div className="flex flex-col">
-														<span className="text-sm font-medium">
-															{dday || b.deadline}
-														</span>
+														<span className="text-sm font-medium">{dday || b.deadline}</span>
 														{dday && (
-															<span className="text-xs text-muted-foreground">
-																{b.deadline}
-															</span>
+															<span className="text-xs text-muted-foreground">{b.deadline}</span>
 														)}
 													</div>
 												</TableCell>
+
 												<TableCell className="whitespace-normal">
 													<div className="line-clamp-2 font-medium">{b.title}</div>
+													<div className="text-xs text-muted-foreground">{b.realId}</div>
 												</TableCell>
+
 												<TableCell className="whitespace-normal">
 													<div className="line-clamp-2">{b.agency}</div>
 												</TableCell>
-												<TableCell className="text-right">
-													{b.budget}
-												</TableCell>
+
+												<TableCell className="text-right">{b.budget}</TableCell>
+
 												<TableCell>
-													<Badge variant={dday === "D-DAY" ? "destructive" : "secondary"}>
-														{dday ? "마감일" : "확인 필요"}
-													</Badge>
+													<Badge variant={statusVariant}>{statusLabel}</Badge>
 												</TableCell>
+
 												<TableCell className="text-right">
 													<div className="flex justify-end gap-2">
 														<Button
@@ -404,13 +422,14 @@ export function BidDiscovery({
 															<Eye className="mr-2 size-4" />
 															상세
 														</Button>
+
 														<Button
 															size="sm"
-															disabled={addingId === b.id || alreadyAdded}
+															disabled={addingId === b.bidId || alreadyAdded}
 															className={cn(alreadyAdded && "opacity-70")}
 															onClick={(e) => {
 																e.stopPropagation();
-																void addToCart(b.id);
+																void addToCart(b.bidId);
 															}}
 														>
 															<Plus className="mr-2 size-4" />
@@ -479,46 +498,49 @@ export function BidDiscovery({
 			>
 				<DialogContent className="sm:max-w-2xl">
 					{selected && (
-						<DialogHeader>
-							<DialogTitle className="leading-snug">{selected.title}</DialogTitle>
-							<DialogDescription>
-								발주기관: {selected.agency} · 예산: {selected.budget} · 마감: {selected.deadline}
-							</DialogDescription>
-						</DialogHeader>
-					)}
+						<>
+							<DialogHeader>
+								<DialogTitle className="leading-snug">{selected.title}</DialogTitle>
+								<DialogDescription>
+									발주기관: {selected.agency} · 예산: {selected.budget} · 마감: {selected.deadline}
+								</DialogDescription>
+							</DialogHeader>
 
-					{selected && (
-						<div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-							<div className="rounded-lg border p-3">
-								<div className="text-xs text-muted-foreground">마감</div>
-								<div className="mt-1 flex items-center gap-2">
-									<span className="text-sm font-medium">
-										{formatDday(selected.deadline) || selected.deadline}
-									</span>
-									<Badge variant="secondary">공고</Badge>
+							<div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+								<div className="rounded-lg border p-3">
+									<div className="text-xs text-muted-foreground">마감</div>
+									<div className="mt-1 flex items-center gap-2">
+										<span className="text-sm font-medium">
+											{formatDday(selected.deadline) || selected.deadline}
+										</span>
+										<Badge variant="secondary">공고</Badge>
+									</div>
+								</div>
+
+								<div className="rounded-lg border p-3">
+									<div className="text-xs text-muted-foreground">예산</div>
+									<div className="mt-1 text-sm font-medium">{selected.budget}</div>
+								</div>
+
+								<div className="rounded-lg border p-3 sm:col-span-2">
+									<div className="text-xs text-muted-foreground">기관</div>
+									<div className="mt-1 text-sm font-medium">{selected.agency}</div>
+								</div>
+
+								<div className="sm:col-span-2 flex justify-end gap-2">
+									<Button variant="outline" onClick={() => setSelected(null)}>
+										닫기
+									</Button>
+									<Button
+										disabled={addingId === selected.bidId || addedIds.has(selected.bidId)}
+										onClick={() => void addToCart(selected.bidId)}
+									>
+										<Plus className="mr-2 size-4" />
+										{addedIds.has(selected.bidId) ? "담김" : "트래킹에 담기"}
+									</Button>
 								</div>
 							</div>
-							<div className="rounded-lg border p-3">
-								<div className="text-xs text-muted-foreground">예산</div>
-								<div className="mt-1 text-sm font-medium">{selected.budget}</div>
-							</div>
-							<div className="rounded-lg border p-3 sm:col-span-2">
-								<div className="text-xs text-muted-foreground">기관</div>
-								<div className="mt-1 text-sm font-medium">{selected.agency}</div>
-							</div>
-							<div className="sm:col-span-2 flex justify-end gap-2">
-								<Button variant="outline" onClick={() => setSelected(null)}>
-									닫기
-								</Button>
-								<Button
-									disabled={addingId === selected.id || addedIds.has(selected.id)}
-									onClick={() => void addToCart(selected.id)}
-								>
-									<Plus className="mr-2 size-4" />
-									{addedIds.has(selected.id) ? "담김" : "트래킹에 담기"}
-								</Button>
-							</div>
-						</div>
+						</>
 					)}
 				</DialogContent>
 			</Dialog>

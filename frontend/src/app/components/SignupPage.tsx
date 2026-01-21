@@ -19,6 +19,9 @@ import {
 	SelectValue,
 } from "./ui/select";
 
+import { PasswordRules } from "./PasswordRules";
+import { is_password_valid } from "../utils/password";
+
 interface SignupPageProps {
 	onSignup: (email: string) => void;
 	onNavigateToLogin: () => void;
@@ -57,6 +60,7 @@ export function SignupPage({
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState<string | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [showPrivacyDetail, setShowPrivacyDetail] = useState(false);
 
 	const canSubmit = useMemo(() => {
 		if (!formData.name.trim()) return false;
@@ -66,6 +70,11 @@ export function SignupPage({
 
 		if (!formData.password) return false;
 		if (formData.password !== formData.confirmPassword) return false;
+
+		const email_local = formData.email.split("@")[0] || "";
+		if (!is_password_valid(formData.password, { user_id: email_local, nickname: formData.nickName })) {
+			return false;
+		}
 
 		if (!formData.recoveryQuestion.trim()) return false;
 		if (!formData.recoveryAnswer.trim()) return false;
@@ -94,6 +103,17 @@ export function SignupPage({
 
 			if (formData.password !== formData.confirmPassword) {
 				setError("비밀번호와 비밀번호 확인이 일치하지 않아요.");
+				return;
+			}
+
+			const email_local = formData.email.split("@")[0] || "";
+			if (
+				!is_password_valid(formData.password, {
+					user_id: email_local,
+					nickname: formData.nickName,
+				})
+			) {
+				setError("비밀번호 규칙을 충족해 주세요.");
 				return;
 			}
 
@@ -272,6 +292,13 @@ export function SignupPage({
 								autoComplete="new-password"
 								required
 							/>
+							<PasswordRules
+								password={formData.password}
+								ctx={{
+									user_id: (formData.email.split("@")[0] || "").trim(),
+									nickname: formData.nickName.trim(),
+								}}
+							/>
 						</div>
 
 						<div className="space-y-2">
@@ -354,7 +381,31 @@ export function SignupPage({
 									<span className="text-red-600"> *</span>
 									<div className="text-xs text-muted-foreground mt-1">
 										회원가입 및 서비스 제공을 위해 필요합니다.
+										<button
+											type="button"
+											className="ml-2 underline"
+											onClick={() => setShowPrivacyDetail((v) => !v)}
+										>
+											{showPrivacyDetail ? "닫기" : "자세히"}
+										</button>
 									</div>
+
+									{showPrivacyDetail && (
+										<div className="mt-2 rounded-md bg-slate-50 border px-3 py-2 text-xs text-slate-700 space-y-1">
+											<div>
+												<span className="font-medium">수집 항목</span>: 이름, 이메일, 닉네임, 생년월일(본인 확인/계정복구용)
+											</div>
+											<div>
+												<span className="font-medium">이용 목적</span>: 회원가입, 로그인, 계정 복구, 서비스 제공 및 고지사항 전달
+											</div>
+											<div>
+												<span className="font-medium">보유 기간</span>: 회원 탈퇴 후 지체 없이 파기(관계 법령에 따라 보관이 필요한 경우 예외)
+											</div>
+											<div>
+												<span className="font-medium">동의 거부</span>: 필수 항목 동의 거부 시 회원가입 불가
+											</div>
+										</div>
+									)}
 								</span>
 							</label>
 
