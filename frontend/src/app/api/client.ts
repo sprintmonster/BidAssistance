@@ -17,26 +17,15 @@ export async function api<T>(
   });
 
   /* 🔥 토큰 만료 처리 */
-	if (res.status === 401 && token) {
+  if (res.status === 401) {
     localStorage.removeItem("accessToken");
     window.location.href = "/";
     throw new Error("인증 만료");
   }
 
   if (!res.ok) {
-		let msg = "API 오류";
-		try {
-			const json = await res.json();
-			msg = (json as any)?.message || msg;
-		} catch {
-			try {
-				const text = await res.text();
-				msg = text || msg;
-			} catch {
-				// ignore
-			}
-		}
-		throw new Error(msg);
+    const msg = await res.text();
+    throw new Error(msg || "API 오류");
   }
 
   return res.json();

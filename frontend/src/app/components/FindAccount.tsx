@@ -1,260 +1,310 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "./ui/card";
 
 const SECURITY_QUESTIONS = [
-    "가장 기억에 남는 선생님 성함은?",
-    "첫 반려동물 이름은?",
-    "출생한 도시는?",
-    "가장 좋아하는 음식은?",
+	"가장 기억에 남는 선생님 성함은?",
+	"첫 반려동물 이름은?",
+	"출생한 도시는?",
+	"가장 좋아하는 음식은?",
 ] as const;
 
-// legacy(키 문자열 저장) → 숫자 인덱스로 변환(과거 데이터 호환용)
-const LEGACY_KEY_TO_INDEX: Record<string, number> = {
-    favorite_teacher: 0,
-    first_pet: 1,
-    birth_city: 2,
-    favorite_food: 3,
-};
+type Notice = { type: "error" | "success"; text: string } | null;
 
+export function FindAccountPage() {
+	const navigate = useNavigate();
 
-interface FindAccountPageProps {
-    onFindAccount: (payload: {
-        name: string;
-        birthDate: string; // YYYY-MM-DD
-        questionIndex: number;
-        answer: string;
-    }) => void | Promise<void>;
-    onNavigateToLogin: () => void;
-    onNavigateToHome: () => void;
-}
+	const [formData, setFormData] = useState({
+		name: "",
+		birthDate: "",
+		answer: "",
+	});
 
-export function FindAccountPage({ onFindAccount, onNavigateToLogin, onNavigateToHome, }: FindAccountPageProps) {
-    const [formData, setFormData] = useState({
-        name: "",
-        birthDate: "",
-        answer: "",
-    });
+	const [step, setStep] = useState<"identify" | "answer" | "result">("identify");
+	const [questionIndex, setQuestionIndex] = useState<number | null>(null);
+	const [identifiedEmail, setIdentifiedEmail] = useState<string>("");
+	const [requestId, setRequestId] = useState<string>("");
 
-    const [step, setStep] = useState<"identify" | "answer" | "result">("identify");
-    const [questionIndex, setQuestionIndex] = useState<number | null>(null);
-    const [identifiedEmail, setIdentifiedEmail] = useState<string>(""); // 결과로 보여줄 계정(이메일)
-    // const [targetEmail, setTargetEmail] = useState<string>("");
-    const [requestId, setRequestId] = useState<string>("");
+	const [message, setMessage] = useState<Notice>(null);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleIdentify = async (e: React.FormEvent) => {
-        e.preventDefault();
+	const canIdentify = useMemo(() => {
+		return Boolean(formData.name.trim() && formData.birthDate);
+	}, [formData.name, formData.birthDate]);
 
-        const name = formData.name.trim();
-        const birth = formData.birthDate; // YYYY-MM-DD
+	const canAnswer = useMemo(() => {
+		return Boolean(requestId && questionIndex !== null && formData.answer.trim());
+	}, [requestId, questionIndex, formData.answer]);
 
-        if (!name || !birth) return;
+	const resetToIdentify = () => {
+		setStep("identify");
+		setQuestionIndex(null);
+		setRequestId("");
+		setIdentifiedEmail("");
+		setFormData((prev) => ({ ...prev, answer: "" }));
+		setMessage(null);
+	};
 
-        try {
-            const qs = new URLSearchParams({ name, birth }).toString();
+	const handleIdentify = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setMessage(null);
+		if (!canIdentify) return;
 
-            const res = await fetch(`/api/users/find_email/identify?${qs}`, {
-                method: "GET",
-            });
+		try {
+			setIsSubmitting(true);
 
-            const json = await res.json().catch(() => null);
+			const name = formData.name.trim();
+			const birth = formData.birthDate;
+			const qs = new URLSearchParams({ name, birth }).toString();
 
-            if (!res.ok || json?.status === "error") {
-                alert(json?.message ?? "해당 계정이 없습니다.");
-                return;
-            }
+			const res = await fetch(`/api/users/find_email/identify?${qs}`, { method: "GET" });
+			const json = await res.json().catch(() => null);
 
-            const rid = json?.data?.requestId;
-            const qIndex = json?.data?.questionIndex;
+			if (!res.ok || json?.status === "error") {
+				const msg =
+					json?.message ??
+					(res.status === 404 ? "가입된 계정을 찾을 수 없습니다." : "요청에 실패했습니다. 다시 시도해 주세요.");
+				setMessage({ type: "error", text: msg });
+				return;
+			}
 
-            if (typeof rid !== "string" || typeof qIndex !== "number") {
-                alert("서버 응답 형식이 올바르지 않아요.");
-                return;
-            }
+			const rid = json?.data?.requestId;
+			const qIndex = json?.data?.questionIndex;
 
-            setRequestId(rid);
-            setQuestionIndex(qIndex);
-            setStep("answer");
-        } catch {
-            alert("서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요.");
-        }
-    };
+			if (typeof rid !== "string" || typeof qIndex !== "number") {
+				setMessage({ type: "error", text: "서버 응답 형식이 올바르지 않아요." });
+				return;
+			}
 
-    const handleVerifyAnswer = async (e: React.FormEvent) => {
-        e.preventDefault();
+			setRequestId(rid);
+			setQuestionIndex(qIndex);
+			setStep("answer");
+			setMessage({ type: "success", text: "확인 완료. 가입 시 설정한 질문에 답변해 주세요." });
+		} catch {
+			setMessage({ type: "error", text: "서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요." });
+		} finally {
+			setIsSubmitting(false);
+		}
+	};
 
-        const answer = formData.answer.trim();
-        if (!requestId || !answer) return;
+	const handleVerifyAnswer = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setMessage(null);
+		if (!canAnswer) return;
 
-        try {
-            const qs = new URLSearchParams({ requestId, answer }).toString();
+		try {
+			setIsSubmitting(true);
 
-            const res = await fetch(`/api/users/find_email/verify?${qs}`, {
-                method: "GET",
-            });
+			const answer = formData.answer.trim();
+			const qs = new URLSearchParams({ requestId, answer }).toString();
 
-            const json = await res.json().catch(() => null);
+			const res = await fetch(`/api/users/find_email/verify?${qs}`, { method: "GET" });
+			const json = await res.json().catch(() => null);
 
-            if (!res.ok || json?.status === "error") {
-                alert(json?.message ?? "답변이 일치하지 않습니다.");
-                return;
-            }
+			if (!res.ok || json?.status === "error") {
+				const msg =
+					json?.message ??
+					(res.status === 401 ? "답변이 일치하지 않습니다." : "요청에 실패했습니다. 다시 시도해 주세요.");
+				setMessage({ type: "error", text: msg });
+				return;
+			}
 
-            const email = json?.data?.email;
-            if (typeof email !== "string") {
-                alert("서버 응답 형식이 올바르지 않아요.");
-                return;
-            }
+			const email = json?.data?.email;
+			if (typeof email !== "string") {
+				setMessage({ type: "error", text: "서버 응답 형식이 올바르지 않아요." });
+				return;
+			}
 
-            setIdentifiedEmail(email);
-            setStep("result");
-        } catch {
-            alert("서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요.");
-        }
-    };
+			setIdentifiedEmail(email);
+			setStep("result");
+			setMessage({ type: "success", text: "계정을 찾았어요!" });
+		} catch {
+			setMessage({ type: "error", text: "서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요." });
+		} finally {
+			setIsSubmitting(false);
+		}
+	};
 
-    return (
-        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-            <Card className="w-full max-w-md">
-                <CardHeader className="space-y-1">
-                    <div className="flex items-center justify-center mb-4">
-                        <img
-                            src="/logo_mini.png"
-                            alt="입찰인사이트 로고(축소판)"
-                            className="h-20 w-auto block object-contain cursor-pointer hover:opacity-80 hover:scale-105 transition-all duration-200"
-                            onClick={onNavigateToHome}
-                            title="홈페이지 이동하기"  // 툴팁 추가
-                        />
-                    </div>
-                    <CardTitle className="text-2xl text-center">계정 찾기</CardTitle>
-                    <CardDescription className="text-center">
-                        가입 시 등록한 정보로 이메일(계정)을 확인합니다
-                    </CardDescription>
-                </CardHeader>
+	return (
+		<div className="min-h-screen flex items-center justify-center p-4 bg-slate-950 bg-[radial-gradient(1200px_500px_at_50%_-20%,rgba(59,130,246,0.18),transparent),radial-gradient(900px_420px_at_15%_110%,rgba(99,102,241,0.12),transparent)]">
+			<Card className="w-full max-w-[420px] rounded-2xl border-slate-200/60 shadow-xl">
+				<CardHeader className="space-y-2 pb-5">
+					<div className="flex items-center justify-center">
+						<img
+							src="/logo2.png"
+							alt="입찰인사이트 로고"
+							className="h-14 w-auto object-contain cursor-pointer hover:opacity-90 transition"
+							onClick={() => navigate("/")}
+							title="홈페이지 이동하기"
+						/>
+					</div>
+				</CardHeader>
 
-                <form onSubmit={step === "identify" ? handleIdentify : step === "answer" ? handleVerifyAnswer : (e) => e.preventDefault()}>
-                    <CardContent className="space-y-4">
-                        {/* 1) identify 단계: 이름 + 생년월일 */}
-                        {step === "identify" && (
-                            <>
-                                <div className="space-y-2">
-                                    <Label htmlFor="name">이름</Label>
-                                    <Input
-                                        id="name"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        required
-                                    />
-                                </div>
+				<form onSubmit={step === "identify" ? handleIdentify : step === "answer" ? handleVerifyAnswer : (e) => e.preventDefault()}>
+					<CardContent className="space-y-5">
+						<div className="space-y-1">
+							<CardTitle className="text-2xl text-center">계정 찾기</CardTitle>
+							<CardDescription className="text-center">
+								가입 시 등록한 정보로 계정(이메일)을 찾습니다
+							</CardDescription>
+						</div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="birthDate">생년월일</Label>
-                                    <Input
-                                        id="birthDate"
-                                        type="date"
-                                        value={formData.birthDate}
-                                        onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                            </>
-                        )}
+						{message && (
+							<div
+								role="alert"
+								className={[
+									"rounded-lg border px-3 py-2 text-sm",
+									message.type === "success"
+										? "border-green-200 bg-green-50 text-green-700"
+										: "border-red-200 bg-red-50 text-red-700",
+								].join(" ")}
+							>
+								{message.text}
+							</div>
+						)}
 
-                        {/* 2) answer 단계: 질문 출력 + 답변 입력 + 다시 입력 */}
-                        {step === "answer" && (
-                            <>
-                                <div className="space-y-2">
-                                    <Label>가입 시 설정한 질문</Label>
-                                    <div className="rounded-md border bg-white px-3 py-2 text-sm">
-                                        {questionIndex !== null ? SECURITY_QUESTIONS[questionIndex] : ""}
-                                    </div>
-                                </div>
+						{step === "identify" && (
+							<>
+								<div className="space-y-2">
+									<Label htmlFor="name" className="text-sm font-medium">이름</Label>
+									<Input
+										id="name"
+										value={formData.name}
+										onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+										className="h-11"
+										required
+									/>
+								</div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="answer">답변</Label>
-                                    <Input
-                                        id="answer"
-                                        value={formData.answer}
-                                        onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
-                                        required
-                                    />
-                                </div>
+								<div className="space-y-2">
+									<Label htmlFor="birthDate" className="text-sm font-medium">생년월일</Label>
+									<Input
+										id="birthDate"
+										type="date"
+										value={formData.birthDate}
+										onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+										className="h-11"
+										required
+									/>
+								</div>
+							</>
+						)}
 
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="w-full"
-                                    onClick={() => {
-                                        setStep("identify");
-                                        setQuestionIndex(null);
-                                        setRequestId("");
-                                        setIdentifiedEmail("");
-                                        setFormData({ ...formData, answer: "" });
-                                    }}
-                                >
-                                    다시 입력하기
-                                </Button>
-                            </>
-                        )}
+						{step === "answer" && (
+							<>
+								<div className="space-y-2">
+									<Label className="text-sm font-medium">가입 시 설정한 질문</Label>
+									<div className="rounded-lg border bg-white px-3 py-3 text-sm leading-relaxed">
+										{questionIndex !== null ? SECURITY_QUESTIONS[questionIndex] : ""}
+									</div>
+								</div>
 
-                        {/* 3) result 단계: 계정(이메일) 공개 */}
-                        {step === "result" && (
-                            <>
-                                <div className="rounded-md bg-green-50 text-green-700 px-3 py-2 text-sm">
-                                    계정을 찾았어요!
-                                </div>
+								<div className="space-y-2">
+									<Label htmlFor="answer" className="text-sm font-medium">답변</Label>
+									<Input
+										id="answer"
+										value={formData.answer}
+										onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
+										className="h-11"
+										required
+									/>
+								</div>
 
-                                <div className="text-sm">
-                                    당신의 계정(이메일): <span className="font-medium">{identifiedEmail}</span>
-                                </div>
+								<Button
+									type="button"
+									variant="outline"
+									className="w-full h-11"
+									onClick={resetToIdentify}
+									disabled={isSubmitting}
+								>
+									다시 입력하기
+								</Button>
+							</>
+						)}
 
-                                <Button type="button" className="w-full" onClick={onNavigateToLogin}>
-                                    로그인하러 가기
-                                </Button>
+						{step === "result" && (
+							<>
+								<div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+									계정을 찾았어요!
+								</div>
 
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="w-full"
-                                    onClick={() => {
-                                        setStep("identify");
-                                        setQuestionIndex(null);
-                                        setRequestId("");
-                                        setIdentifiedEmail("");
-                                        setFormData({ name: "", birthDate: "", answer: "" });
-                                    }}
-                                >
-                                    다시 찾기
-                                </Button>
-                            </>
-                        )}
-                    </CardContent>
+								<div className="text-sm">
+									당신의 계정(이메일):{" "}
+									<span className="font-medium text-slate-900">{identifiedEmail}</span>
+								</div>
 
+								<Button
+									type="button"
+									className="w-full h-11 text-base font-semibold"
+									onClick={() => navigate("/login")}
+								>
+									로그인하러 가기
+								</Button>
 
-                    <CardFooter className="flex flex-col space-y-4">
-                        {step !== "result" && (
-                            <Button type="submit" className="w-full">
-                                {step === "identify" ? "다음" : "계정 확인"}
-                            </Button>
-                        )}
+								<Button
+									type="button"
+									variant="outline"
+									className="w-full h-11"
+									onClick={() => {
+										setStep("identify");
+										setQuestionIndex(null);
+										setRequestId("");
+										setIdentifiedEmail("");
+										setFormData({ name: "", birthDate: "", answer: "" });
+										setMessage(null);
+									}}
+								>
+									다시 찾기
+								</Button>
+							</>
+						)}
+					</CardContent>
 
+					<CardFooter className="flex flex-col gap-3 pt-6">
+						{step !== "result" && (
+							<Button
+								type="submit"
+								className="w-full h-11 text-base font-semibold"
+								disabled={
+									isSubmitting ||
+									(step === "identify" && !canIdentify) ||
+									(step === "answer" && !canAnswer)
+								}
+							>
+								{isSubmitting ? "확인 중..." : step === "identify" ? "다음" : "계정 확인"}
+							</Button>
+						)}
 
-                        <div className="text-sm text-center text-gray-600">
-                            로그인 화면으로 돌아가기{" "}
-                            <button
-                                type="button"
-                                onClick={onNavigateToLogin}
-                                className="text-blue-600 hover:underline"
-                            >
-                                로그인
-                            </button>
-                        </div>
-                    </CardFooter>
-                </form>
-            </Card>
-        </div>
-    );
+						<div className="flex justify-between gap-4 text-sm">
+							<button
+								type="button"
+								onClick={() => navigate("/login")}
+								className="text-muted-foreground hover:text-slate-900 hover:underline"
+							>
+								로그인
+							</button>
+							<button
+								type="button"
+								onClick={() => navigate("/reset-password")}
+								className="text-muted-foreground hover:text-slate-900 hover:underline"
+							>
+								비밀번호 찾기
+							</button>
+						</div>
+					</CardFooter>
+				</form>
+			</Card>
+		</div>
+	);
 }
