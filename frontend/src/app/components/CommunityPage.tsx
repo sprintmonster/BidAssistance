@@ -43,7 +43,7 @@ function safeUserId() {
 	return localStorage.getItem("userId") || "";
 }
 function isAuthedNow() {
-	return !!localStorage.getItem("accessToken");
+	return !!localStorage.getItem("userId");
 }
 
 export function CommunityPage() {
