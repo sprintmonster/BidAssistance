@@ -15,10 +15,6 @@ export function Home() {
   //   () => !!localStorage.getItem("accessToken"),
   //   []
   // );
-    const isAuthed = useMemo(() => {
-        const uid = localStorage.getItem("userId");
-        return !!uid && uid !== "undefined";
-    }, []);
 
   const [wishlistCount, setWishlistCount] = useState(0);
 
@@ -29,7 +25,12 @@ export function Home() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-    const user: AuthUser | null = useMemo(() => {
+    const [isAuthed, setIsAuthed] = useState(() => {
+        const uid = localStorage.getItem("userId");
+        return !!uid && uid !== "undefined";
+    });
+
+    const [user, setUser] = useState<AuthUser | null>(() => {
         const uid = localStorage.getItem("userId");
         if (!uid || uid === "undefined") return null;
 
@@ -37,22 +38,27 @@ export function Home() {
         const storedEmail = localStorage.getItem("email") || undefined;
 
         return { name: name || "사용자", email: storedEmail };
-    }, []);
+    });
+
 
 
     useEffect(() => {
-        const uidStr = localStorage.getItem("userId");
-        if (!uidStr || uidStr === "undefined") return;
+        if (!isAuthed) {
+            setWishlistCount(0);
+            return;
+        }
 
+        const uidStr = localStorage.getItem("userId");
         const uid = Number(uidStr);
         if (!Number.isFinite(uid)) return;
 
         fetchWishlist(uid)
             .then((items) => setWishlistCount(items.length))
             .catch(() => setWishlistCount(0));
-    }, []);
+    }, [isAuthed]);
 
-  const onQuickLogin = async () => {
+
+    const onQuickLogin = async () => {
     setErrorMsg(null);
     if (!email.trim() || !password.trim()) {
       setErrorMsg("이메일과 비밀번호를 입력하세요.");
@@ -75,7 +81,7 @@ export function Home() {
         const id = (res as any)?.data?.id;
 
         if (typeof id === "number" && Number.isFinite(id)) {
-            localStorage.setItem("u,serId", String(id));
+            localStorage.setItem("userId", String(id));
         } else {
             localStorage.removeItem("userId");
             setErrorMsg("로그인 정보 처리 중 문제가 발생했습니다. 다시 시도해주세요.");
@@ -85,10 +91,10 @@ export function Home() {
         localStorage.setItem("userName", String(res.data?.name ?? ""));
         localStorage.setItem("email", String(res.data?.email ?? email.trim()));
 
-// ⚠️ 아래 토큰들은 서버가 실제로 줄 때만 저장(없으면 저장하지 않기)
-        const anyData = res.data as any;
-        if (anyData?.accessToken) localStorage.setItem("accessToken", String(anyData.accessToken));
-        if (anyData?.refreshToken) localStorage.setItem("refreshToken", String(anyData.refreshToken));
+// // ⚠️ 아래 토큰들은 서버가 실제로 줄 때만 저장(없으면 저장하지 않기)
+//         const anyData = res.data as any;
+//         if (anyData?.accessToken) localStorage.setItem("accessToken", String(anyData.accessToken));
+//         if (anyData?.refreshToken) localStorage.setItem("refreshToken", String(anyData.refreshToken));
 
 
         navigate("/dashboard");
@@ -100,8 +106,8 @@ export function Home() {
   };
 
   const onLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    // localStorage.removeItem("accessToken");
+    // localStorage.removeItem("refreshToken");
     localStorage.removeItem("userId");
     localStorage.removeItem("userName");
     localStorage.removeItem("name");
