@@ -6,7 +6,14 @@ import {
 	AccordionTrigger,
 } from "./ui/accordion";
 import { Badge } from "./ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "./ui/card";
 import { ScrollArea } from "./ui/scroll-area";
 import { Separator } from "./ui/separator";
 
@@ -280,25 +287,29 @@ export function PrivacyPolicyPage() {
 				<Separator />
 			</CardHeader>
 
-			<CardContent>
-				<ScrollArea className="max-h-[72vh] pr-3">
-					<Accordion type="multiple" className="w-full">
-						{sections.map((s) => (
-							<AccordionItem key={s.id} value={s.id}>
-								<AccordionTrigger>{s.title}</AccordionTrigger>
-								<AccordionContent>
-									<div className="space-y-3 leading-relaxed">{s.content}</div>
-								</AccordionContent>
-							</AccordionItem>
-						))}
-					</Accordion>
-
-					<div className="mt-6 text-xs text-muted-foreground">
-						본 방침은 서비스 구성/기능 및 법령 적용 범위에 따라 수정이 필요할 수 있습니다.
-						프로덕션 배포 전, 실제 수집항목·보관기간·위탁/제공 여부를 최종 확정해 주세요.
+			<CardContent className="p-0 overflow-hidden">
+				<ScrollArea className="h-[72vh]">
+					<div className="p-6 pr-8">
+						<Accordion type="multiple" className="w-full">
+							{sections.map((s) => (
+								<AccordionItem key={s.id} value={s.id}>
+									<AccordionTrigger>{s.title}</AccordionTrigger>
+									<AccordionContent>
+										<div className="space-y-3 leading-relaxed">{s.content}</div>
+									</AccordionContent>
+								</AccordionItem>
+							))}
+						</Accordion>
 					</div>
 				</ScrollArea>
 			</CardContent>
+
+			<CardFooter className="border-t py-3">
+				<p className="text-xs text-muted-foreground">
+					본 방침은 서비스 구성/기능 및 법령 적용 범위에 따라 수정이 필요할 수 있습니다.
+					프로덕션 배포 전, 실제 수집항목·보관기간·위탁/제공 여부를 최종 확정해 주세요.
+				</p>
+			</CardFooter>
 		</Card>
 	);
 }
