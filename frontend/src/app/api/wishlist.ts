@@ -1,39 +1,45 @@
 import { api } from "./client";
 import type { WishlistItem } from "../types/wishlist";
 
+// 서버가 주는 위시리스트 아이템(실제 응답 기준)
+type WishlistServerItem = {
+    id: number;
+    realId: string;
+    name: string;
+    organization: string;
+    estimatePrice: unknown;
+    startDate: string;
+    endDate: string;
+    openDate?: string;
+    region?: string;
+};
+
 type WishlistListResponse = {
     status: "success" | "error";
     message?: string;
-    data?: {
-        items?: Array<{
-            bidId: number;
-            realId: string;
-            title: string;
-            agency: string;
-            baseAmount: unknown;
-            bidStart: string;
-            bidEnd: string;
-            openTime: string;
-            region: string;
-        }>;
-    };
+    data?: WishlistServerItem[] | { items?: WishlistServerItem[] };
 };
 
 export async function fetchWishlist(userId: number): Promise<WishlistItem[]> {
     const res = (await api(`/wishlist/${userId}`, { method: "GET" })) as WishlistListResponse;
 
-    const items = res?.data?.items ?? [];
+    // ✅ data가 배열이거나, data.items 형태 둘 다 지원
+    const list: WishlistServerItem[] = Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray((res?.data as any)?.items)
+            ? (res.data as any).items
+            : [];
 
-    return items.map((it) => ({
-        bidId: it.bidId,
-        realId: it.realId,
-        title: it.title,
-        agency: it.agency,
-        baseAmount: String(it.baseAmount ?? ""),
-        bidStart: it.bidStart,
-        bidEnd: it.bidEnd,
-        openTime: it.openTime,
-        region: it.region,
+    return list.map((it) => ({
+        bidId: it.id, // ✅ 서버는 id
+        realId: String(it.realId ?? ""),
+        title: String(it.name ?? ""),
+        agency: String(it.organization ?? ""),
+        baseAmount: String(it.estimatePrice ?? ""),
+        bidStart: String(it.startDate ?? ""),
+        bidEnd: String(it.endDate ?? ""),
+        openTime: String(it.openDate ?? ""),
+        region: String(it.region ?? ""),
         stage: "INTEREST",
     }));
 }
@@ -44,32 +50,7 @@ type ToggleResponse = {
 };
 
 export async function toggleWishlist(userId: number, bidId: number): Promise<ToggleResponse> {
-    return (await api("/wishlist/toggle", {
+    return (await api(`/wishlist/toggle?userId=${userId}&bidId=${bidId}`, {
         method: "POST",
-        body: JSON.stringify({ userId, bidId }),
     })) as ToggleResponse;
 }
-
-// await api("/wishlist/toggle", { method:"POST", body: { userId, bidId } })
-
-
-// import { api } from "./client";
-// import type { BidStage } from "../types/bid";
-// import type { WishlistItem } from "../types/wishlist";
-//
-// export function fetchWishlist() {
-// 	return api<WishlistItem[]>("/wishlist");
-// }
-//
-// export function updateWishlistStage(wishlistId: number, stage: BidStage) {
-// 	return api(`/wishlist/${wishlistId}/stage`, {
-// 		method: "PATCH",
-// 		body: JSON.stringify({ stage }),
-// 	});
-// }
-//
-// export function deleteWishlist(wishlistId: number) {
-// 	return api(`/wishlist/${wishlistId}`, {
-// 		method: "DELETE",
-// 	});
-// }

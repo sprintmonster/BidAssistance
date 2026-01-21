@@ -11,10 +11,14 @@ type AuthUser = {
 export function Home() {
   const navigate = useNavigate();
 
-  const isAuthed = useMemo(
-    () => !!localStorage.getItem("accessToken"),
-    []
-  );
+  // const isAuthed = useMemo(
+  //   () => !!localStorage.getItem("accessToken"),
+  //   []
+  // );
+    const isAuthed = useMemo(() => {
+        const uid = localStorage.getItem("userId");
+        return !!uid && uid !== "undefined";
+    }, []);
 
   const [wishlistCount, setWishlistCount] = useState(0);
 
@@ -25,19 +29,28 @@ export function Home() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const user: AuthUser | null = useMemo(() => {
-    const name = localStorage.getItem("name");
-    const storedEmail = localStorage.getItem("email") || undefined;
-    if (!localStorage.getItem("accessToken")) return null;
-    return { name: name || "사용자", email: storedEmail };
-  }, []);
+    const user: AuthUser | null = useMemo(() => {
+        const uid = localStorage.getItem("userId");
+        if (!uid || uid === "undefined") return null;
 
-  useEffect(() => {
-    if (!localStorage.getItem("accessToken")) return;
-    fetchWishlist()
-      .then((items) => setWishlistCount(items.length))
-      .catch(() => setWishlistCount(0));
-  }, []);
+        const name = localStorage.getItem("userName") || localStorage.getItem("name");
+        const storedEmail = localStorage.getItem("email") || undefined;
+
+        return { name: name || "사용자", email: storedEmail };
+    }, []);
+
+
+    useEffect(() => {
+        const uidStr = localStorage.getItem("userId");
+        if (!uidStr || uidStr === "undefined") return;
+
+        const uid = Number(uidStr);
+        if (!Number.isFinite(uid)) return;
+
+        fetchWishlist(uid)
+            .then((items) => setWishlistCount(items.length))
+            .catch(() => setWishlistCount(0));
+    }, []);
 
   const onQuickLogin = async () => {
     setErrorMsg(null);
@@ -54,13 +67,31 @@ export function Home() {
         return;
       }
 
-      localStorage.setItem("accessToken", res.data.accessToken);
-      localStorage.setItem("refreshToken", res.data.refreshToken);
-      localStorage.setItem("userId", res.data.userId);
-      localStorage.setItem("name", res.data.name);
-      localStorage.setItem("email", email.trim());
+      // localStorage.setItem("accessToken", res.data.accessToken);
+      // localStorage.setItem("refreshToken", res.data.refreshToken);
+      // localStorage.setItem("userId", res.data.id);
+      // localStorage.setItem("name", res.data.name);
+      // localStorage.setItem("email", email.trim());
+        const id = (res as any)?.data?.id;
 
-      navigate("/dashboard");
+        if (typeof id === "number" && Number.isFinite(id)) {
+            localStorage.setItem("u,serId", String(id));
+        } else {
+            localStorage.removeItem("userId");
+            setErrorMsg("로그인 정보 처리 중 문제가 발생했습니다. 다시 시도해주세요.");
+            return;
+        }
+
+        localStorage.setItem("userName", String(res.data?.name ?? ""));
+        localStorage.setItem("email", String(res.data?.email ?? email.trim()));
+
+// ⚠️ 아래 토큰들은 서버가 실제로 줄 때만 저장(없으면 저장하지 않기)
+        const anyData = res.data as any;
+        if (anyData?.accessToken) localStorage.setItem("accessToken", String(anyData.accessToken));
+        if (anyData?.refreshToken) localStorage.setItem("refreshToken", String(anyData.refreshToken));
+
+
+        navigate("/dashboard");
     } catch (e: any) {
       setErrorMsg(e?.message || "로그인 중 오류가 발생했습니다.");
     } finally {
@@ -72,6 +103,7 @@ export function Home() {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("userId");
+    localStorage.removeItem("userName");
     localStorage.removeItem("name");
     localStorage.removeItem("email");
     window.location.href = "/";
@@ -155,7 +187,7 @@ export function Home() {
 
           {/* RIGHT */}
           <div className="col-span-12 lg:col-span-4">
-            {!localStorage.getItem("accessToken") ? (
+            {!isAuthed ? (
               <aside className="bg-white border rounded-2xl p-5 shadow-sm">
                 <h3 className="text-lg font-semibold text-slate-900 mb-2">
                   로그인

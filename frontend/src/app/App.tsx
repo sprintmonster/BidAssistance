@@ -106,6 +106,15 @@ function ResetPasswordRoute() {
 		/>
 	);
 }
+const _setItem = localStorage.setItem.bind(localStorage);
+localStorage.setItem = (key: string, value: string) => {
+    if (key === "userId") {
+        console.log("[TRACE] setItem userId =", value);
+        console.trace();
+    }
+    return _setItem(key, value);
+};
+
 
 export default function App() {
 	const [globalLoading, setGlobalLoading] = useState(false);

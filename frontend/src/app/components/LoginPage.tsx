@@ -27,33 +27,41 @@ export function LoginPage() {
 	const [errorMsg, setErrorMsg] = useState<string | null>(null);
 	const [submitting, setSubmitting] = useState(false);
 
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-		setErrorMsg(null);
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setErrorMsg(null);
 
-		try {
-			setSubmitting(true);
-			const res = await login(email.trim(), password);
+        try {
+            setSubmitting(true);
+            const res = await login(email.trim(), password);
 
-			if (res.status !== "success" || !res.data) {
-				setErrorMsg(res.message || "이메일 또는 비밀번호가 올바르지 않습니다.");
-				return;
-			}
+            if (res.status !== "success" || !res.data) {
+                setErrorMsg(res.message || "이메일 또는 비밀번호가 올바르지 않습니다.");
+                return;
+            }
 
-			localStorage.setItem("accessToken", res.data.accessToken);
-			localStorage.setItem("refreshToken", res.data.refreshToken);
-			// localStorage.setItem("userId", res.data.userId);
-			localStorage.setItem("name", res.data.name);
-			localStorage.setItem("email", email.trim());
-            localStorage.setItem("userId", String(res.data.userId));
+            const id = (res as any)?.data?.id;
+
+            if (typeof id === "number" && Number.isFinite(id)) {
+                localStorage.setItem("userId", String(id));
+            } else {
+                localStorage.removeItem("userId");
+                setErrorMsg("로그인 정보 처리 중 문제가 발생했습니다. 다시 시도해주세요.");
+                return;
+            }
+
+            localStorage.setItem("userName", String(res.data.name ?? ""));
+            localStorage.setItem("email", String(res.data.email ?? email.trim()));
+
 
             navigate(from, { replace: true });
-		} catch (e: any) {
-			setErrorMsg(e?.message || "서버 내부 오류가 발생했습니다. 관리자에게 문의하세요.");
-		} finally {
-			setSubmitting(false);
-		}
-	};
+        } catch (e: any) {
+            setErrorMsg(e?.message || "서버 내부 오류가 발생했습니다. 관리자에게 문의하세요.");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
 
 	return (
 		<div className="min-h-screen flex items-center justify-center p-4 bg-slate-950 bg-[radial-gradient(1200px_500px_at_50%_-20%,rgba(59,130,246,0.18),transparent),radial-gradient(900px_420px_at_15%_110%,rgba(99,102,241,0.12),transparent)]">

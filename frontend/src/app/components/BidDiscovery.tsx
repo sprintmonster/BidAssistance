@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Eye, FilterX, Plus, RefreshCw, Search } from "lucide-react";
-
+import { toggleWishlist } from "../api/wishlist";
 import { fetchBids } from "../api/bids";
 import { api } from "../api/client";
 import { Badge } from "./ui/badge";
@@ -222,32 +222,43 @@ export function BidDiscovery({
 		setPage(1);
 	};
 
-	const addToCart = async (bidId: number) => {
-		try {
-			setAddingId(bidId);
-			setGlobalLoading(true);
+    const addToCart = async (bidId: number) => {
+        try {
+            const userIdStr = localStorage.getItem("userId");
+            const userId = Number(userIdStr);
 
-			await api("/wishlist", {
-				method: "POST",
-				body: JSON.stringify({ bidId }),
-			});
+            if (!userIdStr || !Number.isFinite(userId)) {
+                showToast("로그인이 필요합니다. 다시 로그인 해주세요.", "error");
+                return;
+            }
 
-			setAddedIds((prev) => {
-				const next = new Set(prev);
-				next.add(bidId);
-				return next;
-			});
+            setAddingId(bidId);
+            setGlobalLoading(true);
 
-			showToast("장바구니에 추가됨", "success");
-		} catch {
-			showToast("추가 실패", "error");
-		} finally {
-			setGlobalLoading(false);
-			setAddingId(null);
-		}
-	};
+            const res = await toggleWishlist(userId, bidId);
 
-	const paginationNumbers = useMemo(() => {
+            if (res.status !== "success") {
+                showToast(res.message || "추가 실패", "error");
+                return;
+            }
+
+            setAddedIds((prev) => {
+                const next = new Set(prev);
+                next.add(bidId);
+                return next;
+            });
+
+            showToast("장바구니에 추가됨", "success");
+        } catch (e) {
+            showToast("추가 실패", "error");
+        } finally {
+            setGlobalLoading(false);
+            setAddingId(null);
+        }
+    };
+
+
+    const paginationNumbers = useMemo(() => {
 		const numbers: number[] = [];
 		const windowSize = 5;
 		const half = Math.floor(windowSize / 2);

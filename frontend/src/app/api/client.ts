@@ -8,7 +8,8 @@ export async function api<T>(
 
   const res = await fetch(`${BASE_URL}${url}`, {
     ...options,
-    headers: {
+      credentials: "include",
+      headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,

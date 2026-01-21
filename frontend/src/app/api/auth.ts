@@ -5,6 +5,7 @@ export type ApiStatus = "success" | "error";
 export interface LoginSuccessData {
   userId: string;
   name: string;
+  email: string;
   accessToken: string;
   refreshToken: string;
 }
