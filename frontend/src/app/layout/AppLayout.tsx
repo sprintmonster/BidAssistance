@@ -36,12 +36,12 @@ export function AppLayout() {
 	const [mobileOpen, setMobileOpen] = useState(false);
 
 	const isAuthed = useMemo(
-		() => !!localStorage.getItem("accessToken"),
+		() => !!localStorage.getItem("userId"),
 		[location.pathname],
 	);
 
     useEffect(() => {
-        if (!localStorage.getItem("accessToken")) {
+        if (!localStorage.getItem("userId")) {
             setWishlistCount(0);
             return;
         }
@@ -68,8 +68,8 @@ export function AppLayout() {
 	};
 
 	const logout = () => {
-		localStorage.removeItem("accessToken");
-		localStorage.removeItem("refreshToken");
+		// localStorage.removeItem("accessToken");
+		// localStorage.removeItem("refreshToken");
 		localStorage.removeItem("userId");
 		localStorage.removeItem("name");
 		localStorage.removeItem("email");
