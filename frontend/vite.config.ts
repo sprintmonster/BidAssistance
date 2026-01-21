@@ -14,7 +14,7 @@ export default defineConfig({
       proxy: {
           // '/api'로 시작하는 요청이 오면 8080으로 보내라!
           '/api': {
-              target: 'http://localhost:8080',
+              target: 'https://aivle-tk-con.greenpond-9eab36ab.koreacentral.azurecontainerapps.io/',
               changeOrigin: true,
           },
       },

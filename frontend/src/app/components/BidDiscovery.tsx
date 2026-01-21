@@ -115,15 +115,19 @@ export function BidDiscovery({
 	}, [urlQuery]);
 
 	const load = async () => {
+        console.log("load() start");
 		try {
 			setGlobalLoading(true);
-
 			const res = await fetchBids();
-			const items = Array.isArray(res)
-				? res
-				: Array.isArray((res as any)?.data?.items)
-					? (res as any).data.items
-					: [];
+            console.log("after fetchBids()");
+            console.log("fetchBids res:", res);
+            const items = Array.isArray(res)
+                ? res
+                : Array.isArray((res as any)?.data)
+                    ? (res as any).data
+                    : Array.isArray((res as any)?.data?.items)
+                        ? (res as any).data.items
+                        : [];
 
 			const mapped: UiBid[] = items
 				.map((it: any) => {
@@ -146,7 +150,8 @@ export function BidDiscovery({
 				.filter(Boolean) as UiBid[];
 
 			setBids(mapped);
-		} catch {
+		} catch (e){
+            console.error("load() failed:", e);
 			showToast("공고 목록을 불러오지 못했습니다.", "error");
 			setBids([]);
 		} finally {
