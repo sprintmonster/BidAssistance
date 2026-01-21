@@ -1,4 +1,5 @@
-const BASE_URL = import.meta.env.VITE_API_URL ?? "/api";
+const DOMAIN = import.meta.env.VITE_API_URL || "";
+const BASE_URL = `${DOMAIN}/api`;
 
 export async function api<T>(
   url: string,
