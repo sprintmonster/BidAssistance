@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Eye, FilterX, Plus, RefreshCw, Search } from "lucide-react";
 import { toggleWishlist } from "../api/wishlist";
 import { fetchBids } from "../api/bids";
 import { api } from "../api/client";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+
 import {
 	Card,
 	CardContent,
@@ -13,13 +14,13 @@ import {
 	CardHeader,
 	CardTitle,
 } from "./ui/card";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "./ui/dialog";
+// import {
+// 	Dialog,
+// 	DialogContent,
+// 	DialogDescription,
+// 	DialogHeader,
+// 	DialogTitle,
+// } from "./ui/dialog";
 import { Input } from "./ui/input";
 import {
 	Pagination,
@@ -104,12 +105,14 @@ export function BidDiscovery({
 	const [sortKey, setSortKey] = useState<SortKey>("deadline_asc");
 	const [page, setPage] = useState<number>(1);
 	const [pageSize, setPageSize] = useState<number>(10);
-	const [selected, setSelected] = useState<UiBid | null>(null);
+	// const [selected, setSelected] = useState<UiBid | null>(null);
 
 	const [addingId, setAddingId] = useState<number | null>(null);
 	const [addedIds, setAddedIds] = useState<Set<number>>(() => new Set());
 
-	useEffect(() => {
+    const navigate = useNavigate();
+
+    useEffect(() => {
 		setKeyword(urlQuery);
 		setPage(1);
 	}, [urlQuery]);
@@ -394,7 +397,7 @@ export function BidDiscovery({
 											<TableRow
 												key={`${b.bidId}-${b.realId}`}
 												className="cursor-pointer"
-												onClick={() => setSelected(b)}
+                                                onClick={() => navigate(`/bids/${b.bidId}`)}
 											>
 												<TableCell className="whitespace-normal pl-6">
 													<div className="flex flex-col">
@@ -427,7 +430,7 @@ export function BidDiscovery({
 															size="sm"
 															onClick={(e) => {
 																e.stopPropagation();
-																setSelected(b);
+                                                                navigate(`/bids/${b.bidId}`);
 															}}
 														>
 															<Eye className="mr-2 size-4" />
@@ -501,60 +504,60 @@ export function BidDiscovery({
 				</CardContent>
 			</Card>
 
-			<Dialog
-				open={!!selected}
-				onOpenChange={(open) => {
-					if (!open) setSelected(null);
-				}}
-			>
-				<DialogContent className="sm:max-w-2xl">
-					{selected && (
-						<>
-							<DialogHeader>
-								<DialogTitle className="leading-snug">{selected.title}</DialogTitle>
-								<DialogDescription>
-									발주기관: {selected.agency} · 예산: {selected.budget} · 마감: {selected.deadline}
-								</DialogDescription>
-							</DialogHeader>
+			{/*<Dialog*/}
+			{/*	open={!!selected}*/}
+			{/*	onOpenChange={(open) => {*/}
+			{/*		if (!open) setSelected(null);*/}
+			{/*	}}*/}
+			{/*>*/}
+			{/*	<DialogContent className="sm:max-w-2xl">*/}
+			{/*		{selected && (*/}
+			{/*			<>*/}
+			{/*				<DialogHeader>*/}
+			{/*					<DialogTitle className="leading-snug">{selected.title}</DialogTitle>*/}
+			{/*					<DialogDescription>*/}
+			{/*						발주기관: {selected.agency} · 예산: {selected.budget} · 마감: {selected.deadline}*/}
+			{/*					</DialogDescription>*/}
+			{/*				</DialogHeader>*/}
 
-							<div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-								<div className="rounded-lg border p-3">
-									<div className="text-xs text-muted-foreground">마감</div>
-									<div className="mt-1 flex items-center gap-2">
-										<span className="text-sm font-medium">
-											{formatDday(selected.deadline) || selected.deadline}
-										</span>
-										<Badge variant="secondary">공고</Badge>
-									</div>
-								</div>
+			{/*				<div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">*/}
+			{/*					<div className="rounded-lg border p-3">*/}
+			{/*						<div className="text-xs text-muted-foreground">마감</div>*/}
+			{/*						<div className="mt-1 flex items-center gap-2">*/}
+			{/*							<span className="text-sm font-medium">*/}
+			{/*								{formatDday(selected.deadline) || selected.deadline}*/}
+			{/*							</span>*/}
+			{/*							<Badge variant="secondary">공고</Badge>*/}
+			{/*						</div>*/}
+			{/*					</div>*/}
 
-								<div className="rounded-lg border p-3">
-									<div className="text-xs text-muted-foreground">예산</div>
-									<div className="mt-1 text-sm font-medium">{selected.budget}</div>
-								</div>
+			{/*					<div className="rounded-lg border p-3">*/}
+			{/*						<div className="text-xs text-muted-foreground">예산</div>*/}
+			{/*						<div className="mt-1 text-sm font-medium">{selected.budget}</div>*/}
+			{/*					</div>*/}
 
-								<div className="rounded-lg border p-3 sm:col-span-2">
-									<div className="text-xs text-muted-foreground">기관</div>
-									<div className="mt-1 text-sm font-medium">{selected.agency}</div>
-								</div>
+			{/*					<div className="rounded-lg border p-3 sm:col-span-2">*/}
+			{/*						<div className="text-xs text-muted-foreground">기관</div>*/}
+			{/*						<div className="mt-1 text-sm font-medium">{selected.agency}</div>*/}
+			{/*					</div>*/}
 
-								<div className="sm:col-span-2 flex justify-end gap-2">
-									<Button variant="outline" onClick={() => setSelected(null)}>
-										닫기
-									</Button>
-									<Button
-										disabled={addingId === selected.bidId || addedIds.has(selected.bidId)}
-										onClick={() => void addToCart(selected.bidId)}
-									>
-										<Plus className="mr-2 size-4" />
-										{addedIds.has(selected.bidId) ? "담김" : "트래킹에 담기"}
-									</Button>
-								</div>
-							</div>
-						</>
-					)}
-				</DialogContent>
-			</Dialog>
+			{/*					<div className="sm:col-span-2 flex justify-end gap-2">*/}
+			{/*						<Button variant="outline" onClick={() => setSelected(null)}>*/}
+			{/*							닫기*/}
+			{/*						</Button>*/}
+			{/*						<Button*/}
+			{/*							disabled={addingId === selected.bidId || addedIds.has(selected.bidId)}*/}
+			{/*							onClick={() => void addToCart(selected.bidId)}*/}
+			{/*						>*/}
+			{/*							<Plus className="mr-2 size-4" />*/}
+			{/*							{addedIds.has(selected.bidId) ? "담김" : "트래킹에 담기"}*/}
+			{/*						</Button>*/}
+			{/*					</div>*/}
+			{/*				</div>*/}
+			{/*			</>*/}
+			{/*		)}*/}
+			{/*	</DialogContent>*/}
+			{/*</Dialog>*/}
 		</div>
 	);
 }

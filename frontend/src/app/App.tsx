@@ -25,6 +25,7 @@ import { ProtectedRoute } from "./routes/ProtectedRoute";
 
 import { Toast } from "./components/ui/Toast";
 import { useToast } from "./components/ui/useToast";
+import {BidSummary} from "./components/BidSummary";
 
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
 	try {
@@ -106,15 +107,6 @@ function ResetPasswordRoute() {
 		/>
 	);
 }
-const _setItem = localStorage.setItem.bind(localStorage);
-localStorage.setItem = (key: string, value: string) => {
-    if (key === "userId") {
-        console.log("[TRACE] setItem userId =", value);
-        console.trace();
-    }
-    return _setItem(key, value);
-};
-
 
 export default function App() {
 	const [globalLoading, setGlobalLoading] = useState(false);
@@ -147,15 +139,32 @@ export default function App() {
 						}
 					/>
 
-					<Route
-						path="/bids"
-						element={
-							<PageContainer>
-								<BidDiscovery setGlobalLoading={setGlobalLoading} showToast={showToast} />
-							</PageContainer>
-						}
-					/>
+                    <Route
+                        path="/bids"
+                        element={
+                            <PageContainer>
+                                <BidDiscovery setGlobalLoading={setGlobalLoading} showToast={showToast} />
+                            </PageContainer>
+                        }
+                    />
 
+                    <Route
+                        path="/bids/:bidId"
+                        element={
+                            <PageContainer>
+                                <BidSummary />
+                            </PageContainer>
+                        }
+                    />
+
+                    <Route
+                        path="/bids/:bidId"
+                        element={
+                            <PageContainer>
+                                <BidSummary />
+                            </PageContainer>
+                        }
+                    />
 					<Route
 						path="/cart"
 						element={
