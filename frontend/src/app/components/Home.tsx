@@ -12,7 +12,7 @@ export function Home() {
   const navigate = useNavigate();
 
   // const isAuthed = useMemo(
-  //   () => !!localStorage.getItem("accessToken"),
+  //   () => !!localStorage.getItem("userId"),
   //   []
   // );
     const isAuthed = useMemo(() => {
@@ -67,7 +67,7 @@ export function Home() {
         return;
       }
 
-      // localStorage.setItem("accessToken", res.data.accessToken);
+      // localStorage.setItem("userId", res.data.userId);
       // localStorage.setItem("refreshToken", res.data.refreshToken);
       // localStorage.setItem("userId", res.data.id);
       // localStorage.setItem("name", res.data.name);
@@ -87,7 +87,7 @@ export function Home() {
 
 // ⚠️ 아래 토큰들은 서버가 실제로 줄 때만 저장(없으면 저장하지 않기)
         const anyData = res.data as any;
-        if (anyData?.accessToken) localStorage.setItem("accessToken", String(anyData.accessToken));
+        if (anyData?.userId) localStorage.setItem("userId", String(anyData.userId));
         if (anyData?.refreshToken) localStorage.setItem("refreshToken", String(anyData.refreshToken));
 
 
@@ -100,7 +100,7 @@ export function Home() {
   };
 
   const onLogout = () => {
-    localStorage.removeItem("accessToken");
+    localStorage.removeItem("userId");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("userId");
     localStorage.removeItem("userName");
