@@ -22,7 +22,6 @@ const QUICK_PROMPTS = [
 	{ title: "마감 임박 공고", desc: "D-3 이내만 요약", text: "마감 임박한 공고만 요약해줘" },
 	{ title: "지역별 공고", desc: "서울/경기 등", text: "서울 지역 공고 알려줘" },
 	{ title: "예산 조건", desc: "30억 이하", text: "30억 이하 공사 찾아줘" },
-	{ title: "낙찰 트렌드", desc: "최근 6개월", text: "최근 낙찰률 분석해줘" },
 ];
 
 function nowTime() {
@@ -53,14 +52,6 @@ function generateBotResponse(userInput: string): { text: string; suggestions: st
 			text:
 				"마감 3일 이내 공고는 8건입니다. ⚠️\n\n긴급:\n• 서울 강남구 도로공사 (D-2, 35억원)\n• 인천 연수구 학교시설 (D-4, 12억원)\n• 경기 성남시 건축공사 (D-5, 87억원)\n\n서류 체크리스트가 필요하시면 항목별로 정리해드릴게요.",
 			suggestions: ["서류 체크리스트 만들어줘", "투찰가 체크 포인트", "장바구니에 담는 기준"],
-		};
-	}
-
-	if (input.includes("낙찰") || input.includes("분석")) {
-		return {
-			text:
-				"최근 6개월 낙찰률 요약:\n\n• 평균 낙찰률: 84.2%\n• 낙찰 건수: 186건\n• 평균 경쟁률: 3.8:1\n• 유찰률: 7.2%\n\n10~30억 구간에서 상대적으로 성공률이 높게 나타나는 경향이 있습니다.",
-			suggestions: ["기관별 분석", "월별 추이", "경쟁률 높은 업종"],
 		};
 	}
 
@@ -119,7 +110,7 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
 			sender: "bot",
 			text: "안녕하세요. 입찰인사이트 AI 도우미입니다.\n원하시는 조건(지역/예산/마감)을 말해주시면 공고를 빠르게 좁혀드릴게요.",
 			timestamp: nowTime(),
-			suggestions: ["서울 지역 공고 알려줘", "30억 이하 공사 찾아줘", "마감 임박 공고는?", "낙찰률 분석해줘"],
+			suggestions: ["서울 지역 공고 알려줘", "30억 이하 공사 찾아줘", "마감 임박 공고는?"],
 		},
 	]);
 
