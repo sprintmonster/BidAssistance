@@ -1,4 +1,4 @@
-const BASE_URL = "https://aivle-tk-con.greenpond-9eab36ab.koreacentral.azurecontainerapps.io"//import.meta.env.VITE_API_URL;
+const BASE_URL = import.meta.env.VITE_API_URL ?? "/api";
 
 export async function api<T>(
   url: string,
