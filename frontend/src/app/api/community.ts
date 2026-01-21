@@ -23,7 +23,7 @@ export function fetchCommunityPosts(opts: {
 	page?: number;
 	size?: number;
 }) {
-	return api<ApiResponse<PostListData>>(`/community/posts${qs({
+	return api<ApiResponse<PostListData>>(`/board/posts${qs({
 		category: opts.category,
 		q: opts.q,
 		sort: opts.sort,
@@ -33,7 +33,7 @@ export function fetchCommunityPosts(opts: {
 }
 
 export function fetchCommunityPost(postId: number) {
-	return api<ApiResponse<Post>>(`/community/posts/${postId}`).then(unwrap);
+	return api<ApiResponse<Post>>(`/board/posts/${postId}`).then(unwrap);
 }
 
 export function createCommunityPost(payload: {
@@ -42,7 +42,7 @@ export function createCommunityPost(payload: {
 	category: PostCategory;
 	attachmentIds?: string[];
 }) {
-	return api<ApiResponse<Post>>("/community/posts", {
+	return api<ApiResponse<Post>>("/board/posts", {
 		method: "POST",
 		body: JSON.stringify(payload),
 	}).then(unwrap);
@@ -54,51 +54,49 @@ export function updateCommunityPost(postId: number, payload: Partial<{
 	category: PostCategory;
 	attachmentIds: string[];
 }>) {
-	return api<ApiResponse<Post>>(`/community/posts/${postId}`, {
+	return api<ApiResponse<Post>>(`/board/${postId}`, {
 		method: "PATCH",
 		body: JSON.stringify(payload),
 	}).then(unwrap);
 }
 
-export function deleteCommunityPost(postId: number) {
-	return api<ApiResponse<{ message?: string }>>(`/community/posts/${postId}`, {
+export function deleteCommunityPost(commentId: number) {
+	return api<ApiResponse<{ message?: string }>>(`/comments/${commentId}`, {
 		method: "DELETE",
 	}).then(unwrap);
 }
 
 export function likeCommunityPost(postId: number) {
-	return api<ApiResponse<{ liked: true }>>(`/community/posts/${postId}/like`, {
+	return api<ApiResponse<{ liked: true }>>(`/board/posts/${postId}/like`, {
 		method: "POST",
 	}).then(unwrap);
 }
 
 export function unlikeCommunityPost(postId: number) {
-	return api<ApiResponse<{ liked: false }>>(`/community/posts/${postId}/like`, {
+	return api<ApiResponse<{ liked: false }>>(`/board/posts/${postId}/dislike`, {
 		method: "DELETE",
 	}).then(unwrap);
 }
 
 export function createCommunityComment(postId: number, content: string) {
-	return api<ApiResponse<Comment>>(`/community/posts/${postId}/comments`, {
+	return api<ApiResponse<Comment>>(`/boards/${postId}/comments`, {
 		method: "POST",
 		body: JSON.stringify({ content }),
 	}).then(unwrap);
 }
 
 export function deleteCommunityComment(postId: number, commentId: string) {
-	return api<ApiResponse<{ message?: string }>>(`/community/posts/${postId}/comments/${commentId}`, {
+	return api<ApiResponse<{ message?: string }>>(`/comments/${commentId}`, {
 		method: "DELETE",
 	}).then(unwrap);
 }
 
 export async function uploadCommunityAttachments(files: File[]) {
-	const token = localStorage.getItem("accessToken");
 	const fd = new FormData();
 	files.forEach((f) => fd.append("files", f));
 
-	const res = await fetch("/api/community/attachments", {
+	const res = await fetch("/api/board/attachments", {
 		method: "POST",
-		headers: token ? { Authorization: `Bearer ${token}` } : undefined,
 		body: fd,
 	});
 
