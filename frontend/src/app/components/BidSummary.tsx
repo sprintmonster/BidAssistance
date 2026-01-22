@@ -240,6 +240,24 @@ export function BidSummary() {
                     setBid(null);
                     return;
                 }
+                // const docUrlRaw =
+                //     item.bidReportURL ?? item.bidReportUrl ?? item.documentUrl ?? item.bidURL ?? item.bidUrl;
+                //
+                // const documentUrl = docUrlRaw ? String(docUrlRaw) : undefined;
+                //
+                // const fileNameFromUrl = (u?: string) => {
+                //     if (!u) return undefined;
+                //     try {
+                //         const url = new URL(u, window.location.origin);
+                //         const last = decodeURIComponent(url.pathname.split("/").pop() || "");
+                //         // 확장자 있으면 그걸 파일명으로 사용, 없으면 undefined
+                //         return last && last.includes(".") ? last : undefined;
+                //     } catch {
+                //         return undefined;
+                //     }
+                // };
+
+
 
                 // ✅ 서버 필드 -> 프론트 Bid 타입 매핑
                 const mapped: Bid = {
@@ -289,16 +307,21 @@ export function BidSummary() {
         if (!bid) return;
         const baseName = safeFileName(`공고문_${bid.id}_${bid.title}`);
         const pdfName = bid.documentFileName ? safeFileName(bid.documentFileName) : `${baseName}.pdf`;
-
-        if (bid.documentUrl) {
-            try {
-                await downloadFromUrl(bid.documentUrl, pdfName);
-                toast.success("공고문 다운로드가 시작되었습니다.");
-                return;
-            } catch {
-                // 실패 시 텍스트로 폴백
-            }
+        function openDownload(url: string) {
+            const a = document.createElement("a");
+            a.href = url;
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
         }
+        if (bid.documentUrl) {
+            openDownload(bid.documentUrl);
+            toast.success("첨부파일 다운로드를 시작했습니다.");
+            return;
+        }
+
 
         const txt = buildTextNotice({ ...bid, checklist });
         downloadText(txt, `${baseName}.txt`);

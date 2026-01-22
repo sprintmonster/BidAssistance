@@ -145,64 +145,56 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 		].join(" ");
 	}, []);
 
-	const onSaveProfile = async () => {
-		setError(null);
+    const onSaveProfile = async () => {
+        setError(null);
 
-		if (!userId) {
-			setError("로그인이 필요합니다.");
-			return;
-		}
-		if (!name.trim()) {
-			setError("이름을 입력해 주세요.");
-			return;
-		}
-		if (!email.trim()) {
-			setError("이메일을 입력해 주세요.");
-			return;
-		}
-		if (newPassword || confirmPassword) {
-			if (newPassword !== confirmPassword) {
-				setError("새 비밀번호와 확인이 일치하지 않습니다.");
-				return;
-			}
-		}
+        if (!userId) {
+            setError("로그인이 필요합니다.");
+            return;
+        }
 
-		const payload: { email: string; name: string; role: number; password?: string } = {
-			email: email.trim(),
-			name: name.trim(),
-			role,
-		};
+        // 비밀번호 변경만 허용
+        if (!newPassword && !confirmPassword) {
+            setError("변경할 비밀번호를 입력해 주세요.");
+            return;
+        }
 
-		// 정의서 수정 API가 password를 받으므로, 변경할 때만 포함
-		if (newPassword) payload.password = newPassword;
+        if (newPassword !== confirmPassword) {
+            setError("새 비밀번호와 확인이 일치하지 않습니다.");
+            return;
+        }
 
-		try {
-			setSaving(true);
-			await updateUserProfile(userId, payload);
+        const payload: { email: string; password: string; name: string; role: number } = {
+            email: email.trim(),
+            name: name.trim(),
+            role,
+            password: newPassword,
+        };
 
-			// 비밀번호 변경 감지: 접근통제(유효기간) 갱신
-			if (newPassword) {
-				set_password_changed_now_for_user(userId);
 
-				// 만료로 인해 강제 이동된 케이스면, 변경 후 원래 위치로 복귀
-				if (passwordExpiredFromRoute && fromAfterChange) {
-					navigate(fromAfterChange, { replace: true });
-				}
-			}
+        try {
+            setSaving(true);
+            await updateUserProfile(userId, payload);
 
-			localStorage.setItem("email", email.trim());
-			localStorage.setItem("name", name.trim());
-			setCurrentPassword("");
-			setNewPassword("");
-			setConfirmPassword("");
-		} catch (e: any) {
-			setError(e?.message || "저장에 실패했습니다.");
-		} finally {
-			setSaving(false);
-		}
-	};
+            // 비밀번호 변경 감지: 접근통제(유효기간) 갱신
+            set_password_changed_now_for_user(userId);
 
-	return (
+            // 만료로 인해 강제 이동된 케이스면, 변경 후 원래 위치로 복귀
+            if (passwordExpiredFromRoute && fromAfterChange) {
+                navigate(fromAfterChange, { replace: true });
+            }
+
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+        } catch (e: any) {
+            setError(e?.message || "저장에 실패했습니다.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
 		<div className="space-y-6">
 			<div>
 				<h2 className="text-3xl mb-2">마이페이지</h2>
@@ -286,31 +278,33 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 								</div>
 							)}
 
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-								<div className="space-y-2">
-									<Label htmlFor="name">이름</Label>
-									<Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
-								</div>
-								<div className="space-y-2">
-									<Label htmlFor="email">이메일</Label>
-									<Input
-										id="email"
-										type="email"
-										value={email}
-										onChange={(e) => setEmail(e.target.value)}
-									/>
-								</div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>이름</Label>
+                                    <div className="h-10 rounded-md border px-3 flex items-center text-sm">
+                                        {name || "—"}
+                                    </div>
+                                </div>
 
-								{/* 아래 phone/position은 정의서에 필드가 없어 “UI only” */}
-								<div className="space-y-2">
-									<Label htmlFor="phone">연락처</Label>
-									<Input id="phone" defaultValue="010-1234-5678" />
-								</div>
-								<div className="space-y-2">
-									<Label htmlFor="position">직위</Label>
-									<Input id="position" defaultValue="입찰 담당자" />
-								</div>
-							</div>
+                                <div className="space-y-2">
+                                    <Label>이메일</Label>
+                                    <div className="h-10 rounded-md border px-3 flex items-center text-sm">
+                                        {email || "—"}
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            {/*/!* 아래 phone/position은 정의서에 필드가 없어 “UI only” *!/*/}
+								{/*<div className="space-y-2">*/}
+								{/*	<Label htmlFor="phone">연락처</Label>*/}
+								{/*	<Input id="phone" defaultValue="010-1234-5678" />*/}
+								{/*</div>*/}
+								{/*<div className="space-y-2">*/}
+								{/*	<Label htmlFor="position">직위</Label>*/}
+								{/*	<Input id="position" defaultValue="입찰 담당자" />*/}
+								{/*</div>*/}
+							{/*</div>*/}
 
 							<Separator />
 
