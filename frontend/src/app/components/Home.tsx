@@ -293,16 +293,6 @@ export function Home() {
 							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 								<MiniStat label="신규 공고" value="67" sub="이번 달" />
 								<MiniStat label="마감 임박" value="8" sub="3일 이내" />
-								<MiniStat
-									label="관심 공고"
-									value={String(wishlistCount)}
-									sub="장바구니"
-								/>
-							</div>
-
-							<div className="mt-4 text-sm text-slate-500">
-								상단 AI 검색창에서 자연어로 조건을 입력하면 공고 탐색 흐름으로 바로
-								연결됩니다.
 							</div>
 						</section>
 					</div>
