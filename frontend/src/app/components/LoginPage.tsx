@@ -33,6 +33,33 @@ function parse_user_id(res: any): string | null {
 	if (typeof cand === "string" && cand.trim()) return cand.trim();
 	return null;
 }
+function cleanLoginErrorMessage(input: unknown) {
+    // input이 문자열이면 그대로, 객체면 message 우선
+    let msg =
+        typeof input === "string"
+            ? input
+            : typeof (input as any)?.message === "string"
+                ? (input as any).message
+                : "";
+
+    // JSON 문자열이면 파싱해서 message만 뽑기
+    try {
+        const parsed = JSON.parse(msg);
+        if (parsed?.message) msg = String(parsed.message);
+    } catch {
+        // ignore
+    }
+
+    // 접두어 제거
+    msg = msg.replace(/^서버 내부 오류가 발생했습니다:\s*/g, "").trim();
+
+    // 매핑
+    if (msg.includes("비밀번호가 일치하지 않습니다")) return "비밀번호가 올바르지 않습니다.";
+    if (msg.includes("존재하지") || msg.includes("계정을 찾을 수")) return "등록되지 않은 이메일입니다.";
+    if (!msg) return "로그인에 실패했습니다. 다시 시도해 주세요.";
+
+    return msg;
+}
 
 export function LoginPage() {
 	const navigate = useNavigate();
@@ -110,11 +137,11 @@ export function LoginPage() {
 					);
 					return;
 				}
-				setErrorMsg(
-					(res.message || "이메일 또는 비밀번호가 올바르지 않습니다.") +
-						` (남은 시도: ${remaining}회)`,
-				);
-				return;
+                const clean = cleanLoginErrorMessage(res);
+                setErrorMsg(`${clean} (남은 시도: ${remaining}회)`);
+
+
+                return;
 			}
 
 			const userId = parse_user_id(res);
@@ -143,28 +170,31 @@ export function LoginPage() {
 			}
 
 			navigate(from, { replace: true });
-		} catch (err: any) {
-			const em2 = email.trim();
-			if (em2) {
-				const st = record_login_failure(em2);
-				if (st.lock_until && st.lock_until > Date.now()) {
-					setErrorMsg(
-						`로그인 실패가 누적되어 계정이 잠겼습니다. ${format_mmss(
-							login_lock_remaining_ms(em2),
-						)} 후 다시 시도해 주세요.`,
-					);
-				} else {
-					const remaining = Math.max(0, 5 - st.count);
-					setErrorMsg((err?.message || "로그인에 실패했습니다.") + ` (남은 시도: ${remaining}회)`);
-				}
-				return;
-			}
+        } catch (err: any) {
+            const em2 = email.trim();
+            if (em2) {
+                const st = record_login_failure(em2);
 
-			setErrorMsg(err?.message || "서버 내부 오류가 발생했습니다. 관리자에게 문의하세요.");
-		} finally {
-			setSubmitting(false);
-		}
-	};
+                if (st.lock_until && st.lock_until > Date.now()) {
+                    setErrorMsg(
+                        `로그인 실패가 누적되어 계정이 잠겼습니다. ${format_mmss(
+                            login_lock_remaining_ms(em2),
+                        )} 후 다시 시도해 주세요.`,
+                    );
+                } else {
+                    const remaining = Math.max(0, 5 - st.count);
+                    const clean = cleanLoginErrorMessage(err);
+                    setErrorMsg(`${clean} (남은 시도: ${remaining}회)`);
+                }
+                return;
+            }
+
+            setErrorMsg(cleanLoginErrorMessage(err));
+        } finally {
+            setSubmitting(false);
+        }
+
+    };
 
 	return (
 		<div className="min-h-screen flex items-center justify-center p-4 bg-slate-950 bg-[radial-gradient(1200px_500px_at_50%_-20%,rgba(59,130,246,0.18),transparent),radial-gradient(900px_420px_at_15%_110%,rgba(99,102,241,0.12),transparent)]">

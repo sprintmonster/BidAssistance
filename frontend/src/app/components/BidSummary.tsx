@@ -392,7 +392,9 @@ export function BidSummary() {
                             <DollarSign className="h-5 w-5 text-muted-foreground" />
                             <div>
                                 <p className="text-sm text-muted-foreground">예산</p>
-                                <p className="font-semibold">{bid.budget}</p>
+                                <p className="font-semibold">
+                                    {Number(bid.budget).toLocaleString()}
+                                </p>
                             </div>
                         </div>
 
@@ -400,7 +402,15 @@ export function BidSummary() {
                             <Calendar className="h-5 w-5 text-muted-foreground" />
                             <div>
                                 <p className="text-sm text-muted-foreground">마감일</p>
-                                <p className="font-semibold text-red-600">{bid.deadline}</p>
+                                <p className="font-semibold text-red-600">
+                                    {new Date(bid.deadline).toLocaleString("ko-KR", {
+                                        year: "numeric",
+                                        month: "2-digit",
+                                        day: "2-digit",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                    })}
+                                </p>
                             </div>
                         </div>
 
@@ -450,6 +460,14 @@ export function BidSummary() {
                         </CardHeader>
 
                         <CardContent className="space-y-6">
+
+
+                            <div>
+                                <h4 className="font-semibold mb-3">🌐 입찰 방식</h4>
+                                <p className="text-sm">{bid.requirements.technicalStaff || "데이터 준비 중"}</p>
+                            </div>
+                            <Separator />
+
                             <div>
                                 <h4 className="font-semibold mb-3">📋 자격 요건</h4>
                                 {bid.requirements.license.length === 0 ? (
@@ -480,12 +498,7 @@ export function BidSummary() {
                                 <p className="text-sm">{bid.requirements.experience || "데이터 준비 중"}</p>
                             </div>
 
-                            <Separator />
 
-                            <div>
-                                <h4 className="font-semibold mb-3">👷 기술인력 요건</h4>
-                                <p className="text-sm">{bid.requirements.technicalStaff || "데이터 준비 중"}</p>
-                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -639,6 +652,15 @@ p
                     </Card>
                 </TabsContent>
             </Tabs>
+
+    <div className="pt-4 text-xs text-muted-foreground leading-relaxed">
+        본 페이지에 제공되는 정보 및 AI 분석 결과는 참고용 자료이며,
+        실제 공고문 원문 및 나라장터(G2B) 공지 내용을 반드시 우선 확인하시기 바랍니다.<br/>
+        당사는 본 자료의 정확성, 완전성 및 최신성을 보장하지 않으며,
+        이를 근거로 한 의사결정 및 입찰 결과에 대해 책임을 지지 않습니다.
+    </div>
+
+
         </div>
     );
 }
