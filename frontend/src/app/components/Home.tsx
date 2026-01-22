@@ -59,7 +59,9 @@ export function Home() {
     }, [isAuthed]);
 
 
-    const onQuickLogin = async () => {
+    const onQuickLogin = async (e?:React.FormEvent) => {
+        e?.preventDefault();
+
     setErrorMsg(null);
     if (!email.trim() || !password.trim()) {
       setErrorMsg("이메일과 비밀번호를 입력하세요.");
@@ -208,7 +210,7 @@ export function Home() {
                   로그인하면 장바구니/알림/AI 기능을 이용할 수 있습니다.
                 </p>
 
-                <div className="space-y-3">
+                <form className="space-y-3" onSubmit={onQuickLogin}>
                   <div>
                     <div className="text-sm font-medium text-slate-700 mb-1">
                       이메일
@@ -240,8 +242,9 @@ export function Home() {
                   )}
 
                   <button
+                    type = "submit"
                     disabled={submitting}
-                    onClick={onQuickLogin}
+
                     className="w-full h-11 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-60"
                   >
                     {submitting ? "로그인 중..." : "로그인"}
@@ -270,7 +273,7 @@ export function Home() {
                       비밀번호 찾기
                     </button>
                   </div>
-                </div>
+                </form>
               </aside>
             ) : (
 				<aside className="bg-white border rounded-2xl p-5 shadow-sm">

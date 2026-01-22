@@ -228,9 +228,12 @@ export function BidSummary() {
                 // ✅ API: GET /api/bid/{bidId}
                 const res = await api(`/bids/${numericBidId}`, { method: "GET" });
 
+                const data = (res as any)?.data;
+
                 const item =
-                    (res as any)?.data?.items?.[0] ??
-                    (Array.isArray((res as any)?.data) ? (res as any).data[0] : null);
+                    data && typeof data === "object" && !Array.isArray(data) ? data :
+                        (data?.items?.[0] ?? null) ||
+                        (Array.isArray(data) ? data[0] : null);
 
                 if (!item) {
                     setError("상세 정보를 찾을 수 없습니다.");
@@ -250,6 +253,7 @@ export function BidSummary() {
                     type: "공사",
                     status: "진행중",
                     description: String(item.analysisResult ?? ""),
+                    // description: String(item.analysisResult ?? item.name ?? item.title ?? ""),
 
                     documentUrl: item.bidReportURL ? String(item.bidReportURL) : undefined,
                     documentFileName: item.bidReportURL ? "첨부파일" : undefined,
