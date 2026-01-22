@@ -417,7 +417,7 @@ export function BidDiscovery({
 													<div className="line-clamp-2">{b.agency}</div>
 												</TableCell>
 
-												<TableCell className="text-right">{b.budget}</TableCell>
+												<TableCell className="text-right"> {Number(b.budget).toLocaleString()}</TableCell>
 
 												<TableCell>
 													<Badge variant={statusVariant}>{statusLabel}</Badge>
