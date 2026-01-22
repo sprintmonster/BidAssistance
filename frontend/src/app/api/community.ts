@@ -1,5 +1,17 @@
 import { api } from "./client";
-import type { ApiResponse, Post, PostListData, SortKey, PostCategory, Comment, Attachment } from "../types/community";
+import type {
+	ApiResponse,
+	Post,
+	PostListData,
+	SortKey,
+	PostCategory,
+	Comment,
+	Attachment,
+} from "../types/community";
+
+
+const DOMAIN = import.meta.env.VITE_API_URL || "";
+const BASE_URL = `${DOMAIN}/api`;
 
 function qs(params: Record<string, string | number | undefined>) {
 	const sp = new URLSearchParams();
@@ -23,13 +35,15 @@ export function fetchCommunityPosts(opts: {
 	page?: number;
 	size?: number;
 }) {
-	return api<ApiResponse<PostListData>>(`/board/posts${qs({
-		category: opts.category,
-		q: opts.q,
-		sort: opts.sort,
-		page: opts.page,
-		size: opts.size,
-	})}`).then(unwrap);
+	return api<ApiResponse<PostListData>>(
+		`/board/posts${qs({
+			category: opts.category,
+			q: opts.q,
+			sort: opts.sort,
+			page: opts.page,
+			size: opts.size,
+		})}`,
+	).then(unwrap);
 }
 
 export function fetchCommunityPost(postId: number) {
@@ -48,20 +62,23 @@ export function createCommunityPost(payload: {
 	}).then(unwrap);
 }
 
-export function updateCommunityPost(postId: number, payload: Partial<{
-	title: string;
-	content: string;
-	category: PostCategory;
-	attachmentIds: string[];
-}>) {
-	return api<ApiResponse<Post>>(`/board/${postId}`, {
+export function updateCommunityPost(
+	postId: number,
+	payload: Partial<{
+		title: string;
+		content: string;
+		category: PostCategory;
+		attachmentIds: string[];
+	}>,
+) {
+	return api<ApiResponse<Post>>(`/board/posts/${postId}`, {
 		method: "PATCH",
 		body: JSON.stringify(payload),
 	}).then(unwrap);
 }
 
-export function deleteCommunityPost(commentId: number) {
-	return api<ApiResponse<{ message?: string }>>(`/comments/${commentId}`, {
+export function deleteCommunityPost(postId: number) {
+	return api<ApiResponse<{ message?: string }>>(`/board/posts/${postId}`, {
 		method: "DELETE",
 	}).then(unwrap);
 }
@@ -79,7 +96,7 @@ export function unlikeCommunityPost(postId: number) {
 }
 
 export function createCommunityComment(postId: number, content: string) {
-	return api<ApiResponse<Comment>>(`/boards/${postId}/comments`, {
+	return api<ApiResponse<Comment>>(`/board/posts/${postId}/comments`, {
 		method: "POST",
 		body: JSON.stringify({ content }),
 	}).then(unwrap);
@@ -95,8 +112,15 @@ export async function uploadCommunityAttachments(files: File[]) {
 	const fd = new FormData();
 	files.forEach((f) => fd.append("files", f));
 
-	const res = await fetch("/api/board/attachments", {
+	const userId = localStorage.getItem("userId");
+	const headers: Record<string, string> = {};
+
+	if (userId) headers["X-User-Id"] = userId;
+
+	const res = await fetch(`${BASE_URL}/board/attachments`, {
 		method: "POST",
+		credentials: "include",
+		headers,
 		body: fd,
 	});
 
