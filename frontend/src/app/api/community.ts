@@ -9,7 +9,6 @@ import type {
 	Attachment,
 } from "../types/community";
 
-
 const DOMAIN = import.meta.env.VITE_API_URL || "";
 const BASE_URL = `${DOMAIN}/api`;
 
@@ -112,11 +111,12 @@ export async function uploadCommunityAttachments(files: File[]) {
 	const fd = new FormData();
 	files.forEach((f) => fd.append("files", f));
 
+	// userId 기반 접근통제: 백엔드가 읽는 헤더명으로 통일 필요(여기서는 X-User-Id 사용)
 	const userId = localStorage.getItem("userId");
 	const headers: Record<string, string> = {};
+	if (userId) headers["X-User-Id"] = String(userId);
 
-	if (userId) headers["X-User-Id"] = userId;
-
+	// 배포 환경에서도 동작하도록 BASE_URL 사용 + 쿠키 기반 세션 대비 credentials 포함
 	const res = await fetch(`${BASE_URL}/board/attachments`, {
 		method: "POST",
 		credentials: "include",

@@ -1,7 +1,20 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { login } from "../api/auth";
+import {
+	format_mmss,
+	is_login_locked,
+	is_password_expired,
+	login_lock_remaining_ms,
+	record_login_failure,
+	record_login_success,
+	should_require_captcha,
+	ensure_password_changed_at_initialized,
+	migrate_password_changed_at,
+} from "../utils/accessControl";
+
+import { SimpleCaptcha } from "./SimpleCaptcha";
 
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -9,19 +22,23 @@ import { Label } from "./ui/label";
 import {
 	Card,
 	CardContent,
-	CardDescription,
 	CardFooter,
 	CardHeader,
-	CardTitle,
 } from "./ui/card";
+
+function parse_user_id(res: any): string | null {
+	const data = res?.data;
+	const cand = data?.id ?? data?.userId ?? data?.user_id;
+	if (typeof cand === "number" && Number.isFinite(cand)) return String(cand);
+	if (typeof cand === "string" && cand.trim()) return cand.trim();
+	return null;
+}
 
 export function LoginPage() {
 	const navigate = useNavigate();
 	const location = useLocation() as any;
 
-	// 로그인 성공 후 기본 이동 경로는 "홈(/)".
-	// (특정 페이지에서 로그인 페이지로 유도된 경우, state.from을 우선 사용)
-	const from = location?.state?.from || "/";
+	const from = location?.state?.from || "/dashboard";
 
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -29,41 +46,125 @@ export function LoginPage() {
 	const [errorMsg, setErrorMsg] = useState<string | null>(null);
 	const [submitting, setSubmitting] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setErrorMsg(null);
+	const [captchaValid, setCaptchaValid] = useState(true);
+	const captchaRequired = useMemo(() => {
+		return should_require_captcha(email.trim());
+	}, [email]);
 
-        try {
-            setSubmitting(true);
-            const res = await login(email.trim(), password);
+	const [lockRemaining, setLockRemaining] = useState(0);
 
-            if (res.status !== "success" || !res.data) {
-                setErrorMsg(res.message || "이메일 또는 비밀번호가 올바르지 않습니다.");
-                return;
-            }
+	useEffect(() => {
+		const em = email.trim();
+		if (!em) {
+			setLockRemaining(0);
+			return;
+		}
 
-            const id = (res as any)?.data?.id;
+		const tick = () => {
+			setLockRemaining(login_lock_remaining_ms(em));
+		};
+		tick();
 
-            if (typeof id === "number" && Number.isFinite(id)) {
-                localStorage.setItem("userId", String(id));
-            } else {
-                localStorage.removeItem("userId");
-                setErrorMsg("로그인 정보 처리 중 문제가 발생했습니다. 다시 시도해주세요.");
-                return;
-            }
+		const id = window.setInterval(tick, 500);
+		return () => window.clearInterval(id);
+	}, [email]);
 
-            localStorage.setItem("userName", String(res.data.name ?? ""));
-            localStorage.setItem("email", String(res.data.email ?? email.trim()));
+	const locked = useMemo(() => {
+		const em = email.trim();
+		if (!em) return false;
+		return is_login_locked(em);
+	}, [email, lockRemaining]);
 
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setErrorMsg(null);
 
-            navigate(from, { replace: true });
-        } catch (e: any) {
-            setErrorMsg(e?.message || "서버 내부 오류가 발생했습니다. 관리자에게 문의하세요.");
-        } finally {
-            setSubmitting(false);
-        }
-    };
+		const em = email.trim();
+		if (!em || !password) {
+			setErrorMsg("이메일과 비밀번호를 입력해 주세요.");
+			return;
+		}
 
+		if (locked) {
+			setErrorMsg(`로그인이 잠겨 있습니다. ${format_mmss(lockRemaining)} 후 다시 시도해 주세요.`);
+			return;
+		}
+
+		if (captchaRequired && !captchaValid) {
+			setErrorMsg("캡챠 인증을 완료해 주세요.");
+			return;
+		}
+
+		try {
+			setSubmitting(true);
+			const res = await login(em, password);
+
+			if (res.status !== "success" || !res.data) {
+				const st = record_login_failure(em);
+				const remaining = Math.max(0, 5 - st.count);
+				if (st.lock_until && st.lock_until > Date.now()) {
+					setErrorMsg(
+						`로그인 실패가 누적되어 계정이 잠겼습니다. ${format_mmss(
+							login_lock_remaining_ms(em),
+						)} 후 다시 시도해 주세요.`,
+					);
+					return;
+				}
+				setErrorMsg(
+					(res.message || "이메일 또는 비밀번호가 올바르지 않습니다.") +
+						` (남은 시도: ${remaining}회)`,
+				);
+				return;
+			}
+
+			const userId = parse_user_id(res);
+			if (!userId) {
+				setErrorMsg("로그인 정보 처리 중 문제가 발생했습니다. 다시 시도해주세요.");
+				return;
+			}
+
+			record_login_success(em);
+			localStorage.setItem("userId", userId);
+			localStorage.setItem("userName", String(res.data.name ?? ""));
+			localStorage.setItem("email", String(res.data.email ?? em));
+
+			migrate_password_changed_at(String(res.data.email ?? em), userId);
+			ensure_password_changed_at_initialized(userId);
+
+			if (is_password_expired(userId)) {
+				navigate("/profile", {
+					replace: true,
+					state: {
+						passwordExpired: true,
+						fromAfterChange: from,
+					},
+				});
+				return;
+			}
+
+			navigate(from, { replace: true });
+		} catch (err: any) {
+			const em2 = email.trim();
+			if (em2) {
+				const st = record_login_failure(em2);
+				if (st.lock_until && st.lock_until > Date.now()) {
+					setErrorMsg(
+						`로그인 실패가 누적되어 계정이 잠겼습니다. ${format_mmss(
+							login_lock_remaining_ms(em2),
+						)} 후 다시 시도해 주세요.`,
+					);
+				} else {
+					const remaining = Math.max(0, 5 - st.count);
+					setErrorMsg((err?.message || "로그인에 실패했습니다.") + ` (남은 시도: ${remaining}회)`);
+				}
+				return;
+			}
+
+			setErrorMsg(err?.message || "서버 내부 오류가 발생했습니다. 관리자에게 문의하세요.");
+		} finally {
+			setSubmitting(false);
+		}
+	};
 
 	return (
 		<div className="min-h-screen flex items-center justify-center p-4 bg-slate-950 bg-[radial-gradient(1200px_500px_at_50%_-20%,rgba(59,130,246,0.18),transparent),radial-gradient(900px_420px_at_15%_110%,rgba(99,102,241,0.12),transparent)]">
@@ -113,46 +214,56 @@ export function LoginPage() {
 							/>
 						</div>
 
+						<SimpleCaptcha required={captchaRequired} onValidChange={setCaptchaValid} />
+
 						{errorMsg && (
 							<div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
 								{errorMsg}
 							</div>
 						)}
+
+						{locked && (
+							<div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+								로그인 시도가 제한되었습니다. {format_mmss(lockRemaining)} 후 다시 시도해 주세요.
+							</div>
+						)}
 					</CardContent>
 
-					<CardFooter className="flex flex-col gap-3 pt-0">
+					<CardFooter className="flex flex-col gap-3 pt-6">
 						<Button
 							type="submit"
-							className="w-full h-11 rounded-xl bg-slate-900 text-white hover:bg-slate-800"
-							disabled={submitting}
+							className="w-full h-11 text-base font-semibold"
+							disabled={submitting || locked || (captchaRequired && !captchaValid)}
 						>
 							{submitting ? "로그인 중..." : "로그인"}
 						</Button>
 
-						<div className="w-full flex items-center justify-between text-sm text-slate-500">
+						<div className="text-sm text-center text-muted-foreground">
+							계정이 없으신가요?{" "}
 							<button
 								type="button"
-								onClick={() => navigate("/")}
-								className="hover:text-blue-600 hover:underline"
+								onClick={() => navigate("/signup")}
+								className="font-medium text-slate-900 pt-6 hover:underline"
 							>
-								홈으로
+								회원가입
 							</button>
-							<div className="flex gap-3">
-								<button
-									type="button"
-									onClick={() => navigate("/find-account")}
-									className="hover:text-blue-600 hover:underline"
-								>
-									계정 찾기
-								</button>
-								<button
-									type="button"
-									onClick={() => navigate("/reset-password")}
-									className="hover:text-blue-600 hover:underline"
-								>
-									비밀번호 찾기
-								</button>
-							</div>
+						</div>
+
+						<div className="flex justify-between gap-4 text-sm">
+							<button
+								type="button"
+								onClick={() => navigate("/find-account")}
+								className="text-muted-foreground hover:text-slate-900 hover:underline"
+							>
+								계정 찾기
+							</button>
+							<button
+								type="button"
+								onClick={() => navigate("/reset-password")}
+								className="text-muted-foreground hover:text-slate-900 hover:underline"
+							>
+								비밀번호 찾기
+							</button>
 						</div>
 					</CardFooter>
 				</form>
