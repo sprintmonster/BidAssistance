@@ -227,76 +227,54 @@ export function Home() {
 					<div className="hidden md:flex gap-2"></div>
 				</div>
 
-				{/* 메인 그리드: 좌(4메뉴 박스) + 우(로그인/회원정보) */}
-				<div className="grid grid-cols-12 gap-6">
-					{/* LEFT */}
-					<div className="col-span-12 lg:col-span-8 space-y-6">
-						<section className="bg-white border rounded-2xl p-5 shadow-sm">
-							<div className="flex items-center justify-between mb-4">
-								<h2 className="font-semibold text-slate-900">바로가기</h2>
-								<div className="text-sm text-slate-500">핵심 기능 4개를 빠르게 접근</div>
-							</div>
+				{/* 핵심 수정: 바로가기 섹션과 우측 박스를 "같은 row"로 배치 */}
+				<div className="grid grid-cols-12 gap-6 items-stretch">
+					{/* ROW 1 - LEFT (바로가기) */}
+					<section className="col-span-12 lg:col-span-8 bg-white border rounded-2xl p-5 shadow-sm h-full">
+						<div className="flex items-center justify-between mb-4">
+							<h2 className="font-semibold text-slate-900">바로가기</h2>
+							<div className="text-sm text-slate-500">핵심 기능 4개를 빠르게 접근</div>
+						</div>
 
-							<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-								<QuickBox
-									title="대시보드"
-									desc="지표/분포/현황 한눈에"
-									onClick={() => navigate("/dashboard")}
-								/>
-								<QuickBox
-									title="공고 찾기"
-									desc="조건 필터 & AI 검색"
-									onClick={() => navigate("/bids")}
-								/>
-								<QuickBox
-									title="장바구니"
-									desc={`관심 공고 관리${wishlistCount ? ` · ${wishlistCount}건` : ""}`}
-									badge={wishlistCount}
-									onClick={() => navigate("/cart")}
-								/>
-								<QuickBox
-									title="커뮤니티"
-									desc="실무 팁/질문/공유"
-									onClick={() => navigate("/community")}
-								/>
-							</div>
-						</section>
+						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							<QuickBox
+								title="대시보드"
+								desc="지표/분포/현황 한눈에"
+								onClick={() => navigate("/dashboard")}
+							/>
+							<QuickBox
+								title="공고 찾기"
+								desc="조건 필터 & AI 검색"
+								onClick={() => navigate("/bids")}
+							/>
+							<QuickBox
+								title="장바구니"
+								desc={`관심 공고 관리${wishlistCount ? ` · ${wishlistCount}건` : ""}`}
+								badge={wishlistCount}
+								onClick={() => navigate("/cart")}
+							/>
+							<QuickBox
+								title="커뮤니티"
+								desc="실무 팁/질문/공유"
+								onClick={() => navigate("/community")}
+							/>
+						</div>
+					</section>
 
-						{/* 빈 느낌 줄이기: 홈에서 보여주는 “요약 카드” */}
-						<section className="bg-white border rounded-2xl p-5 shadow-sm">
-							<div className="flex items-center justify-between mb-3">
-								<h3 className="font-semibold text-slate-900">오늘의 추천</h3>
-								<button
-									className="text-sm text-blue-600 hover:underline"
-									onClick={() => navigate("/bids")}
-								>
-									더 보기
-								</button>
-							</div>
-
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-								<MiniStat label="신규 공고" value="67" sub="이번 달" />
-								<MiniStat label="마감 임박" value="8" sub="3일 이내" />
-							</div>
-
-						</section>
-					</div>
-
-					{/* RIGHT */}
-					{/* 데스크탑에서 우측 박스가 너무 위로 붙어 보이는 현상 방지 */}
-					<div className="col-span-12 lg:col-span-4 lg:pt-6">
+					{/* ROW 1 - RIGHT (로그인/회원정보) */}
+					<div className="col-span-12 lg:col-span-4 h-full">
 						{!isAuthed ? (
-							<aside className="bg-white border rounded-2xl p-5 shadow-sm">
-								<h3 className="text-lg font-semibold text-slate-900 mb-2">로그인</h3>
-								<p className="text-sm text-slate-500 mb-4">
-									로그인하면 장바구니/알림/AI 기능을 이용할 수 있습니다.
-								</p>
+							<aside className="bg-white border rounded-2xl p-5 shadow-sm h-full flex flex-col">
+								<div className="mb-4">
+									<h3 className="text-lg font-semibold text-slate-900 mb-2">로그인</h3>
+									<p className="text-sm text-slate-500">
+										로그인하면 장바구니/알림/AI 기능을 이용할 수 있습니다.
+									</p>
+								</div>
 
 								<form className="space-y-3" onSubmit={onQuickLogin}>
 									<div>
-										<div className="text-sm font-medium text-slate-700 mb-1">
-											이메일
-										</div>
+										<div className="text-sm font-medium text-slate-700 mb-1">이메일</div>
 										<input
 											value={email}
 											onChange={(e) => setEmail(e.target.value)}
@@ -307,9 +285,7 @@ export function Home() {
 									</div>
 
 									<div>
-										<div className="text-sm font-medium text-slate-700 mb-1">
-											비밀번호
-										</div>
+										<div className="text-sm font-medium text-slate-700 mb-1">비밀번호</div>
 										<input
 											value={password}
 											onChange={(e) => setPassword(e.target.value)}
@@ -319,10 +295,7 @@ export function Home() {
 										/>
 									</div>
 
-									<SimpleCaptcha
-										required={captchaRequired}
-										onValidChange={setCaptchaValid}
-									/>
+									<SimpleCaptcha required={captchaRequired} onValidChange={setCaptchaValid} />
 
 									{errorMsg && <div className="text-sm text-red-600">{errorMsg}</div>}
 
@@ -368,18 +341,19 @@ export function Home() {
 										</button>
 									</div>
 								</form>
+
+								{/* h-full로 늘어났을 때 하단 여백을 자연스럽게 처리 */}
+								<div className="flex-1" />
 							</aside>
 						) : (
-							<aside className="bg-white border rounded-2xl p-5 shadow-sm">
+							<aside className="bg-white border rounded-2xl p-5 shadow-sm h-full flex flex-col">
 								<div className="flex items-center justify-between mb-4">
 									<div>
 										<div className="text-sm text-slate-500">환영합니다</div>
 										<div className="text-lg font-semibold text-slate-900">
 											{mask_name(user?.name ?? "사용자")}
 										</div>
-										{user?.email && (
-											<div className="text-sm text-slate-500">{user.email}</div>
-										)}
+										{user?.email && <div className="text-sm text-slate-500">{user.email}</div>}
 									</div>
 									<div className="w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
 										{user?.name?.slice(0, 1) ?? "U"}
@@ -406,9 +380,32 @@ export function Home() {
 										로그아웃
 									</button>
 								</div>
+
+								<div className="flex-1" />
 							</aside>
 						)}
 					</div>
+
+					{/* ROW 2 - LEFT (오늘의 추천) */}
+					<section className="col-span-12 lg:col-span-8 bg-white border rounded-2xl p-5 shadow-sm">
+						<div className="flex items-center justify-between mb-3">
+							<h3 className="font-semibold text-slate-900">오늘의 추천</h3>
+							<button
+								className="text-sm text-blue-600 hover:underline"
+								onClick={() => navigate("/bids")}
+							>
+								더 보기
+							</button>
+						</div>
+
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+							<MiniStat label="신규 공고" value="67" sub="이번 달" />
+							<MiniStat label="마감 임박" value="8" sub="3일 이내" />
+						</div>
+					</section>
+
+					{/* ROW 2 - RIGHT (비워두기: 레이아웃 안정) */}
+					<div className="hidden lg:block lg:col-span-4" />
 				</div>
 			</div>
 		</div>
