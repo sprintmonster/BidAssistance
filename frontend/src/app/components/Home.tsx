@@ -1,62 +1,56 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { login } from "../api/auth";
 import { fetchWishlist } from "../api/wishlist";
 import { mask_name } from "../utils/masking";
 
 type AuthUser = {
-  name: string;
-  email?: string;
+	name: string;
+	email?: string;
 };
 
 export function Home() {
-  const navigate = useNavigate();
+	const navigate = useNavigate();
 
-  // const isAuthed = useMemo(
-  //   () => !!localStorage.getItem("userId"),
-  //   []
-  // );
+	const [wishlistCount, setWishlistCount] = useState(0);
 
-  const [wishlistCount, setWishlistCount] = useState(0);
+	// 홈 우측 로그인 폼
+	const [email, setEmail] = useState("");
+	const [password, setPassword] = useState("");
 
-  // 홈 우측 로그인 폼
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+	const [errorMsg, setErrorMsg] = useState<string | null>(null);
+	const [submitting, setSubmitting] = useState(false);
 
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+	const [isAuthed, setIsAuthed] = useState(() => {
+		const uid = localStorage.getItem("userId");
+		return !!uid && uid !== "undefined";
+	});
 
-    const [isAuthed, setIsAuthed] = useState(() => {
-        const uid = localStorage.getItem("userId");
-        return !!uid && uid !== "undefined";
-    });
+	const [user, setUser] = useState<AuthUser | null>(() => {
+		const uid = localStorage.getItem("userId");
+		if (!uid || uid === "undefined") return null;
 
-    const [user, setUser] = useState<AuthUser | null>(() => {
-        const uid = localStorage.getItem("userId");
-        if (!uid || uid === "undefined") return null;
+		const name =
+			localStorage.getItem("userName") || localStorage.getItem("name");
+		const storedEmail = localStorage.getItem("email") || undefined;
 
-        const name = localStorage.getItem("userName") || localStorage.getItem("name");
-        const storedEmail = localStorage.getItem("email") || undefined;
+		return { name: name || "사용자", email: storedEmail };
+	});
 
-        return { name: name || "사용자", email: storedEmail };
-    });
+	useEffect(() => {
+		if (!isAuthed) {
+			setWishlistCount(0);
+			return;
+		}
 
+		const uidStr = localStorage.getItem("userId");
+		const uid = Number(uidStr);
+		if (!Number.isFinite(uid)) return;
 
-
-    useEffect(() => {
-        if (!isAuthed) {
-            setWishlistCount(0);
-            return;
-        }
-
-        const uidStr = localStorage.getItem("userId");
-        const uid = Number(uidStr);
-        if (!Number.isFinite(uid)) return;
-
-        fetchWishlist(uid)
-            .then((items) => setWishlistCount(items.length))
-            .catch(() => setWishlistCount(0));
-    }, [isAuthed]);
+		fetchWishlist(uid)
+			.then((items) => setWishlistCount(items.length))
+			.catch(() => setWishlistCount(0));
+	}, [isAuthed]);
 
 
     const onQuickLogin = async (e?:React.FormEvent) => {
