@@ -1,29 +1,48 @@
+import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-
-import {
-	ensure_password_changed_at_initialized,
-	is_password_expired,
-} from "../utils/accessControl";
+import { checkLogin, persistLogin } from "../api/auth";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-	const userId = localStorage.getItem("userId");
 	const location = useLocation();
+	const [status, setStatus] = useState<"checking" | "authed" | "guest">(() => {
+		return localStorage.getItem("userId") ? "authed" : "checking";
+	});
 
-	if (!userId) {
-		return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+	useEffect(() => {
+		let ignore = false;
+
+		if (status !== "checking") return;
+
+		checkLogin()
+			.then((data) => {
+				if (ignore) return;
+				if (data) {
+					persistLogin(data);
+					setStatus("authed");
+				} else {
+					setStatus("guest");
+				}
+			})
+			.catch(() => {
+				if (ignore) return;
+				setStatus("guest");
+			});
+
+		return () => {
+			ignore = true;
+		};
+	}, [status]);
+
+	if (status === "checking") {
+		return (
+			<div className="py-10 text-center text-sm text-slate-500">
+				로그인 상태 확인 중...
+			</div>
+		);
 	}
 
-	ensure_password_changed_at_initialized(userId);
-
-	// 비밀번호 만료 시: 프로필 페이지에서 비밀번호 변경을 유도
-	if (is_password_expired(userId) && location.pathname !== "/profile") {
-		return (
-			<Navigate
-				to="/profile"
-				replace
-				state={{ passwordExpired: true, fromAfterChange: location.pathname }}
-			/>
-		);
+	if (status === "guest") {
+		return <Navigate to="/login" replace state={{ from: location.pathname }} />;
 	}
 
 	return <>{children}</>;

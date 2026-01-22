@@ -9,9 +9,6 @@ import type {
 	Attachment,
 } from "../types/community";
 
-const DOMAIN = import.meta.env.VITE_API_URL || "";
-const BASE_URL = `${DOMAIN}/api`;
-
 function qs(params: Record<string, string | number | undefined>) {
 	const sp = new URLSearchParams();
 	Object.entries(params).forEach(([k, v]) => {
@@ -35,7 +32,7 @@ export function fetchCommunityPosts(opts: {
 	size?: number;
 }) {
 	return api<ApiResponse<PostListData>>(
-		`/board/posts${qs({
+		`/community/posts${qs({
 			category: opts.category,
 			q: opts.q,
 			sort: opts.sort,
@@ -46,16 +43,16 @@ export function fetchCommunityPosts(opts: {
 }
 
 export function fetchCommunityPost(postId: number) {
-	return api<ApiResponse<Post>>(`/board/posts/${postId}`).then(unwrap);
+	return api<ApiResponse<Post>>(`/community/posts/${postId}`).then(unwrap);
 }
 
 export function createCommunityPost(payload: {
 	title: string;
 	content: string;
 	category: PostCategory;
-	attachmentIds?: string[];
+	attachmentIds?: number[];
 }) {
-	return api<ApiResponse<Post>>("/board/posts", {
+	return api<ApiResponse<Post>>("/community/posts", {
 		method: "POST",
 		body: JSON.stringify(payload),
 	}).then(unwrap);
@@ -67,68 +64,55 @@ export function updateCommunityPost(
 		title: string;
 		content: string;
 		category: PostCategory;
-		attachmentIds: string[];
+		attachmentIds: number[];
 	}>,
 ) {
-	return api<ApiResponse<Post>>(`/board/posts/${postId}`, {
+	return api<ApiResponse<Post>>(`/community/posts/${postId}`, {
 		method: "PATCH",
 		body: JSON.stringify(payload),
 	}).then(unwrap);
 }
 
 export function deleteCommunityPost(postId: number) {
-	return api<ApiResponse<{ message?: string }>>(`/board/posts/${postId}`, {
+	return api<ApiResponse<{ message?: string }>>(`/community/posts/${postId}`, {
 		method: "DELETE",
 	}).then(unwrap);
 }
 
 export function likeCommunityPost(postId: number) {
-	return api<ApiResponse<{ liked: true }>>(`/board/posts/${postId}/like`, {
+	return api<ApiResponse<{ liked: true }>>(`/community/posts/${postId}/like`, {
 		method: "POST",
 	}).then(unwrap);
 }
 
 export function unlikeCommunityPost(postId: number) {
-	return api<ApiResponse<{ liked: false }>>(`/board/posts/${postId}/dislike`, {
+	return api<ApiResponse<{ liked: false }>>(`/community/posts/${postId}/like`, {
 		method: "DELETE",
 	}).then(unwrap);
 }
 
 export function createCommunityComment(postId: number, content: string) {
-	return api<ApiResponse<Comment>>(`/board/posts/${postId}/comments`, {
+	return api<ApiResponse<Comment>>(`/community/posts/${postId}/comments`, {
 		method: "POST",
 		body: JSON.stringify({ content }),
 	}).then(unwrap);
 }
 
-export function deleteCommunityComment(postId: number, commentId: string) {
-	return api<ApiResponse<{ message?: string }>>(`/comments/${commentId}`, {
-		method: "DELETE",
-	}).then(unwrap);
+export function deleteCommunityComment(postId: number, commentId: number) {
+	return api<ApiResponse<{ message?: string }>>(
+		`/community/posts/${postId}/comments/${commentId}`,
+		{ method: "DELETE" },
+	).then(unwrap);
 }
 
 export async function uploadCommunityAttachments(files: File[]) {
 	const fd = new FormData();
 	files.forEach((f) => fd.append("files", f));
 
-	// userId 기반 접근통제: 백엔드가 읽는 헤더명으로 통일 필요(여기서는 X-User-Id 사용)
-	const userId = localStorage.getItem("userId");
-	const headers: Record<string, string> = {};
-	if (userId) headers["X-User-Id"] = String(userId);
-
-	// 배포 환경에서도 동작하도록 BASE_URL 사용 + 쿠키 기반 세션 대비 credentials 포함
-	const res = await fetch(`${BASE_URL}/board/attachments`, {
+	const res = await api<ApiResponse<Attachment[]>>("/community/attachments", {
 		method: "POST",
-		credentials: "include",
-		headers,
 		body: fd,
 	});
 
-	if (!res.ok) {
-		const msg = await res.text().catch(() => "");
-		throw new Error(msg || "첨부 업로드 실패");
-	}
-
-	const json = (await res.json()) as ApiResponse<Attachment[]>;
-	return unwrap(json);
+	return unwrap(res);
 }

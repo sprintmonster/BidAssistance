@@ -17,6 +17,7 @@ import {
 	LogOut,
 	Menu,
 } from "lucide-react";
+import { logout as apiLogout, checkLogin, persistLogin } from "../api/auth";
 
 type SideItem = {
 	label: string;
@@ -35,44 +36,54 @@ export function AppLayout() {
 	const [wishlistCount, setWishlistCount] = useState<number>(0);
 	const [mobileOpen, setMobileOpen] = useState(false);
 
-	const isAuthed = useMemo(
-		() => !!localStorage.getItem("userId"),
-		[location.pathname],
-	);
+	// ✅ 세션 기반: 앱 진입/라우트 이동 시 로그인 복구 시도(쿠키로 확인)
+	useEffect(() => {
+		let ignore = false;
 
-    useEffect(() => {
-        if (!localStorage.getItem("userId")) {
-            setWishlistCount(0);
-            return;
-        }
+		checkLogin()
+			.then((data) => {
+				if (ignore) return;
+				if (data) persistLogin(data);
+			})
+			.catch(() => {});
 
-        const raw = localStorage.getItem("userId");
-        const userId = raw ? Number(raw) : NaN;
+		return () => {
+			ignore = true;
+		};
+	}, [location.pathname]);
 
-        if (!Number.isFinite(userId)) {
-            setWishlistCount(0);
-            return;
-        }
+	const isAuthed = useMemo(() => !!localStorage.getItem("userId"), [location.pathname]);
 
-        fetchWishlist(userId)
-            .then((items) => setWishlistCount(items.length))
-            .catch(() => setWishlistCount(0));
-    }, [location.pathname]);
+	// 장바구니 카운트
+	useEffect(() => {
+		if (!localStorage.getItem("userId")) {
+			setWishlistCount(0);
+			return;
+		}
 
+		const raw = localStorage.getItem("userId");
+		const userId = raw ? Number(raw) : NaN;
 
-    const onSubmitSearch = (e: FormEvent) => {
+		if (!Number.isFinite(userId)) {
+			setWishlistCount(0);
+			return;
+		}
+
+		fetchWishlist(userId)
+			.then((items) => setWishlistCount(items.length))
+			.catch(() => setWishlistCount(0));
+	}, [location.pathname]);
+
+	const onSubmitSearch = (e: FormEvent) => {
 		e.preventDefault();
 		const q = query.trim();
 		if (!q) return;
 		navigate(`/bids?q=${encodeURIComponent(q)}`);
 	};
 
-	const logout = () => {
-		localStorage.removeItem("userId");
-		localStorage.removeItem("refreshToken");
-		localStorage.removeItem("userId");
-		localStorage.removeItem("name");
-		localStorage.removeItem("email");
+	// ✅ 로그아웃: 서버 엔드포인트가 없더라도 apiLogout이 로컬 정리를 수행
+	const onLogout = async () => {
+		await apiLogout();
 		navigate("/", { replace: true });
 	};
 
@@ -139,7 +150,6 @@ export function AppLayout() {
 					<div className="flex-1 h-16 flex items-center justify-end gap-2 px-5">
 						<HeaderPill onClick={() => navigate("/notice")} label="공지사항" />
 						<HeaderPill onClick={() => navigate("/notifications")} label="알림" />
-						{/* 상단바에는 로그인/로그아웃/마이 절대 안 올림 */}
 					</div>
 				</div>
 			</header>
@@ -158,7 +168,7 @@ export function AppLayout() {
 							items={sideItems}
 							pathname={location.pathname}
 							isAuthed={isAuthed}
-							onLogout={logout}
+							onLogout={onLogout}
 							onNavigate={(to) => navigate(to)}
 						/>
 					</aside>
@@ -169,10 +179,7 @@ export function AppLayout() {
 			{isHome && (
 				<section className="bg-white text-slate-900 border-b border-slate-200">
 					<div className="w-full px-5 py-6">
-						<form
-							onSubmit={onSubmitSearch}
-							className="w-full max-w-[760px] mx-auto"
-						>
+						<form onSubmit={onSubmitSearch} className="w-full max-w-[760px] mx-auto">
 							<div className="relative">
 								<input
 									value={query}
@@ -212,26 +219,23 @@ export function AppLayout() {
 					<Outlet />
 				</main>
 			) : (
-				/* 세로: 헤더~푸터 사이를 flex-1로 꽉 채움
-				   가로: 좌측은 사이드바(260px)가 화면 왼쪽부터 시작(빈 여백 제거)
-				*/
 				<div className="flex-1 min-h-0 flex">
 					<aside className="hidden md:flex w-[260px] shrink-0 bg-slate-900 text-white border-r border-white/10">
 						<SideBarContent
 							items={sideItems}
 							pathname={location.pathname}
 							isAuthed={isAuthed}
-							onLogout={logout}
+							onLogout={onLogout}
 							onNavigate={(to) => navigate(to)}
 						/>
 					</aside>
 
 					<main className="flex-1 min-w-0 min-h-0 bg-slate-50">
 						<div className="h-full min-h-0 pl-0 pr-6 py-6">
-              <div className="w-full max-w-[1280px] pl-8">
-							<Outlet />
+							<div className="w-full max-w-[1280px] pl-8">
+								<Outlet />
+							</div>
 						</div>
-          </div>  
 					</main>
 				</div>
 			)}
@@ -241,9 +245,15 @@ export function AppLayout() {
 				<div className="w-full px-5 flex items-center justify-between">
 					<div>© 2026 입찰인사이트. All rights reserved.</div>
 					<div className="flex gap-4 text-xs">
-						<button onClick={() => navigate("/terms")} className="hover:text-gray-500">이용약관</button>
-						<button onClick={() => navigate("/privacy")} className="hover:text-gray-500">개인정보처리방침</button>
-						<button onClick={() => navigate("/support")} className="hover:text-gray-500">고객지원</button>
+						<button onClick={() => navigate("/terms")} className="hover:text-gray-500">
+							이용약관
+						</button>
+						<button onClick={() => navigate("/privacy")} className="hover:text-gray-500">
+							개인정보처리방침
+						</button>
+						<button onClick={() => navigate("/support")} className="hover:text-gray-500">
+							고객지원
+						</button>
 					</div>
 				</div>
 			</footer>
@@ -356,9 +366,7 @@ function SideNavLink({
 				"relative h-11 px-3 rounded-md",
 				"flex items-center gap-3",
 				"transition",
-				active
-					? "bg-white/10 text-white"
-					: "text-slate-200 hover:bg-white/5 hover:text-white",
+				active ? "bg-white/10 text-white" : "text-slate-200 hover:bg-white/5 hover:text-white",
 			].join(" ")}
 		>
 			<span className={active ? "text-white" : "text-slate-200"}>{icon}</span>
