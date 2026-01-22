@@ -371,8 +371,8 @@ export function BidSummary() {
                 </CardHeader>
 
                 <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="flex items-center gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
+                        <div className="flex items-center gap-3 lg:col-span-2">
                             <Building className="h-5 w-5 text-muted-foreground" />
                             <div>
                                 <p className="text-sm text-muted-foreground">발주기관</p>
@@ -380,7 +380,7 @@ export function BidSummary() {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-4">
                             <MapPin className="h-5 w-5 text-muted-foreground" />
                             <div>
                                 <p className="text-sm text-muted-foreground">지역</p>
@@ -392,7 +392,7 @@ export function BidSummary() {
                             <DollarSign className="h-5 w-5 text-muted-foreground" />
                             <div>
                                 <p className="text-sm text-muted-foreground">예산</p>
-                                <p className="font-semibold">
+                                <p className="font-semiboldwhitespace-nowrap">
                                     {Number(bid.budget).toLocaleString()}
                                 </p>
                             </div>
@@ -402,7 +402,7 @@ export function BidSummary() {
                             <Calendar className="h-5 w-5 text-muted-foreground" />
                             <div>
                                 <p className="text-sm text-muted-foreground">마감일</p>
-                                <p className="font-semibold text-red-600">
+                                <p className="font-semibold text-red-600 whitespace-nowrap">
                                     {new Date(bid.deadline).toLocaleString("ko-KR", {
                                         year: "numeric",
                                         month: "2-digit",
