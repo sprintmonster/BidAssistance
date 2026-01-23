@@ -188,6 +188,7 @@ export function Home() {
             localStorage.setItem("userName", String(res.data?.name ?? ""));
             localStorage.setItem("email", String(res.data?.email ?? em));
 			mark_reco_popup_trigger();
+			navigate("/", { replace: true });
 
             migrate_password_changed_at(String(res.data?.email ?? em), userId);
             ensure_password_changed_at_initialized(userId);

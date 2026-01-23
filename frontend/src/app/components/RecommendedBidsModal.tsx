@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Star } from "lucide-react";
+import { Star, X, Sparkles, ArrowRight } from "lucide-react";
 
 import { fetchBids, type Bid } from "../api/bids";
 import { toggleWishlist } from "../api/wishlist";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Dialog, DialogContent } from "./ui/dialog";
 
 const SUPPRESS_KEY = "reco_popup_suppress_date";
-const TRIGGER_KEY = "reco_popup_trigger";
+
+const TRIGGER_KEY = "reco_popup_after_login_session";
 
 function today_ymd(): string {
   const d = new Date();
@@ -55,7 +56,7 @@ function format_krw_eok(raw: unknown): string {
 
 function pick_bid_id(b: Bid): number {
   if (typeof b.id === "number" && Number.isFinite(b.id)) return b.id;
-  if (typeof b.bidId === "number" && Number.isFinite(b.bidId)) return b.bidId;
+  if (typeof (b as any).bidId === "number" && Number.isFinite((b as any).bidId)) return (b as any).bidId;
   return 0;
 }
 
@@ -76,14 +77,23 @@ export function is_reco_popup_suppressed_today(): boolean {
   return localStorage.getItem(SUPPRESS_KEY) === today_ymd();
 }
 
+// ✅ 로그인 성공 시 호출: 세션에서만 유효(라우트 이동마다 재발생 방지)
 export function mark_reco_popup_trigger() {
-  localStorage.setItem(TRIGGER_KEY, "1");
+  try {
+    sessionStorage.setItem(TRIGGER_KEY, "1");
+  } catch {
+    // ignore
+  }
 }
 
 export function consume_reco_popup_trigger(): boolean {
-  if (localStorage.getItem(TRIGGER_KEY) === "1") {
-    localStorage.removeItem(TRIGGER_KEY);
-    return true;
+  try {
+    if (sessionStorage.getItem(TRIGGER_KEY) === "1") {
+      sessionStorage.removeItem(TRIGGER_KEY);
+      return true;
+    }
+  } catch {
+    // ignore
   }
   return false;
 }
@@ -133,13 +143,12 @@ export function RecommendedBidsModal({
     };
   }, [open]);
 
+  // 데모 추천(마감 임박 순): 필요 시 스코어링/개인화로 확장
   const recommended = useMemo(() => {
     const items = [...bids];
     items.sort((a, b) => {
-      const ad =
-        parse_date(String(a.endDate ?? ""))?.getTime() ?? Number.MAX_SAFE_INTEGER;
-      const bd =
-        parse_date(String(b.endDate ?? ""))?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const ad = parse_date(String((a as any).endDate ?? ""))?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const bd = parse_date(String((b as any).endDate ?? ""))?.getTime() ?? Number.MAX_SAFE_INTEGER;
       return ad - bd;
     });
     return items.slice(0, 10);
@@ -182,127 +191,138 @@ export function RecommendedBidsModal({
   };
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) {
-          on_close();
-          return;
-        }
-        onOpenChange(true);
-      }}
-    >
-      <DialogContent className="p-0 sm:max-w-2xl rounded-2xl overflow-hidden">
-        <DialogHeader className="px-6 pt-6">
-          <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
-            <Star className="w-5 h-5" />
-            추천 공고
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="px-6 pb-4">
-          <div className="rounded-2xl border bg-blue-50/40 px-5 py-4">
-            <div className="font-semibold text-slate-900">맞춤 추천 공고</div>
-            <div className="text-sm text-slate-500 mt-1">
-              관심 지역/금액/최근 조회 흐름을 기반으로 추천됩니다. (현재는 데모 데이터)
+    <Dialog open={open} onOpenChange={(next) => (next ? onOpenChange(true) : on_close())}>
+      <DialogContent className="p-0 sm:max-w-3xl rounded-3xl overflow-hidden border-0 shadow-2xl">
+        {/* Header */}
+        <div className="relative px-7 pt-7 pb-5 bg-[radial-gradient(1200px_400px_at_20%_-20%,rgba(59,130,246,0.18),transparent),radial-gradient(900px_380px_at_90%_0%,rgba(99,102,241,0.16),transparent)]">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-2xl bg-white/70 border flex items-center justify-center">
+                  <Star className="w-5 h-5 text-slate-900" />
+                </div>
+                <div className="text-lg font-semibold text-slate-900">추천 공고</div>
+              </div>
+              <div className="mt-2 text-sm text-slate-600 flex items-center gap-2">
+                <Sparkles className="w-4 h-4" />
+                관심 조건/활동 흐름 기반으로 공고를 추천합니다. (현재는 데모 데이터)
+              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={on_close}
+              className="w-10 h-10 rounded-2xl bg-white/70 border hover:bg-white transition flex items-center justify-center"
+              aria-label="닫기"
+            >
+              <X className="w-5 h-5 text-slate-700" />
+            </button>
           </div>
 
-          {notice ? <div className="mt-3 text-sm text-slate-600">{notice}</div> : null}
+          {notice ? (
+            <div className="mt-4 text-sm text-slate-700 bg-white/70 border rounded-2xl px-4 py-3">
+              {notice}
+            </div>
+          ) : null}
+        </div>
 
-          <div className="mt-4">
-            <div className="max-h-[420px] overflow-y-auto pr-1">
-              {loading ? (
-                <div className="space-y-3">
-                  {Array.from({ length: 4 }).map((_, idx) => (
-                    <div key={idx} className="border rounded-2xl p-4 bg-white">
-                      <div className="h-4 w-48 bg-slate-100 rounded animate-pulse" />
-                      <div className="mt-2 h-3 w-36 bg-slate-100 rounded animate-pulse" />
-                      <div className="mt-4 h-8 w-44 bg-slate-100 rounded animate-pulse" />
-                    </div>
-                  ))}
-                </div>
-              ) : error ? (
-                <div className="border rounded-2xl p-4 bg-red-50 text-red-700 text-sm">
-                  {error}
-                </div>
-              ) : recommended.length === 0 ? (
-                <div className="border rounded-2xl p-6 bg-white text-sm text-slate-500">
-                  표시할 추천 공고가 없습니다.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {recommended.map((b) => {
-                    const dleft = days_left(String(b.endDate ?? ""));
-                    const dText = dleft === null ? "-" : dleft <= 0 ? "마감" : `D-${dleft}`;
+        {/* Body */}
+        <div className="px-7 py-6 bg-white">
+          <div className="max-h-[440px] overflow-y-auto pr-1">
+            {loading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <div key={idx} className="border rounded-2xl p-5 bg-white">
+                    <div className="h-4 w-64 bg-slate-100 rounded animate-pulse" />
+                    <div className="mt-2 h-3 w-40 bg-slate-100 rounded animate-pulse" />
+                    <div className="mt-4 h-10 w-56 bg-slate-100 rounded-xl animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            ) : error ? (
+              <div className="border rounded-2xl p-4 bg-red-50 text-red-700 text-sm">
+                {error}
+              </div>
+            ) : recommended.length === 0 ? (
+              <div className="border rounded-2xl p-6 bg-white text-sm text-slate-500">
+                표시할 추천 공고가 없습니다.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recommended.map((b) => {
+                  const bidId = pick_bid_id(b);
+                  const dleft = days_left(String((b as any).endDate ?? ""));
+                  const dText = dleft === null ? "-" : dleft <= 0 ? "마감" : `D-${dleft}`;
 
-                    return (
-                      <div
-                        key={String(pick_bid_id(b) || b.realId)}
-                        className="border rounded-2xl p-4 bg-white"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="font-semibold text-slate-900 truncate">
-                              {b.name}
-                            </div>
-                            <div className="text-sm text-slate-500 truncate">
-                              {b.organization}
-                            </div>
+                  const badgeCls =
+                    dleft !== null && dleft > 0
+                      ? dleft <= 3
+                        ? "bg-orange-600 text-white"
+                        : "bg-blue-600 text-white"
+                      : "bg-slate-100 text-slate-600";
+
+                  return (
+                    <div
+                      key={String(bidId || (b as any).realId || (b as any).RealId || b.name)}
+                      className="group border rounded-2xl p-5 bg-white hover:border-slate-300 hover:shadow-sm transition"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-slate-900 truncate">
+                            {b.name}
                           </div>
-
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="px-2 py-1 rounded-full text-xs border bg-white">
-                              {b.region || "-"}
-                            </span>
-                            <span
-                              className={[
-                                "px-2 py-1 rounded-full text-xs font-semibold",
-                                dleft !== null && dleft > 0
-                                  ? "bg-blue-600 text-white"
-                                  : "bg-slate-100 text-slate-600",
-                              ].join(" ")}
-                            >
-                              {dText}
-                            </span>
+                          <div className="text-sm text-slate-500 truncate">
+                            {(b as any).organization ?? "-"}
                           </div>
                         </div>
 
-                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
-                          <span className="px-2 py-1 rounded-full bg-slate-50 border">
-                            {format_krw_eok((b as any).estimatePrice)}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="px-2.5 py-1 rounded-full text-xs border bg-white">
+                            {(b as any).region || "-"}
                           </span>
-                          <span className="px-2 py-1 rounded-full bg-slate-50 border">
-                            마감: {format_date_ymd(String(b.endDate ?? ""))}
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${badgeCls}`}>
+                            {dText}
                           </span>
-                        </div>
-
-                        <div className="mt-4 flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => on_detail(b)}
-                            className="h-9 px-3 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm"
-                          >
-                            상세 보기
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void on_toggle_wishlist(b)}
-                            disabled={togglingId === pick_bid_id(b)}
-                            className="h-9 px-3 rounded-xl border hover:bg-slate-50 text-sm disabled:opacity-60"
-                          >
-                            장바구니 담기
-                          </button>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-700">
+                        <span className="px-2.5 py-1 rounded-full bg-slate-50 border">
+                          {format_krw_eok((b as any).estimatePrice)}
+                        </span>
+                        <span className="px-2.5 py-1 rounded-full bg-slate-50 border">
+                          마감: {format_date_ymd(String((b as any).endDate ?? ""))}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => on_detail(b)}
+                          className="h-10 px-4 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm inline-flex items-center gap-2"
+                        >
+                          상세 보기
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => void on_toggle_wishlist(b)}
+                          disabled={togglingId === bidId && bidId !== 0}
+                          className="h-10 px-4 rounded-xl border hover:bg-slate-50 text-sm disabled:opacity-60"
+                        >
+                          장바구니 담기
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          <div className="mt-4 flex items-center justify-between">
+          {/* Footer */}
+          <div className="mt-5 flex items-center justify-between border-t pt-4">
             <label className="flex items-center gap-2 text-sm text-slate-600 select-none">
               <input
                 type="checkbox"
@@ -315,7 +335,7 @@ export function RecommendedBidsModal({
             <button
               type="button"
               onClick={on_close}
-              className="h-9 px-4 rounded-xl border hover:bg-slate-50 text-sm"
+              className="h-10 px-4 rounded-xl border hover:bg-slate-50 text-sm"
             >
               닫기
             </button>

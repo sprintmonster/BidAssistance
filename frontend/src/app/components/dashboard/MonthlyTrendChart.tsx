@@ -24,7 +24,7 @@ export function MonthlyTrendChart({
     <div className="border rounded-2xl p-6 bg-white">
       <div className="mb-4">
         <div className="font-semibold">월별 공고 추이</div>
-        <div className="text-sm text-gray-400">끝나는 날(endDate) 기준 · 최근 6개월</div>
+        <div className="text-sm text-gray-400">끝나는 날(endDate) 기준 · 앞으로 6개월</div>
       </div>
 
       <div className="h-64">

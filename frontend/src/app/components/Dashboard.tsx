@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+
 import { fetchBids, type Bid } from "../api/bids";
 import { fetchWishlist } from "../api/wishlist";
 import type { WishlistItem } from "../types/wishlist";
@@ -7,273 +8,249 @@ import { SummaryCards } from "./dashboard/SummaryCard";
 import { MonthlyTrendChart, type MonthlyTrendPoint } from "./dashboard/MonthlyTrendChart";
 import { RegionPieChart, type RegionDistPoint } from "./dashboard/RegionPieChart";
 
-/* ================= KPI 타입 ================= */
-
 type Kpi = {
-    newBidsToday: number;
-    totalExpectedAmount: number;
-
-    newBidsThisMonth: number;
-    wishlistCount: number;
-    closingSoon3Days: number;
-    totalExpectedAmountEok: string;
+  newBidsThisMonth: number;
+  wishlistCount: number;
+  closingSoon3Days: number;
+  totalExpectedAmountEok: string;
 };
-
-const EMPTY_KPI: Kpi = {
-    newBidsToday: 0,
-    wishlistCount: 0,
-    closingSoon3Days: 0,
-    totalExpectedAmount: 0,
-    newBidsThisMonth: 0,
-    totalExpectedAmountEok: "0",
-};
-
-/* ================= 유틸 ================= */
-
-function parseDateSafe(s: string): Date | null {
-    const t = Date.parse(String(s ?? ""));
-    return Number.isFinite(t) ? new Date(t) : null;
-}
-
-function startOfToday(d = new Date()): Date {
-    const x = new Date(d);
-    x.setHours(0, 0, 0, 0);
-    return x;
-}
-
-function endOfToday(d = new Date()): Date {
-    const x = new Date(d);
-    x.setHours(23, 59, 59, 999);
-    return x;
-}
-
-function add_days(d: Date, days: number): Date {
-    const x = new Date(d);
-    x.setDate(x.getDate() + days);
-    return x;
-}
-
-function toNumberAmount(v: unknown): number {
-    if (v == null || v === "") return 0;
-    if (typeof v === "number") return Number.isFinite(v) ? v : 0;
-    const n = Number(String(v).replace(/[^\d.-]/g, ""));
-    return Number.isFinite(n) ? n : 0;
-}
-
-function is_same_month(a: Date, b: Date): boolean {
-    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
-}
-
-function format_eok(value: number): string {
-    if (!Number.isFinite(value) || value <= 0) return "0";
-    const eok = value / 100_000_000;
-    return Math.round(eok * 10) / 10 + "";
-}
-
-/* ================= KPI 카드 ================= */
-
-function KpiCard({
-                     title,
-                     value,
-                     sub,
-                     icon,
-                     accent,
-                 }: {
-    title: string;
-    value: string;
-    sub: string;
-    icon: string;
-    accent?: "warn";
-}) {
-    return (
-        <div className="border rounded-2xl p-5 bg-white flex items-start justify-between">
-            <div className="space-y-3">
-                <div className="text-sm text-gray-600">{title}</div>
-                <div className="text-3xl font-bold">{value}</div>
-                <div className="text-sm text-gray-500">{sub}</div>
-            </div>
-            <div
-                className={[
-                    "w-10 h-10 rounded-xl flex items-center justify-center text-lg",
-                    accent === "warn" ? "bg-orange-50" : "bg-gray-50",
-                ].join(" ")}
-            >
-        <span className={accent === "warn" ? "text-orange-600" : "text-gray-700"}>
-          {icon}
-        </span>
-            </div>
-        </div>
-    );
-}
-
-/* ================= Dashboard ================= */
 
 export function Dashboard() {
-    const [bids, setBids] = useState<Bid[]>([]);
-    const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
-    const [loading, setLoading] = useState(true);
+  const [bids, setBids] = useState<Bid[]>([]);
+  const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-    // 🔧 수정: 데이터 로딩 전용 useEffect
-    useEffect(() => {
-        const load = async () => {
-            setLoading(true);
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setError(null);
 
-            try {
-                const bidList = await fetchBids();
-                setBids(bidList);
-            } catch {
-                setBids([]);
-            }
+      try {
+        const res = await fetchBids();
+        const items = pick_list(res);
+        setBids(items as Bid[]);
+      } catch (e) {
+        setBids([]);
+        setError(e instanceof Error ? e.message : "공고 데이터를 불러오지 못했습니다.");
+      } finally {
+        setLoading(false);
+      }
 
-            const uidStr = localStorage.getItem("userId");
-            const userId = Number(uidStr);
+      const userIdStr = localStorage.getItem("userId");
+      const userId = Number(userIdStr);
+      if (!userIdStr || !Number.isFinite(userId)) {
+        setWishlist([]);
+        return;
+      }
 
-            if (!uidStr || !Number.isFinite(userId)) {
-                setWishlist([]);
-                setLoading(false);
-                return;
-            }
-
-            try {
-                const w = await fetchWishlist(userId);
-                setWishlist(w);
-            } catch {
-                setWishlist([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        void load();
-    }, []);
-
-    // 🔧 수정: KPI + 차트 계산은 useMemo로 통합
-    const monthlyTrend = useMemo<MonthlyTrendPoint[]>(() => build_monthly_trend(bids, 6), [bids]);
-    const regionDist = useMemo<RegionDistPoint[]>(() => build_region_dist(bids), [bids]);
-    const kpi = useMemo<Kpi>(() => build_kpi(bids, wishlist), [bids, wishlist]);
-
-    return (
-        <div className="space-y-6">
-            {/* KPI */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <KpiCard title="신규 공고" value={`${kpi.newBidsToday}개`} sub="오늘 시작" icon="📄" />
-                <KpiCard title="관심 공고" value={`${kpi.wishlistCount}개`} sub="장바구니" icon="📈" />
-                <KpiCard
-                    title="마감 임박"
-                    value={`${kpi.closingSoon3Days}개`}
-                    sub="3일 이내"
-                    icon="⏰"
-                    accent="warn"
-                />
-                <KpiCard
-                    title="총 예상액"
-                    value={`${Math.round(kpi.totalExpectedAmount / 100_000_000)}억`}
-                    sub="관심 공고 합계"
-                    icon="💰"
-                />
-            </div>
-
-            {/*<SummaryCards loading={loading} kpi={kpi} />*/}
-
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <MonthlyTrendChart loading={loading} data={monthlyTrend} />
-                <RegionPieChart loading={loading} data={regionDist} />
-            </div>
-        </div>
-    );
-}
-
-/* ================= KPI 계산 ================= */
-
-function build_kpi(bids: Bid[], wishlist: WishlistItem[]): Kpi {
-    const now = new Date();
-    const todayStart = startOfToday(now);
-    const todayEnd = endOfToday(now);
-    const threeDaysLater = add_days(now, 3);
-
-    let newBidsToday = 0;
-    let newBidsThisMonth = 0;
-    let closingSoon3Days = 0;
-
-    bids.forEach((b) => {
-        const start = parseDateSafe((b as any).startDate ?? (b as any).bidStart ?? "");
-        const end = parseDateSafe((b as any).endDate ?? (b as any).bidEnd ?? "");
-
-        if (start && start >= todayStart && start <= todayEnd) newBidsToday++;
-        if (start && is_same_month(start, now)) newBidsThisMonth++;
-
-        if (end && end >= now && end <= threeDaysLater) closingSoon3Days++;
-    });
-
-    const totalExpectedAmount = wishlist.reduce(
-        (acc, it) => acc + toNumberAmount(it.baseAmount),
-        0
-    );
-
-    return {
-        newBidsToday,
-        newBidsThisMonth,
-        wishlistCount: wishlist.length,
-        closingSoon3Days,
-        totalExpectedAmount,
-        totalExpectedAmountEok: format_eok(totalExpectedAmount),
+      try {
+        const w = await fetchWishlist(userId);
+        setWishlist(w);
+      } catch {
+        setWishlist([]);
+      }
     };
+
+    void load();
+  }, []);
+
+  const monthlyTrend = useMemo<MonthlyTrendPoint[]>(
+    () => build_monthly_trend_forward(bids, 6),
+    [bids],
+  );
+
+  const regionDist = useMemo<RegionDistPoint[]>(() => build_region_dist(bids), [bids]);
+  const kpi = useMemo<Kpi>(() => build_kpi(bids, wishlist), [bids, wishlist]);
+
+  return (
+    <div className="space-y-8">
+      {error ? (
+        <div className="border rounded-2xl p-4 bg-red-50 text-red-700 text-sm">
+          {error}
+        </div>
+      ) : null}
+
+      <SummaryCards loading={loading} kpi={kpi} />
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <MonthlyTrendChart loading={loading} data={monthlyTrend} />
+        <RegionPieChart loading={loading} data={regionDist} />
+      </div>
+    </div>
+  );
 }
 
-/* ================= 차트 계산 ================= */
+function pick_list(res: unknown): unknown[] {
+  if (Array.isArray(res)) return res;
+  const anyRes = res as any;
+  if (Array.isArray(anyRes?.data)) return anyRes.data;
+  if (Array.isArray(anyRes?.data?.items)) return anyRes.data.items;
+  if (Array.isArray(anyRes?.data?.content)) return anyRes.data.content;
+  return [];
+}
 
 function to_date(s: string): Date | null {
-    if (!s) return null;
-    const d = new Date(s);
-    if (!Number.isFinite(d.getTime())) return null;
-    return d;
+  if (!s) return null;
+  const d = new Date(s);
+  if (!Number.isFinite(d.getTime())) return null;
+  return d;
 }
 
 function month_key(d: Date): string {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
 }
 
 function month_label(d: Date): string {
-    return `${String(d.getFullYear()).slice(2)}.${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const yy = String(d.getFullYear()).slice(2);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${yy}.${mm}`;
 }
 
-function build_month_scaffold(n: number): Array<{ key: string; label: string }> {
-    const now = new Date();
-    return Array.from({ length: n }, (_, i) => {
-        const d = new Date(now.getFullYear(), now.getMonth() - (n - 1 - i), 1);
-        return { key: month_key(d), label: month_label(d) };
-    });
+function add_months(d: Date, months: number): Date {
+  return new Date(d.getFullYear(), d.getMonth() + months, 1);
 }
 
-export function build_monthly_trend(bids: Bid[], n: number): MonthlyTrendPoint[] {
-    const scaffold = build_month_scaffold(n);
-    const counts = new Map<string, number>();
+function build_month_scaffold_forward(n: number): Array<{ key: string; label: string; start: Date; end: Date }> {
+  const now = new Date();
+  const base = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    bids.forEach((b) => {
-        const d = to_date((b as any).endDate ?? (b as any).bidEnd ?? "");
-        if (!d) return;
-        const key = month_key(d);
-        counts.set(key, (counts.get(key) ?? 0) + 1);
+  const out: Array<{ key: string; label: string; start: Date; end: Date }> = [];
+  for (let i = 0; i < n; i += 1) {
+    const start = add_months(base, i);
+    const end = add_months(base, i + 1);
+    out.push({
+      key: month_key(start),
+      label: month_label(start),
+      start,
+      end,
     });
+  }
+  return out;
+}
 
-    return scaffold.map((m) => ({ month: m.label, value: counts.get(m.key) ?? 0 }));
+export function build_monthly_trend_forward(bids: Bid[], n: number): MonthlyTrendPoint[] {
+  const scaffold = build_month_scaffold_forward(n);
+  const counts = new Map<string, number>();
+
+  bids.forEach((b) => {
+    const d = to_date(String((b as any).endDate ?? (b as any).bidEnd ?? ""));
+    if (!d) return;
+
+    for (const m of scaffold) {
+      if (d.getTime() >= m.start.getTime() && d.getTime() < m.end.getTime()) {
+        counts.set(m.key, (counts.get(m.key) ?? 0) + 1);
+        break;
+      }
+    }
+  });
+
+  return scaffold.map((m) => ({ month: m.label, value: counts.get(m.key) ?? 0 }));
 }
 
 function normalize_region(raw: string): string {
-    const v = (raw || "").trim();
-    if (!v) return "기타";
-    const keys = ["서울", "경기", "인천", "부산", "대구", "대전", "광주", "울산", "세종"];
-    for (const k of keys) if (v.includes(k)) return k;
-    return "기타";
+  const v = (raw || "").trim();
+  if (!v) return "기타";
+
+  const rules: Array<[string, string]> = [
+    ["서울", "서울"],
+    ["경기", "경기"],
+    ["인천", "인천"],
+    ["부산", "부산"],
+    ["대구", "대구"],
+    ["대전", "대전"],
+    ["광주", "광주"],
+    ["울산", "울산"],
+    ["세종", "세종"],
+    ["강원", "강원"],
+    ["충북", "충북"],
+    ["충남", "충남"],
+    ["전북", "전북"],
+    ["전남", "전남"],
+    ["경북", "경북"],
+    ["경남", "경남"],
+    ["제주", "제주"],
+  ];
+
+  for (const [needle, label] of rules) {
+    if (v.includes(needle)) return label;
+  }
+
+  return v.split(/[\s/,(]/)[0] || "기타";
 }
 
 export function build_region_dist(bids: Bid[]): RegionDistPoint[] {
-    const map = new Map<string, number>();
+  const counts = new Map<string, number>();
 
-    bids.forEach((b) => {
-        const r = normalize_region((b as any).region ?? "");
-        map.set(r, (map.get(r) ?? 0) + 1);
-    });
+  bids.forEach((b) => {
+    const region = normalize_region(String((b as any).region ?? ""));
+    counts.set(region, (counts.get(region) ?? 0) + 1);
+  });
 
-    return Array.from(map.entries()).map(([name, value]) => ({ name, value }));
+  const entries = Array.from(counts.entries())
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+
+  const top = entries.slice(0, 3);
+  if (entries.length <= 3) return top;
+
+  const restSum = entries.slice(3).reduce((acc, cur) => acc + cur.value, 0);
+  return [...top, { name: "기타", value: restSum }].filter((x) => x.value > 0);
+}
+
+function is_same_month(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
+function add_days(d: Date, days: number): Date {
+  const x = new Date(d);
+  x.setDate(x.getDate() + days);
+  return x;
+}
+
+function parse_amount(v: unknown): number {
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  if (typeof v !== "string") return 0;
+  const digits = v.replace(/[^0-9]/g, "");
+  if (!digits) return 0;
+  const n = Number(digits);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function format_eok(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return "0";
+  const eok = value / 100_000_000;
+  const rounded = Math.round(eok * 10) / 10;
+  const s = String(rounded);
+  return s.endsWith(".0") ? s.slice(0, -2) : s;
+}
+
+function build_kpi(bids: Bid[], wishlist: WishlistItem[]): Kpi {
+  const now = new Date();
+  const threeDaysLater = add_days(now, 3);
+
+  let newBidsThisMonth = 0;
+  let closingSoon3Days = 0;
+
+  bids.forEach((b) => {
+    const start = to_date(String((b as any).startDate ?? (b as any).bidStart ?? ""));
+    const end = to_date(String((b as any).endDate ?? (b as any).bidEnd ?? ""));
+
+    if (start && is_same_month(start, now)) newBidsThisMonth += 1;
+
+    if (end && end.getTime() >= now.getTime() && end.getTime() <= threeDaysLater.getTime()) {
+      closingSoon3Days += 1;
+    }
+  });
+
+  const sumAmount = wishlist.reduce((acc, it) => acc + parse_amount(it.baseAmount), 0);
+
+  return {
+    newBidsThisMonth,
+    wishlistCount: wishlist.length,
+    closingSoon3Days,
+    totalExpectedAmountEok: format_eok(sumAmount),
+  };
 }
