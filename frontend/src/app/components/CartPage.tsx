@@ -15,6 +15,59 @@ function parse_time(v: string): number {
 	if (Number.isFinite(t)) return t;
 	return 0;
 }
+function formatAmount(value: unknown): string {
+    if (value == null || value === "") return "-";
+
+    // "123,000" 같은 문자열도 처리
+    const n =
+        typeof value === "number"
+            ? value
+            : Number(String(value).replace(/[^\d.-]/g, ""));
+
+    if (!Number.isFinite(n)) return "-";
+    return n.toLocaleString("ko-KR");
+}
+
+function formatDateTimeLines(dateStr: string) {
+    if (!dateStr) return { dateLine: "-", timeLine: "" };
+
+    const d = new Date(dateStr);
+    if (!Number.isFinite(d.getTime())) return { dateLine: "-", timeLine: "" };
+
+    const dateLine = d.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    });
+
+    const timeLine = d.toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true, // 오전/오후
+    });
+
+    return { dateLine, timeLine };
+}
+function formatDateTimeOneLine(dateStr: string) {
+    if (!dateStr) return "-";
+
+    const d = new Date(dateStr);
+    if (!Number.isFinite(d.getTime())) return "-";
+
+    const date = d.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).replace(/\.\s*/g, ".");
+
+    const time = d.toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false, // 24시간제 → 오전/오후 제거
+    });
+
+    return `${date} ${time}`;
+}
 
 function stage_label(stage: BidStage): string {
 	const found = BID_STAGE_OPTIONS.find((o) => o.value === stage);
@@ -178,8 +231,8 @@ export function CartPage({
 						value={sortKey}
 						onChange={(e) => setSortKey(e.target.value as SortKey)}
 					>
-						<option value="DEADLINE_ASC">마감임순</option>
-						<option value="DEADLINE_DESC">마감늦은순</option>
+						<option value="DEADLINE_ASC">마감 빠른순</option>
+						<option value="DEADLINE_DESC">마감 늦은순</option>
 						<option value="TITLE_ASC">제목순</option>
 					</select>
 				</div>
@@ -200,12 +253,30 @@ export function CartPage({
 							>
 								<div className="min-w-0">
 									<div className="font-semibold text-slate-900 truncate">{w.title}</div>
-									<div className="mt-1 text-sm text-slate-500">
-										{w.agency}
-										{w.baseAmount ? ` · ${w.baseAmount}원` : ""}
-										{w.bidEnd ? ` · 마감 ${w.bidEnd}` : ""}
-									</div>
-								</div>
+                                    <div className="mt-1 text-sm text-slate-500">
+                                        {(() => {
+                                            const amountText = w.baseAmount ? `${formatAmount(w.baseAmount)}원` : "";
+                                            const { dateLine, timeLine } = w.bidEnd ? formatDateTimeLines(String(w.bidEnd)) : { dateLine: "", timeLine: "" };
+
+                                            return (
+                                                <>
+                                                    <span>{w.agency}</span>
+
+                                                    {w.baseAmount ? (
+                                                        <>
+                                                            <span>{` · `}</span>
+                                                            <span>{amountText}</span>
+                                                        </>
+                                                    ) : null}
+
+                                                    {w.bidEnd ? ` · 마감 ${formatDateTimeOneLine(String(w.bidEnd))}` : ""}
+
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
+
+                                </div>
 
 								<div className="flex items-center gap-2 shrink-0">
 									<select
