@@ -66,7 +66,7 @@ export function LoginPage() {
 	const navigate = useNavigate();
 	const location = useLocation() as any;
 
-	const from = location?.state?.from || "/dashboard";
+	const from = location?.state?.from || "/";
 
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");

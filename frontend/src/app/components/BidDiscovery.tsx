@@ -271,21 +271,29 @@ export function BidDiscovery({
 		for (let i = start; i <= end; i += 1) numbers.push(i);
 		return numbers;
 	}, [safePage, totalPages]);
-    function formatDateTime(dateStr: string) {
-        if (!dateStr) return "-";
+    function formatDateTimeLines(dateStr: string) {
+        if (!dateStr) return { dateLine: "-", timeLine: "" };
 
         const d = new Date(dateStr);
+        if (!Number.isFinite(d.getTime())) return { dateLine: "-", timeLine: "" };
 
-        return d.toLocaleString("ko-KR", {
+        const dateLine = d.toLocaleDateString("ko-KR", {
             year: "numeric",
             month: "2-digit",
             day: "2-digit",
+        });
+
+        const timeLine = d.toLocaleTimeString("ko-KR", {
             hour: "2-digit",
             minute: "2-digit",
+            hour12: true, // "오전/오후" 나오게
         });
+
+        return { dateLine, timeLine };
     }
 
-	return (
+
+    return (
 		<div className="space-y-4">
 			<Card>
 				<CardHeader className="space-y-1">
@@ -414,15 +422,35 @@ export function BidDiscovery({
 											>
                                                 <TableCell className="whitespace-normal pl-6">
                                                     <div className="flex flex-col">
-                                                         <span className="text-sm font-medium">
-                                                              {dday || formatDateTime(b.deadline)}
-                                                            </span>
+                                                         {/*<span className="text-sm font-medium">*/}
+                                                         {/*     {dday || formatDateTime(b.deadline)}*/}
+                                                         {/*   </span>*/}
 
-                                                        {dday && (
-                                                            <span className="text-xs text-muted-foreground">
-                                                                {formatDateTime(b.deadline)}
-                                                              </span>
-                                                        )}
+                                                        {(() => {
+                                                            const { dateLine, timeLine } = formatDateTimeLines(b.deadline);
+
+                                                            return (
+                                                                <div className="flex flex-col">
+                                                                      <span className="text-sm font-medium">
+                                                                        {dday || dateLine}
+                                                                      </span>
+
+                                                                    {/* dday가 있으면 두 번째 줄에 날짜+시간을, 없으면 시간만 */}
+                                                                    {dday ? (
+                                                                        <span className="text-xs text-muted-foreground">
+                                                                                  {dateLine} <br /> {timeLine}
+                                                                                </span>
+                                                                    ) : (
+                                                                        timeLine && (
+                                                                            <span className="text-xs text-muted-foreground">
+                                                                                {timeLine}
+                                                                              </span>
+                                                                        )
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })()}
+
                                                     </div>
                                                 </TableCell>
 
