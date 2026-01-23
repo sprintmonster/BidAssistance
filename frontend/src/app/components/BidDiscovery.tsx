@@ -271,6 +271,19 @@ export function BidDiscovery({
 		for (let i = start; i <= end; i += 1) numbers.push(i);
 		return numbers;
 	}, [safePage, totalPages]);
+    function formatDateTime(dateStr: string) {
+        if (!dateStr) return "-";
+
+        const d = new Date(dateStr);
+
+        return d.toLocaleString("ko-KR", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    }
 
 	return (
 		<div className="space-y-4">
@@ -399,16 +412,22 @@ export function BidDiscovery({
 												className="cursor-pointer"
                                                 onClick={() => navigate(`/bids/${b.bidId}`)}
 											>
-												<TableCell className="whitespace-normal pl-6">
-													<div className="flex flex-col">
-														<span className="text-sm font-medium">{dday || b.deadline}</span>
-														{dday && (
-															<span className="text-xs text-muted-foreground">{b.deadline}</span>
-														)}
-													</div>
-												</TableCell>
+                                                <TableCell className="whitespace-normal pl-6">
+                                                    <div className="flex flex-col">
+                                                         <span className="text-sm font-medium">
+                                                              {dday || formatDateTime(b.deadline)}
+                                                            </span>
 
-												<TableCell className="whitespace-normal">
+                                                        {dday && (
+                                                            <span className="text-xs text-muted-foreground">
+                                                                {formatDateTime(b.deadline)}
+                                                              </span>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+
+
+                                                <TableCell className="whitespace-normal">
 													<div className="line-clamp-2 font-medium">{b.title}</div>
 													<div className="text-xs text-muted-foreground">{b.realId}</div>
 												</TableCell>

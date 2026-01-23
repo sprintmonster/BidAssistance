@@ -17,6 +17,7 @@ import {
 } from "../utils/accessControl";
 
 import { SimpleCaptcha } from "./SimpleCaptcha";
+import { ENABLE_TEST_LOGIN, TEST_LOGIN } from "../utils/testLogin";
 
 type AuthUser = {
 	name: string;
@@ -100,109 +101,93 @@ export function Home() {
 			.then((items) => setWishlistCount(items.length))
 			.catch(() => setWishlistCount(0));
 	}, [isAuthed]);
+    const doLogin = async (em: string, pw: string) => {
+        setErrorMsg(null);
 
-	const onQuickLogin = async (e?: React.FormEvent) => {
-		e?.preventDefault();
+        if (!em || !pw) {
+            setErrorMsg("이메일과 비밀번호를 입력하세요.");
+            return;
+        }
 
-		setErrorMsg(null);
+        if (is_login_locked(em)) {
+            setErrorMsg(`로그인이 잠겨 있습니다. ${format_mmss(login_lock_remaining_ms(em))} 후 다시 시도해 주세요.`);
+            return;
+        }
 
-		const em = email.trim();
-		const pw = password.trim();
+        if (should_require_captcha(em) && !captchaValid) {
+            setErrorMsg("캡챠 인증을 완료해 주세요.");
+            return;
+        }
 
-		if (!em || !pw) {
-			setErrorMsg("이메일과 비밀번호를 입력하세요.");
-			return;
-		}
+        try {
+            setSubmitting(true);
+            const res = await login(em, pw);
 
-		if (locked) {
-			setErrorMsg(`로그인이 잠겨 있습니다. ${format_mmss(lockRemaining)} 후 다시 시도해 주세요.`);
-			return;
-		}
+            if (res.status !== "success" || !res.data) {
+                const st = record_login_failure(em);
+                if (st.lock_until && st.lock_until > Date.now()) {
+                    setErrorMsg(
+                        `로그인 실패가 누적되어 계정이 잠겼습니다. ${format_mmss(login_lock_remaining_ms(em))} 후 다시 시도해 주세요.`,
+                    );
+                    return;
+                }
+                const remaining = Math.max(0, 5 - st.count);
+                setErrorMsg((res.message || "로그인 실패") + ` (남은 시도: ${remaining}회)`);
+                return;
+            }
 
-		if (captchaRequired && !captchaValid) {
-			setErrorMsg("캡챠 인증을 완료해 주세요.");
-			return;
-		}
+            const userId = parse_user_id(res);
+            if (!userId) {
+                localStorage.removeItem("userId");
+                setErrorMsg("로그인 정보 처리 중 문제가 발생했습니다. 다시 시도해주세요.");
+                return;
+            }
 
-		try {
-			setSubmitting(true);
-			const res = await login(em, pw);
+            record_login_success(em);
+            localStorage.setItem("userId", userId);
+            localStorage.setItem("userName", String(res.data?.name ?? ""));
+            localStorage.setItem("email", String(res.data?.email ?? em));
 
-			if (res.status !== "success" || !res.data) {
-				const st = record_login_failure(em);
-				if (st.lock_until && st.lock_until > Date.now()) {
-					setErrorMsg(
-						`로그인 실패가 누적되어 계정이 잠겼습니다. ${format_mmss(
-							login_lock_remaining_ms(em),
-						)} 후 다시 시도해 주세요.`,
-					);
-					return;
-				}
-				const remaining = Math.max(0, 5 - st.count);
-				setErrorMsg((res.message || "로그인 실패") + ` (남은 시도: ${remaining}회)`);
-				return;
-			}
+            migrate_password_changed_at(String(res.data?.email ?? em), userId);
+            ensure_password_changed_at_initialized(userId);
 
-			const userId = parse_user_id(res);
-			if (!userId) {
-				localStorage.removeItem("userId");
-				setErrorMsg("로그인 정보 처리 중 문제가 발생했습니다. 다시 시도해주세요.");
-				return;
-			}
+            setIsAuthed(true);
+            setUser({
+                name: String(res.data?.name ?? "사용자"),
+                email: String(res.data?.email ?? em),
+            });
 
-			// 성공 처리
-			record_login_success(em);
-			localStorage.setItem("userId", userId);
-			localStorage.setItem("userName", String(res.data?.name ?? ""));
-			localStorage.setItem("email", String(res.data?.email ?? em));
+            if (is_password_expired(userId)) {
+                navigate("/profile", {
+                    replace: true,
+                    state: { passwordExpired: true, fromAfterChange: "/" },
+                });
+                return;
+            }
 
-			// 비밀번호 변경일(가입 직후 이메일 기준 저장) → 로그인 후 userId 기준으로 마이그레이션
-			migrate_password_changed_at(String(res.data?.email ?? em), userId);
-			ensure_password_changed_at_initialized(userId);
+            navigate("/", { replace: true });
+        } catch (err: any) {
+            const st = record_login_failure(em);
+            if (st.lock_until && st.lock_until > Date.now()) {
+                setErrorMsg(
+                    `로그인 실패가 누적되어 계정이 잠겼습니다. ${format_mmss(login_lock_remaining_ms(em))} 후 다시 시도해 주세요.`,
+                );
+            } else {
+                const remaining = Math.max(0, 5 - st.count);
+                setErrorMsg((err?.message || "로그인 중 오류가 발생했습니다.") + ` (남은 시도: ${remaining}회)`);
+            }
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
-			// 홈에서 로그인했을 때는 홈에 그대로 머물며 UI만 로그인 상태로 갱신
-			setIsAuthed(true);
-			setUser({
-				name: String(res.data?.name ?? "사용자"),
-				email: String(res.data?.email ?? em),
-			});
+    const onQuickLogin = async (e?: React.FormEvent) => {
+        e?.preventDefault();
+        await doLogin(email.trim(), password.trim());
+    };
 
-			// 비밀번호 유효기간 만료 시 프로필로 이동하여 변경 유도
-			if (is_password_expired(userId)) {
-				navigate("/profile", {
-					replace: true,
-					state: {
-						passwordExpired: true,
-						fromAfterChange: "/",
-					},
-				});
-				return;
-			}
 
-			navigate("/", { replace: true });
-		} catch (err: any) {
-			const em2 = email.trim();
-			if (em2) {
-				const st = record_login_failure(em2);
-				if (st.lock_until && st.lock_until > Date.now()) {
-					setErrorMsg(
-						`로그인 실패가 누적되어 계정이 잠겼습니다. ${format_mmss(
-							login_lock_remaining_ms(em2),
-						)} 후 다시 시도해 주세요.`,
-					);
-				} else {
-					const remaining = Math.max(0, 5 - st.count);
-					setErrorMsg((err?.message || "로그인 중 오류가 발생했습니다.") + ` (남은 시도: ${remaining}회)`);
-				}
-				return;
-			}
-			setErrorMsg(err?.message || "로그인 중 오류가 발생했습니다.");
-		} finally {
-			setSubmitting(false);
-		}
-	};
-
-	const onLogout = () => {
+    const onLogout = () => {
 		localStorage.removeItem("userId");
 		localStorage.removeItem("refreshToken");
 
@@ -322,7 +307,22 @@ export function Home() {
 										>
 											회원가입
 										</button>
-									</div>
+                                        {ENABLE_TEST_LOGIN && (
+                                            <button
+                                                type="button"
+                                                disabled={submitting}
+                                                onClick={async () => {
+                                                    setEmail(TEST_LOGIN.email);
+                                                    setPassword(TEST_LOGIN.password);
+                                                    await doLogin(TEST_LOGIN.email, TEST_LOGIN.password);
+                                                }}
+                                                className="h-11 rounded-xl border hover:bg-slate-50"
+                                            >
+                                                테스트 로그인
+                                            </button>
+                                        )}
+
+                                    </div>
 
 									<div className="flex justify-between text-sm text-slate-500 pt-2">
 										<button
