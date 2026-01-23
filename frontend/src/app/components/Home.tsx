@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import { fetchBids } from "../api/bids";
 import { login } from "../api/auth";
 import { fetchWishlist } from "../api/wishlist";
 import { mask_name } from "../utils/masking";
@@ -36,6 +36,8 @@ export function Home() {
 	const navigate = useNavigate();
 
 	const [wishlistCount, setWishlistCount] = useState(0);
+    const [newBidsToday, setNewBidsToday] = useState(0);
+    const [closingSoon3Days, setClosingSoon3Days] = useState(0);
 
 	// 홈 우측 로그인 폼
 	const [email, setEmail] = useState("");
@@ -101,6 +103,43 @@ export function Home() {
 			.then((items) => setWishlistCount(items.length))
 			.catch(() => setWishlistCount(0));
 	}, [isAuthed]);
+
+    useEffect(() => {
+        const loadHomeKpi = async () => {
+            try {
+                const bids = await fetchBids();
+
+                const now = new Date();
+                const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
+                const todayEnd = new Date(now); todayEnd.setHours(23, 59, 59, 999);
+                const threeDaysLater = new Date(now); threeDaysLater.setDate(threeDaysLater.getDate() + 3);
+
+                const parse = (s: any) => {
+                    const t = Date.parse(String(s ?? ""));
+                    return Number.isFinite(t) ? new Date(t) : null;
+                };
+
+                const newToday = bids.filter((b: any) => {
+                    const s = parse(b.startDate ?? b.bidStart);
+                    return !!s && s >= todayStart && s <= todayEnd;
+                }).length;
+
+                const closingSoon = bids.filter((b: any) => {
+                    const e = parse(b.endDate ?? b.bidEnd);
+                    return !!e && e >= now && e <= threeDaysLater;
+                }).length;
+
+                setNewBidsToday(newToday);
+                setClosingSoon3Days(closingSoon);
+            } catch {
+                setNewBidsToday(0);
+                setClosingSoon3Days(0);
+            }
+        };
+
+        void loadHomeKpi();
+    }, []);
+
     const doLogin = async (em: string, pw: string) => {
         setErrorMsg(null);
 
@@ -398,11 +437,12 @@ export function Home() {
 							</button>
 						</div>
 
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<MiniStat label="신규 공고" value="67" sub="이번 달" />
-							<MiniStat label="마감 임박" value="8" sub="3일 이내" />
-						</div>
-					</section>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <MiniStat label="신규 공고" value={String(newBidsToday)} sub="오늘 시작" />
+                            <MiniStat label="마감 임박" value={String(closingSoon3Days)} sub="3일 이내" />
+                        </div>
+
+                    </section>
 
 					{/* ROW 2 - RIGHT (비워두기: 레이아웃 안정) */}
 					<div className="hidden lg:block lg:col-span-4" />
