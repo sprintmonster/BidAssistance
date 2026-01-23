@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Eye, FilterX, Plus, RefreshCw, Search } from "lucide-react";
-import { toggleWishlist } from "../api/wishlist";
+import { fetchWishlist, toggleWishlist } from "../api/wishlist";
 import { fetchBids } from "../api/bids";
 import { api } from "../api/client";
 import { Badge } from "./ui/badge";
@@ -98,6 +98,7 @@ export function BidDiscovery({
 		const q = new URLSearchParams(location.search).get("q");
 		return (q || "").trim();
 	}, [location.search]);
+    const [wishlistSynced, setWishlistSynced] = useState(false);
 
 	const [bids, setBids] = useState<UiBid[]>([]);
 	const [keyword, setKeyword] = useState<string>(urlQuery);
@@ -167,7 +168,33 @@ export function BidDiscovery({
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	const agencies = useMemo(() => {
+    useEffect(() => {
+        const syncAddedFromServer = async () => {
+            setWishlistSynced(false);
+
+            const userIdStr = localStorage.getItem("userId");
+            const userId = Number(userIdStr);
+
+            if (!userIdStr || !Number.isFinite(userId)) {
+                setAddedIds(new Set());
+                setWishlistSynced(true);
+                return;
+            }
+
+            try {
+                const items = await fetchWishlist(userId);
+                setAddedIds(new Set(items.map((it) => it.bidId)));
+            } catch {
+                setAddedIds(new Set());
+            } finally {
+                setWishlistSynced(true);
+            }
+        };
+
+        void syncAddedFromServer();
+    }, []);
+
+    const agencies = useMemo(() => {
 		const set = new Set<string>();
 		bids.forEach((b) => {
 			const a = (b.agency || "").trim();
@@ -251,6 +278,9 @@ export function BidDiscovery({
                 return next;
             });
 
+            const items = await fetchWishlist(userId);
+            setAddedIds(new Set(items.map((it) => it.bidId)));
+
             showToast("장바구니에 추가됨", "success");
         } catch (e) {
             showToast("추가 실패", "error");
@@ -271,8 +301,29 @@ export function BidDiscovery({
 		for (let i = start; i <= end; i += 1) numbers.push(i);
 		return numbers;
 	}, [safePage, totalPages]);
+    function formatDateTimeLines(dateStr: string) {
+        if (!dateStr) return { dateLine: "-", timeLine: "" };
 
-	return (
+        const d = new Date(dateStr);
+        if (!Number.isFinite(d.getTime())) return { dateLine: "-", timeLine: "" };
+
+        const dateLine = d.toLocaleDateString("ko-KR", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+        });
+
+        const timeLine = d.toLocaleTimeString("ko-KR", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true, // "오전/오후" 나오게
+        });
+
+        return { dateLine, timeLine };
+    }
+
+
+    return (
 		<div className="space-y-4">
 			<Card>
 				<CardHeader className="space-y-1">
@@ -399,16 +450,42 @@ export function BidDiscovery({
 												className="cursor-pointer"
                                                 onClick={() => navigate(`/bids/${b.bidId}`)}
 											>
-												<TableCell className="whitespace-normal pl-6">
-													<div className="flex flex-col">
-														<span className="text-sm font-medium">{dday || b.deadline}</span>
-														{dday && (
-															<span className="text-xs text-muted-foreground">{b.deadline}</span>
-														)}
-													</div>
-												</TableCell>
+                                                <TableCell className="whitespace-normal pl-6">
+                                                    <div className="flex flex-col">
+                                                         {/*<span className="text-sm font-medium">*/}
+                                                         {/*     {dday || formatDateTime(b.deadline)}*/}
+                                                         {/*   </span>*/}
 
-												<TableCell className="whitespace-normal">
+                                                        {(() => {
+                                                            const { dateLine, timeLine } = formatDateTimeLines(b.deadline);
+
+                                                            return (
+                                                                <div className="flex flex-col">
+                                                                      <span className="text-sm font-medium">
+                                                                        {dday || dateLine}
+                                                                      </span>
+
+                                                                    {/* dday가 있으면 두 번째 줄에 날짜+시간을, 없으면 시간만 */}
+                                                                    {dday ? (
+                                                                        <span className="text-xs text-muted-foreground">
+                                                                                  {dateLine} <br /> {timeLine}
+                                                                                </span>
+                                                                    ) : (
+                                                                        timeLine && (
+                                                                            <span className="text-xs text-muted-foreground">
+                                                                                {timeLine}
+                                                                              </span>
+                                                                        )
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })()}
+
+                                                    </div>
+                                                </TableCell>
+
+
+                                                <TableCell className="whitespace-normal">
 													<div className="line-clamp-2 font-medium">{b.title}</div>
 													<div className="text-xs text-muted-foreground">{b.realId}</div>
 												</TableCell>
@@ -417,7 +494,7 @@ export function BidDiscovery({
 													<div className="line-clamp-2">{b.agency}</div>
 												</TableCell>
 
-												<TableCell className="text-right">{b.budget}</TableCell>
+												<TableCell className="text-right"> {Number(b.budget).toLocaleString()}</TableCell>
 
 												<TableCell>
 													<Badge variant={statusVariant}>{statusLabel}</Badge>
@@ -437,19 +514,31 @@ export function BidDiscovery({
 															상세
 														</Button>
 
-														<Button
-															size="sm"
-															disabled={addingId === b.bidId || alreadyAdded}
-															className={cn(alreadyAdded && "opacity-70")}
-															onClick={(e) => {
-																e.stopPropagation();
-																void addToCart(b.bidId);
-															}}
-														>
-															<Plus className="mr-2 size-4" />
-															{alreadyAdded ? "담김" : "담기"}
-														</Button>
-													</div>
+                                                        <Button
+                                                            size="sm"
+                                                            disabled={addingId === b.bidId || !wishlistSynced}
+                                                            className={cn(alreadyAdded && "opacity-70")}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+
+                                                                if (!wishlistSynced) {
+                                                                    showToast("장바구니 상태를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.", "error");
+                                                                    return;
+                                                                }
+
+                                                                if (alreadyAdded) {
+                                                                    showToast("이미 장바구니에 담긴 공고입니다.", "success");
+                                                                    return;
+                                                                }
+
+                                                                void addToCart(b.bidId);
+                                                            }}
+                                                        >
+                                                            <Plus className="mr-2 size-4" />
+                                                            {alreadyAdded ? "담김" : "담기"}
+                                                        </Button>
+
+                                                    </div>
 												</TableCell>
 											</TableRow>
 										);

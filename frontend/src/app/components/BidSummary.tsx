@@ -228,15 +228,36 @@ export function BidSummary() {
                 // ✅ API: GET /api/bid/{bidId}
                 const res = await api(`/bids/${numericBidId}`, { method: "GET" });
 
+                const data = (res as any)?.data;
+
                 const item =
-                    (res as any)?.data?.items?.[0] ??
-                    (Array.isArray((res as any)?.data) ? (res as any).data[0] : null);
+                    data && typeof data === "object" && !Array.isArray(data) ? data :
+                        (data?.items?.[0] ?? null) ||
+                        (Array.isArray(data) ? data[0] : null);
 
                 if (!item) {
                     setError("상세 정보를 찾을 수 없습니다.");
                     setBid(null);
                     return;
                 }
+                // const docUrlRaw =
+                //     item.bidReportURL ?? item.bidReportUrl ?? item.documentUrl ?? item.bidURL ?? item.bidUrl;
+                //
+                // const documentUrl = docUrlRaw ? String(docUrlRaw) : undefined;
+                //
+                // const fileNameFromUrl = (u?: string) => {
+                //     if (!u) return undefined;
+                //     try {
+                //         const url = new URL(u, window.location.origin);
+                //         const last = decodeURIComponent(url.pathname.split("/").pop() || "");
+                //         // 확장자 있으면 그걸 파일명으로 사용, 없으면 undefined
+                //         return last && last.includes(".") ? last : undefined;
+                //     } catch {
+                //         return undefined;
+                //     }
+                // };
+
+
 
                 // ✅ 서버 필드 -> 프론트 Bid 타입 매핑
                 const mapped: Bid = {
@@ -250,6 +271,7 @@ export function BidSummary() {
                     type: "공사",
                     status: "진행중",
                     description: String(item.analysisResult ?? ""),
+                    // description: String(item.analysisResult ?? item.name ?? item.title ?? ""),
 
                     documentUrl: item.bidReportURL ? String(item.bidReportURL) : undefined,
                     documentFileName: item.bidReportURL ? "첨부파일" : undefined,
@@ -285,16 +307,21 @@ export function BidSummary() {
         if (!bid) return;
         const baseName = safeFileName(`공고문_${bid.id}_${bid.title}`);
         const pdfName = bid.documentFileName ? safeFileName(bid.documentFileName) : `${baseName}.pdf`;
-
-        if (bid.documentUrl) {
-            try {
-                await downloadFromUrl(bid.documentUrl, pdfName);
-                toast.success("공고문 다운로드가 시작되었습니다.");
-                return;
-            } catch {
-                // 실패 시 텍스트로 폴백
-            }
+        function openDownload(url: string) {
+            const a = document.createElement("a");
+            a.href = url;
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
         }
+        if (bid.documentUrl) {
+            openDownload(bid.documentUrl);
+            toast.success("첨부파일 다운로드를 시작했습니다.");
+            return;
+        }
+
 
         const txt = buildTextNotice({ ...bid, checklist });
         downloadText(txt, `${baseName}.txt`);
@@ -344,8 +371,8 @@ export function BidSummary() {
                 </CardHeader>
 
                 <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="flex items-center gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
+                        <div className="flex items-center gap-3 lg:col-span-2">
                             <Building className="h-5 w-5 text-muted-foreground" />
                             <div>
                                 <p className="text-sm text-muted-foreground">발주기관</p>
@@ -353,7 +380,7 @@ export function BidSummary() {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-4">
                             <MapPin className="h-5 w-5 text-muted-foreground" />
                             <div>
                                 <p className="text-sm text-muted-foreground">지역</p>
@@ -365,7 +392,9 @@ export function BidSummary() {
                             <DollarSign className="h-5 w-5 text-muted-foreground" />
                             <div>
                                 <p className="text-sm text-muted-foreground">예산</p>
-                                <p className="font-semibold">{bid.budget}</p>
+                                <p className="font-semiboldwhitespace-nowrap">
+                                    {Number(bid.budget).toLocaleString()}
+                                </p>
                             </div>
                         </div>
 
@@ -373,7 +402,15 @@ export function BidSummary() {
                             <Calendar className="h-5 w-5 text-muted-foreground" />
                             <div>
                                 <p className="text-sm text-muted-foreground">마감일</p>
-                                <p className="font-semibold text-red-600">{bid.deadline}</p>
+                                <p className="font-semibold text-red-600 whitespace-nowrap">
+                                    {new Date(bid.deadline).toLocaleString("ko-KR", {
+                                        year: "numeric",
+                                        month: "2-digit",
+                                        day: "2-digit",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                    })}
+                                </p>
                             </div>
                         </div>
 
@@ -423,6 +460,14 @@ export function BidSummary() {
                         </CardHeader>
 
                         <CardContent className="space-y-6">
+
+
+                            <div>
+                                <h4 className="font-semibold mb-3">🌐 입찰 방식</h4>
+                                <p className="text-sm">{bid.requirements.technicalStaff || "데이터 준비 중"}</p>
+                            </div>
+                            <Separator />
+
                             <div>
                                 <h4 className="font-semibold mb-3">📋 자격 요건</h4>
                                 {bid.requirements.license.length === 0 ? (
@@ -453,12 +498,7 @@ export function BidSummary() {
                                 <p className="text-sm">{bid.requirements.experience || "데이터 준비 중"}</p>
                             </div>
 
-                            <Separator />
 
-                            <div>
-                                <h4 className="font-semibold mb-3">👷 기술인력 요건</h4>
-                                <p className="text-sm">{bid.requirements.technicalStaff || "데이터 준비 중"}</p>
-                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -612,6 +652,15 @@ p
                     </Card>
                 </TabsContent>
             </Tabs>
+
+    <div className="pt-4 text-xs text-muted-foreground leading-relaxed">
+        본 페이지에 제공되는 정보 및 AI 분석 결과는 참고용 자료이며,
+        실제 공고문 원문 및 나라장터(G2B) 공지 내용을 반드시 우선 확인하시기 바랍니다.<br/>
+        당사는 본 자료의 정확성, 완전성 및 최신성을 보장하지 않으며,
+        이를 근거로 한 의사결정 및 입찰 결과에 대해 책임을 지지 않습니다.
+    </div>
+
+
         </div>
     );
 }

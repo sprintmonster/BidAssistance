@@ -26,7 +26,7 @@ export function updateUserProfile(
 	payload: { email: string; name: string; role: number; password?: string },
 ) {
 	return api<ApiResponse<{ message?: string }>>(`/users/${userId}`, {
-		method: "POST",
+		method: "PUT",
 		body: JSON.stringify(payload),
 	});
 }

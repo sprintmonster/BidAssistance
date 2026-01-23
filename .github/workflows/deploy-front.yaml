@@ -25,3 +25,5 @@ jobs:
           output_location: "dist"
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_ENABLE_TEST_LOGIN: ${{ secrets.VITE_ENABLE_TEST_LOGIN }}
+

@@ -1,32 +1,41 @@
 const DOMAIN = import.meta.env.VITE_API_URL || "";
 const BASE_URL = `${DOMAIN}/api`;
 
-export async function api<T>(
-  url: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const token = localStorage.getItem("userId");
+function isFormData(body: unknown): body is FormData {
+	return typeof FormData !== "undefined" && body instanceof FormData;
+}
 
-  const res = await fetch(`${BASE_URL}${url}`, {
-    ...options,
-      credentials: "include",
-      headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
+export async function api<T>(url: string, options: RequestInit = {}): Promise<T> {
+	const headers: Record<string, string> = {
+		...((options.headers as Record<string, string>) ?? {}),
+	};
 
-  if (res.status === 401) {
-    localStorage.removeItem("userId");
-    window.location.href = "/";
-    throw new Error("인증 만료");
-  }
+	if (options.body && isFormData(options.body)) {
+		// do nothing
+	} else {
+		if (!headers["Content-Type"]) headers["Content-Type"] = "application/json";
+	}
 
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(msg || "API 오류");
-  }
+	const res = await fetch(`${BASE_URL}${url}`, {
+		...options,
+		credentials: "include",
+		headers,
+	});
 
-  return res.json();
+	if (res.status === 401) {
+		// 세션 만료/미인증
+		localStorage.removeItem("userId");
+		localStorage.removeItem("userName");
+		localStorage.removeItem("name");
+		localStorage.removeItem("email");
+		localStorage.removeItem("role");
+		throw new Error("인증이 필요합니다.");
+	}
+
+	if (!res.ok) {
+		const msg = await res.text().catch(() => "");
+		throw new Error(msg || "API 오류");
+	}
+
+	return (await res.json()) as T;
 }
