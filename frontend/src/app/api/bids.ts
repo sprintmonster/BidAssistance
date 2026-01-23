@@ -15,6 +15,15 @@ export interface Bid {
     estimatePrice : bigint;
 }
 
-export function fetchBids() {
-    return api<Bid[]>("/bids");
+function pickBidList(res: any): any[] {
+    if (Array.isArray(res)) return res;
+    if (Array.isArray(res?.data)) return res.data;
+    if (Array.isArray(res?.data?.items)) return res.data.items;
+    if (Array.isArray(res?.data?.content)) return res.data.content;
+    return [];
+}
+
+export async function fetchBids(): Promise<Bid[]> {
+    const res = await api<any>("/bids");
+    return pickBidList(res) as Bid[];
 }

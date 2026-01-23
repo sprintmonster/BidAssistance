@@ -11,17 +11,111 @@ import {
 	Legend,
 	Cell,
 } from "recharts";
+import {useEffect, useState} from "react";
+import {fetchBids} from "../api/bids";
+import {fetchWishlist} from "../api/wishlist";
+
+type Kpi = {
+    newBidsToday: number;
+    wishlistCount: number;
+    closingSoon3Days: number;
+    totalExpectedAmount: number; // 원 단위 합
+};
+
+const EMPTY_KPI: Kpi = {
+    newBidsToday: 0,
+    wishlistCount: 0,
+    closingSoon3Days: 0,
+    totalExpectedAmount: 0,
+};
+
+function parseDateSafe(s: string): Date | null {
+    const t = Date.parse(String(s ?? ""));
+    return Number.isFinite(t) ? new Date(t) : null;
+}
+
+function startOfToday(d = new Date()): Date {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    return x;
+}
+
+function endOfToday(d = new Date()): Date {
+    const x = new Date(d);
+    x.setHours(23, 59, 59, 999);
+    return x;
+}
+
+function addDays(d: Date, days: number): Date {
+    const x = new Date(d);
+    x.setDate(x.getDate() + days);
+    return x;
+}
+function toNumberAmount(v: unknown): number {
+    if (v == null || v === "") return 0;
+    if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+    // "123,000" / "123000" / BigInt 문자열 모두 대응
+    const n = Number(String(v).replace(/[^\d.-]/g, ""));
+    return Number.isFinite(n) ? n : 0;
+}
 
 export function Dashboard() {
 	// TODO: 추후 API 연동 시 여기 데이터만 교체하면 UI 유지됨
-	const kpi = {
-		newBidsThisMonth: 67,
-		wishlistCount: 0,
-		closingSoon3Days: 8,
-		totalExpectedAmountEok: 142, // "억" 단위
-	};
+	const [kpi, setKpi] = useState<Kpi>(EMPTY_KPI);
 
-	const monthlyTrend = [
+    useEffect(() => {
+        const load = async () => {
+            const uidStr = localStorage.getItem("userId");
+            const userId = Number(uidStr);
+
+            const now = new Date();
+            const todayStart = startOfToday(now);
+            const todayEnd = endOfToday(now);
+            const soonEnd = addDays(now, 3);
+
+            const bids = await fetchBids();
+
+            const newBidsToday = bids.filter((b) => {
+                const s = parseDateSafe(b.startDate);
+                return !!s && s >= todayStart && s <= todayEnd;
+            }).length;
+
+            const closingSoon3Days = bids.filter((b) => {
+                const e = parseDateSafe(b.endDate);
+                return !!e && e >= now && e <= soonEnd;
+            }).length;
+
+            // 로그인 안 했으면 wishlist는 0
+            if (!uidStr || !Number.isFinite(userId)) {
+                setKpi({
+                    newBidsToday,
+                    closingSoon3Days,
+                    wishlistCount: 0,
+                    totalExpectedAmount: 0,
+                });
+                return;
+            }
+
+            // 로그인 했을 때만 wishlist 불러오기
+            const wishlist = await fetchWishlist(userId);
+
+            setKpi({
+                newBidsToday,
+                closingSoon3Days,
+                wishlistCount: wishlist.length,
+                totalExpectedAmount: wishlist.reduce(
+                    (sum, it) => sum + toNumberAmount(it.baseAmount),
+                    0
+                ),
+            });
+        };
+
+        void load();
+    }, []);
+
+
+
+    const monthlyTrend = [
 		{ month: "7월", value: 45 },
 		{ month: "8월", value: 52 },
 		{ month: "9월", value: 48 },
@@ -43,8 +137,8 @@ export function Dashboard() {
 			<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
 				<KpiCard
 					title="신규 공고"
-					value={`${kpi.newBidsThisMonth}개`}
-					sub="이번 달"
+					value={`${kpi.newBidsToday}개`}
+					sub="오늘 시작된 공고"
 					icon="📄"
 				/>
 				<KpiCard
@@ -62,7 +156,7 @@ export function Dashboard() {
 				/>
 				<KpiCard
 					title="총 예상액"
-					value={`${kpi.totalExpectedAmountEok}억`}
+					value={`${Math.round(kpi.totalExpectedAmount / 100_000_000)}억`}
 					sub="관심 공고 합계"
 					icon="💰"
 				/>
