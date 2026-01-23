@@ -18,6 +18,7 @@ import {
 
 import { SimpleCaptcha } from "./SimpleCaptcha";
 import { ENABLE_TEST_LOGIN, TEST_LOGIN } from "../utils/testLogin";
+import { mark_reco_popup_trigger } from "./RecommendedBidsModal";
 
 type AuthUser = {
 	name: string;
@@ -186,6 +187,7 @@ export function Home() {
             localStorage.setItem("userId", userId);
             localStorage.setItem("userName", String(res.data?.name ?? ""));
             localStorage.setItem("email", String(res.data?.email ?? em));
+			mark_reco_popup_trigger();
 
             migrate_password_changed_at(String(res.data?.email ?? em), userId);
             ensure_password_changed_at_initialized(userId);

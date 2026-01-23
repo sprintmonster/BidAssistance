@@ -7,6 +7,11 @@ import {
 	type ReactNode,
 } from "react";
 import { ChatbotFloatingButton } from "../components/ChatbotFloatingButton";
+import {
+	consume_reco_popup_trigger,
+	is_reco_popup_suppressed_today,
+	RecommendedBidsModal,
+} from "../components/RecommendedBidsModal";
 import { fetchWishlist } from "../api/wishlist";
 import {
 	LayoutDashboard,
@@ -35,6 +40,7 @@ export function AppLayout() {
 	const [query, setQuery] = useState("");
 	const [wishlistCount, setWishlistCount] = useState<number>(0);
 	const [mobileOpen, setMobileOpen] = useState(false);
+	const [recoOpen, setRecoOpen] = useState(false);
 
 	// ✅ 세션 기반: 앱 진입/라우트 이동 시 로그인 복구 시도(쿠키로 확인)
 	useEffect(() => {
@@ -53,6 +59,15 @@ export function AppLayout() {
 	}, [location.pathname]);
 
 	const isAuthed = useMemo(() => !!localStorage.getItem("userId"), [location.pathname]);
+
+	useEffect(() => {
+		if (!localStorage.getItem("userId")) return;
+		if (is_reco_popup_suppressed_today()) {
+			consume_reco_popup_trigger();
+			return;
+		}
+		if (consume_reco_popup_trigger()) setRecoOpen(true);
+	}, [location.pathname]);
 
 	// 장바구니 카운트
 	useEffect(() => {
@@ -259,6 +274,7 @@ export function AppLayout() {
 			</footer>
 
 			<ChatbotFloatingButton />
+			<RecommendedBidsModal open={recoOpen} onOpenChange={setRecoOpen} />
 		</div>
 	);
 }

@@ -26,6 +26,7 @@ import {
 	CardHeader,
 } from "./ui/card";
 import { ENABLE_TEST_LOGIN, TEST_LOGIN } from "../utils/testLogin";
+import { mark_reco_popup_trigger } from "./RecommendedBidsModal";
 
 function parse_user_id(res: any): string | null {
 	const data = res?.data;
@@ -151,6 +152,7 @@ export function LoginPage() {
             localStorage.setItem("userId", userId);
             localStorage.setItem("userName", String(res.data.name ?? ""));
             localStorage.setItem("email", String(res.data.email ?? em));
+			mark_reco_popup_trigger();
 
             migrate_password_changed_at(String(res.data.email ?? em), userId);
             ensure_password_changed_at_initialized(userId);
@@ -181,99 +183,6 @@ export function LoginPage() {
         }
     };
 
-    // const handleSubmit = async (e: React.FormEvent) => {
-	// 	e.preventDefault();
-	// 	setErrorMsg(null);
-    //
-	// 	const em = email.trim();
-	// 	if (!em || !password) {
-	// 		setErrorMsg("이메일과 비밀번호를 입력해 주세요.");
-	// 		return;
-	// 	}
-    //
-	// 	if (locked) {
-	// 		setErrorMsg(`로그인이 잠겨 있습니다. ${format_mmss(lockRemaining)} 후 다시 시도해 주세요.`);
-	// 		return;
-	// 	}
-    //
-	// 	if (captchaRequired && !captchaValid) {
-	// 		setErrorMsg("캡챠 인증을 완료해 주세요.");
-	// 		return;
-	// 	}
-    //
-	// 	try {
-	// 		setSubmitting(true);
-	// 		const res = await login(em, password);
-    //
-	// 		if (res.status !== "success" || !res.data) {
-	// 			const st = record_login_failure(em);
-	// 			const remaining = Math.max(0, 5 - st.count);
-	// 			if (st.lock_until && st.lock_until > Date.now()) {
-	// 				setErrorMsg(
-	// 					`로그인 실패가 누적되어 계정이 잠겼습니다. ${format_mmss(
-	// 						login_lock_remaining_ms(em),
-	// 					)} 후 다시 시도해 주세요.`,
-	// 				);
-	// 				return;
-	// 			}
-    //             const clean = cleanLoginErrorMessage(res);
-    //             setErrorMsg(`${clean} (남은 시도: ${remaining}회)`);
-    //
-    //
-    //             return;
-	// 		}
-    //
-	// 		const userId = parse_user_id(res);
-	// 		if (!userId) {
-	// 			setErrorMsg("로그인 정보 처리 중 문제가 발생했습니다. 다시 시도해주세요.");
-	// 			return;
-	// 		}
-    //
-	// 		record_login_success(em);
-	// 		localStorage.setItem("userId", userId);
-	// 		localStorage.setItem("userName", String(res.data.name ?? ""));
-	// 		localStorage.setItem("email", String(res.data.email ?? em));
-    //
-	// 		migrate_password_changed_at(String(res.data.email ?? em), userId);
-	// 		ensure_password_changed_at_initialized(userId);
-    //
-	// 		if (is_password_expired(userId)) {
-	// 			navigate("/profile", {
-	// 				replace: true,
-	// 				state: {
-	// 					passwordExpired: true,
-	// 					fromAfterChange: from,
-	// 				},
-	// 			});
-	// 			return;
-	// 		}
-    //
-	// 		navigate(from, { replace: true });
-    //     } catch (err: any) {
-    //         const em2 = email.trim();
-    //         if (em2) {
-    //             const st = record_login_failure(em2);
-    //
-    //             if (st.lock_until && st.lock_until > Date.now()) {
-    //                 setErrorMsg(
-    //                     `로그인 실패가 누적되어 계정이 잠겼습니다. ${format_mmss(
-    //                         login_lock_remaining_ms(em2),
-    //                     )} 후 다시 시도해 주세요.`,
-    //                 );
-    //             } else {
-    //                 const remaining = Math.max(0, 5 - st.count);
-    //                 const clean = cleanLoginErrorMessage(err);
-    //                 setErrorMsg(`${clean} (남은 시도: ${remaining}회)`);
-    //             }
-    //             return;
-    //         }
-    //
-    //         setErrorMsg(cleanLoginErrorMessage(err));
-    //     } finally {
-    //         setSubmitting(false);
-    //     }
-    //
-    // };
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         await doLogin(email.trim(), password);
@@ -366,7 +275,6 @@ export function LoginPage() {
                                 테스트 로그인
                             </Button>
                         )}
-
 
                         <div className="text-sm text-center text-muted-foreground">
 							계정이 없으신가요?{" "}
