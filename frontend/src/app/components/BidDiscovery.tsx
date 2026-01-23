@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Eye, FilterX, Plus, RefreshCw, Search } from "lucide-react";
-import { toggleWishlist } from "../api/wishlist";
+import { fetchWishlist, toggleWishlist } from "../api/wishlist";
 import { fetchBids } from "../api/bids";
 import { api } from "../api/client";
 import { Badge } from "./ui/badge";
@@ -98,6 +98,7 @@ export function BidDiscovery({
 		const q = new URLSearchParams(location.search).get("q");
 		return (q || "").trim();
 	}, [location.search]);
+    const [wishlistSynced, setWishlistSynced] = useState(false);
 
 	const [bids, setBids] = useState<UiBid[]>([]);
 	const [keyword, setKeyword] = useState<string>(urlQuery);
@@ -167,7 +168,33 @@ export function BidDiscovery({
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	const agencies = useMemo(() => {
+    useEffect(() => {
+        const syncAddedFromServer = async () => {
+            setWishlistSynced(false);
+
+            const userIdStr = localStorage.getItem("userId");
+            const userId = Number(userIdStr);
+
+            if (!userIdStr || !Number.isFinite(userId)) {
+                setAddedIds(new Set());
+                setWishlistSynced(true);
+                return;
+            }
+
+            try {
+                const items = await fetchWishlist(userId);
+                setAddedIds(new Set(items.map((it) => it.bidId)));
+            } catch {
+                setAddedIds(new Set());
+            } finally {
+                setWishlistSynced(true);
+            }
+        };
+
+        void syncAddedFromServer();
+    }, []);
+
+    const agencies = useMemo(() => {
 		const set = new Set<string>();
 		bids.forEach((b) => {
 			const a = (b.agency || "").trim();
@@ -250,6 +277,9 @@ export function BidDiscovery({
                 next.add(bidId);
                 return next;
             });
+
+            const items = await fetchWishlist(userId);
+            setAddedIds(new Set(items.map((it) => it.bidId)));
 
             showToast("장바구니에 추가됨", "success");
         } catch (e) {
@@ -484,19 +514,31 @@ export function BidDiscovery({
 															상세
 														</Button>
 
-														<Button
-															size="sm"
-															disabled={addingId === b.bidId || alreadyAdded}
-															className={cn(alreadyAdded && "opacity-70")}
-															onClick={(e) => {
-																e.stopPropagation();
-																void addToCart(b.bidId);
-															}}
-														>
-															<Plus className="mr-2 size-4" />
-															{alreadyAdded ? "담김" : "담기"}
-														</Button>
-													</div>
+                                                        <Button
+                                                            size="sm"
+                                                            disabled={addingId === b.bidId || !wishlistSynced}
+                                                            className={cn(alreadyAdded && "opacity-70")}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+
+                                                                if (!wishlistSynced) {
+                                                                    showToast("장바구니 상태를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.", "error");
+                                                                    return;
+                                                                }
+
+                                                                if (alreadyAdded) {
+                                                                    showToast("이미 장바구니에 담긴 공고입니다.", "success");
+                                                                    return;
+                                                                }
+
+                                                                void addToCart(b.bidId);
+                                                            }}
+                                                        >
+                                                            <Plus className="mr-2 size-4" />
+                                                            {alreadyAdded ? "담김" : "담기"}
+                                                        </Button>
+
+                                                    </div>
 												</TableCell>
 											</TableRow>
 										);

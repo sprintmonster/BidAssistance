@@ -5,7 +5,7 @@ export type WishlistItem = {
 	userId: number;
 	bidId: number;
 	stage: BidStage;
-	decidedAt?:A?: string;   // Date -> ISO string (서버가 문자열로 내려준다고 가정)
+	decidedAt?: string;   // Date -> ISO string (서버가 문자열로 내려준다고 가정)
 	submittedAt?: string;
 	resultAt?: string;
 	memo?: string;
