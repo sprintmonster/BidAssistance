@@ -35,8 +35,11 @@ type Bid = {
     type: string;
     status: string;
     description: string;
+
+    bidUrl?:string;
     documentUrl?: string;
     documentFileName?: string;
+
     requirements: {
         license: string[];
         location: string;
@@ -82,6 +85,15 @@ function downloadText(content: string, fileName: string) {
     a.click();
     a.remove();
     URL.revokeObjectURL(objectUrl);
+}
+function openDownload(url: string) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
 }
 
 function buildTextNotice(bid: Bid) {
@@ -258,7 +270,8 @@ export function BidSummary() {
                 // };
 
 
-
+                const reportUrl = item.bidReportURL ? String(item.bidReportURL) : "";
+                const bidUrl = item.bidURL ? String(item.bidURL) : "";
                 // ✅ 서버 필드 -> 프론트 Bid 타입 매핑
                 const mapped: Bid = {
                     id: Number(item.id ?? item.bid_id ?? item.bidId ?? numericBidId),
@@ -273,8 +286,11 @@ export function BidSummary() {
                     description: String(item.analysisResult ?? ""),
                     // description: String(item.analysisResult ?? item.name ?? item.title ?? ""),
 
-                    documentUrl: item.bidReportURL ? String(item.bidReportURL) : undefined,
-                    documentFileName: item.bidReportURL ? "첨부파일" : undefined,
+
+                    bidUrl : bidUrl || undefined,
+                    documentUrl: reportUrl || bidUrl || undefined,
+                    documentFileName: reportUrl ? "첨부파일" : bidUrl ? "공고 링크" : undefined,
+
 
                     requirements: { license: [], location: "", experience: "", technicalStaff: "" },
                     risks: [],
@@ -305,28 +321,28 @@ export function BidSummary() {
 
     const handleDownloadNotice = async () => {
         if (!bid) return;
-        const baseName = safeFileName(`공고문_${bid.id}_${bid.title}`);
-        const pdfName = bid.documentFileName ? safeFileName(bid.documentFileName) : `${baseName}.pdf`;
-        function openDownload(url: string) {
-            const a = document.createElement("a");
-            a.href = url;
-            a.target = "_blank";
-            a.rel = "noopener noreferrer";
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-        }
-        if (bid.documentUrl) {
+
+        // 1) 첨부파일 URL이 있으면: 새 탭 열기(혹은 다운로드 시도)
+        if (bid.documentFileName === "첨부파일" && bid.documentUrl) {
             openDownload(bid.documentUrl);
-            toast.success("첨부파일 다운로드를 시작했습니다.");
+            toast.success("첨부파일을 열었습니다.");
             return;
         }
 
+        // 2) 첨부파일 없고 공고 링크면: 공고 페이지 열기
+        if (bid.documentFileName === "공고 링크" && bid.documentUrl) {
+            openDownload(bid.documentUrl);
+            toast.info("공고 링크로 이동합니다.");
+            return;
+        }
 
+        // 3) 둘 다 없으면: 텍스트로 폴백
+        const baseName = safeFileName(`공고문_${bid.id}_${bid.title}`);
         const txt = buildTextNotice({ ...bid, checklist });
         downloadText(txt, `${baseName}.txt`);
-        toast.info("PDF가 없어 텍스트 공고문으로 다운로드했습니다.");
+        toast.info("첨부파일이 없어 텍스트 공고문으로 다운로드했습니다.");
     };
+
 
     const handleDownloadAiReport = () => {
         if (!bid) return;
@@ -339,7 +355,7 @@ export function BidSummary() {
     if (loading) return <div className="p-6">불러오는 중...</div>;
     if (error) return <div className="p-6 text-red-600">{error}</div>;
     if (!bid) return null;
-
+    const hasDoc = !!bid.documentUrl;
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-4">
@@ -364,11 +380,27 @@ export function BidSummary() {
                                 <Badge variant="outline">{bid.status}</Badge>
                                 <Badge variant="destructive">마감임박</Badge>
                             </div>
+
                             <CardTitle className="text-2xl mb-2">{bid.title}</CardTitle>
                             <CardDescription>{bid.description || "상세 설명(analysisResult) 준비 중"}</CardDescription>
                         </div>
+
+                        {/* ✅ 추가: 공고 링크 버튼(우측 상단) */}
+                        {bid.bidUrl && (
+                            <div className="shrink-0">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openDownload(bid.bidUrl!)}
+                                    className="gap-2"
+                                >
+                                    공고 링크
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </CardHeader>
+
 
                 <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
@@ -418,8 +450,12 @@ export function BidSummary() {
                             <div>
                                 <p className="text-sm text-muted-foreground">첨부파일</p>
                                 <p
-                                    className="mt-1 text-blue-600 cursor-pointer hover:underline"
-                                    onClick={handleDownloadNotice}
+                                    className={
+                                        hasDoc
+                                            ? "mt-1 text-blue-600 cursor-pointer hover:underline"
+                                            : "mt-1 text-muted-foreground"
+                                    }
+                                    onClick={hasDoc ? handleDownloadNotice : undefined}
                                 >
                                     {bid.documentFileName ?? "없음"}
                                 </p>

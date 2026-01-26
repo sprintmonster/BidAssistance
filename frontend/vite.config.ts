@@ -16,6 +16,7 @@ export default defineConfig({
           '/api': {
               target: 'https://aivle-tk-con.greenpond-9eab36ab.koreacentral.azurecontainerapps.io/',
               changeOrigin: true,
+
           },
       },
   },

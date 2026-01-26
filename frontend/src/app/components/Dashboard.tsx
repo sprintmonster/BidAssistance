@@ -9,7 +9,9 @@ import { MonthlyTrendChart, type MonthlyTrendPoint } from "./dashboard/MonthlyTr
 import { RegionPieChart, type RegionDistPoint } from "./dashboard/RegionPieChart";
 
 type Kpi = {
+
   newBidsThisMonth: number;
+
   wishlistCount: number;
   closingSoon3Days: number;
   totalExpectedAmountEok: string;
@@ -226,31 +228,49 @@ function format_eok(value: number): string {
   const s = String(rounded);
   return s.endsWith(".0") ? s.slice(0, -2) : s;
 }
+function start_of_today(d: Date): Date {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    return x;
+}
+
+function end_of_today(d: Date): Date {
+    const x = new Date(d);
+    x.setHours(23, 59, 59, 999);
+    return x;
+}
+
 
 function build_kpi(bids: Bid[], wishlist: WishlistItem[]): Kpi {
-  const now = new Date();
-  const threeDaysLater = add_days(now, 3);
+    const now = new Date();
+    const threeDaysLater = add_days(now, 3);
 
-  let newBidsThisMonth = 0;
-  let closingSoon3Days = 0;
+    const todayStart = start_of_today(now);
+    const todayEnd = end_of_today(now);
 
-  bids.forEach((b) => {
-    const start = to_date(String((b as any).startDate ?? (b as any).bidStart ?? ""));
-    const end = to_date(String((b as any).endDate ?? (b as any).bidEnd ?? ""));
+    let newBidsThisMonth = 0;   // (이름 유지할 거면 그대로)
+    let closingSoon3Days = 0;
 
-    if (start && is_same_month(start, now)) newBidsThisMonth += 1;
+    bids.forEach((b) => {
+        const start = to_date(String((b as any).startDate ?? (b as any).bidStart ?? ""));
+        const end = to_date(String((b as any).endDate ?? (b as any).bidEnd ?? ""));
 
-    if (end && end.getTime() >= now.getTime() && end.getTime() <= threeDaysLater.getTime()) {
-      closingSoon3Days += 1;
-    }
-  });
+        // 오늘 시작한 공고로 변경
+        if (start && start.getTime() >= todayStart.getTime() && start.getTime() <= todayEnd.getTime()) {
+            newBidsThisMonth += 1;
+        }
 
-  const sumAmount = wishlist.reduce((acc, it) => acc + parse_amount(it.baseAmount), 0);
+        if (end && end.getTime() >= now.getTime() && end.getTime() <= threeDaysLater.getTime()) {
+            closingSoon3Days += 1;
+        }
+    });
 
-  return {
-    newBidsThisMonth,
-    wishlistCount: wishlist.length,
-    closingSoon3Days,
-    totalExpectedAmountEok: format_eok(sumAmount),
-  };
+    const sumAmount = wishlist.reduce((acc, it) => acc + parse_amount(it.baseAmount), 0);
+
+    return {
+        newBidsThisMonth, // (혹은 newBidsToday로 이름 바꾸면 newBidsToday)
+        wishlistCount: wishlist.length,
+        closingSoon3Days,
+        totalExpectedAmountEok: format_eok(sumAmount),
+    };
 }

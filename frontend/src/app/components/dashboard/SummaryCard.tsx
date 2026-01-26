@@ -46,7 +46,7 @@ export function SummaryCards({
     {
       title: "신규 공고",
       value: `${kpi.newBidsThisMonth}개`,
-      sub: "이번 달",
+      sub: "오늘 시작한 공고",
       icon: FileText,
     },
     {
