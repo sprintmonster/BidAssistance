@@ -48,7 +48,6 @@ export function login(email: string, password: string) {
 
 export async function checkLogin(): Promise<LoginSuccessData | null> {
 	const candidates = [
-		"/users/checkLogin",
 		"/users/login/check",
 		"/users/check",
 		"/users/me",
