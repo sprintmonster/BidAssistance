@@ -1,5 +1,7 @@
 const DOMAIN = import.meta.env.VITE_API_URL || "";
-const BASE_URL = `${DOMAIN}/api`;
+const BASE_URL = import.meta.env.VITE_API_URL
+    ? `${import.meta.env.VITE_API_URL}/api`
+    : "/api";
 
 function is_form_data(body: unknown): body is FormData {
 	return typeof FormData !== "undefined" && body instanceof FormData;

@@ -1,9 +1,16 @@
 import { useState } from "react";
 import { X } from "lucide-react";
-import type { NewPostDraft, PostCategory } from "../types/community";
+import type { PostCategory } from "../types/community";
+
+export type NewPostDraftForm = {
+    title: string;
+    content: string;
+    category: PostCategory;
+    files: File[];
+};
 
 interface NewPostFormProps {
-	onSubmit: (draft: NewPostDraft) => void;
+	onSubmit: (draft: NewPostDraftForm) => void;
 	onCancel: () => void;
 }
 

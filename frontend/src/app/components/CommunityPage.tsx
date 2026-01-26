@@ -13,8 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 
 import { Info, Plus, Search as SearchIcon } from "lucide-react";
-
-import type { NewPostDraft, Post, PostCategory, SortKey } from "../types/community";
+import type {NewPostDraftForm} from "./NewPostForm";
+import type { Post, PostCategory, SortKey } from "../types/community";
 import {
 	createCommunityComment,
 	createCommunityPost,
@@ -174,7 +174,7 @@ export function CommunityPage() {
 		return selected_post.authorId === current_user_id;
 	}, [authed, selected_post, current_user_id]);
 
-	const add_post = async (draft: NewPostDraft) => {
+	const add_post = async (draft: NewPostDraftForm) => {
 		if (!authed) return go_login();
 
 		try {
