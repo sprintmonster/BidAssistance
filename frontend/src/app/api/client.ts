@@ -10,11 +10,9 @@ function build_headers(options: RequestInit) {
 		...((options.headers as Record<string, string>) ?? {}),
 	};
 
-	// 토큰이 필요한 API 대비 (이미 있으면 유지)
 	const token = localStorage.getItem("accessToken");
 	if (token && !headers.Authorization) headers.Authorization = `Bearer ${token}`;
 
-	// FormData면 브라우저가 Content-Type(boundary)을 설정하므로 건드리지 않음
 	if (!(options.body && is_form_data(options.body))) {
 		if (!headers["Content-Type"]) headers["Content-Type"] = "application/json";
 	}
@@ -38,6 +36,7 @@ function clear_auth_storage() {
 
 export async function api<T>(url: string, options: RequestInit = {}): Promise<T> {
 	const headers = build_headers(options);
+	const method = String(options.method || "GET").toUpperCase();
 
 	const res = await fetch(`${BASE_URL}${url}`, {
 		...options,
@@ -46,7 +45,13 @@ export async function api<T>(url: string, options: RequestInit = {}): Promise<T>
 	});
 
 	if (res.status === 401) {
-		clear_auth_storage();
+		/**
+		 * 핵심 수정:
+		 * - GET(특히 checkLogin 같은 "상태 확인")에서 401이 나왔다고 userId까지 지워버리면
+		 *   테스트로그인/프론트 로그인 유지가 불가능해짐.
+		 * - 쓰기(POST/PATCH/DELETE 등)에서 401이면 그때 정리하는 것이 안전.
+		 */
+		if (method !== "GET") clear_auth_storage();
 		throw new Error("인증이 필요합니다.");
 	}
 

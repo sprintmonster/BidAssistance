@@ -46,24 +46,14 @@ export function login(email: string, password: string) {
 }
 
 export async function checkLogin(): Promise<LoginSuccessData | null> {
-	const candidates = [
-		"/checkLogin",
-		"/users/login/check",
-		"/users/check",
-        "/users/checkLogin",
-		"/users/me",
-		"/users/session",
-	];
 
-	for (const path of candidates) {
-		try {
-			const res = await api<LoginApiResponse>(path, { method: "GET" });
-			if (res.status === "success" && res.data) return res.data;
-		} catch {
-
-		}
+	try {
+		const res = await api<LoginApiResponse>("/checkLogin", { method: "GET" });
+		if (res.status === "success" && res.data) return res.data;
+		return null;
+	} catch {
+		return null;
 	}
-	return null;
 }
 
 export async function logout() {
