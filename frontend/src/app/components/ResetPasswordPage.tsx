@@ -12,6 +12,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "./ui/card";
+import { api } from "../api/client";
 
 const SECURITY_QUESTIONS = [
 	"가장 기억에 남는 선생님 성함은?",
@@ -63,25 +64,47 @@ export function ResetPasswordPage() {
 				birth: formData.birthDate,
 			};
 
-			const res = await fetch("/api/users/recovery_question", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(payload),
-			});
+            type RecoveryQuestionRes = {
+                status: "success" | "error";
+                message?: string;
+                data?: { recoverySessionId: string; questionId: number };
+            };
 
-			const json = await res.json().catch(() => null);
+            let json: RecoveryQuestionRes;
+            try {
+                json = await api<RecoveryQuestionRes>("/users/recovery_question", {
+                    method: "POST",
+                    body: JSON.stringify(payload),
+                });
+            } catch (e) {
+                setMessage({ type: "error", text: e instanceof Error ? e.message : "요청에 실패했습니다." });
+                return;
+            }
 
-			if (!res.ok || json?.status === "error") {
-				const msg =
-					json?.message ??
-					(res.status === 401
-						? "본인 확인에 실패했습니다."
-						: res.status === 404
-							? "가입된 계정을 찾을 수 없습니다."
-							: "요청에 실패했습니다. 다시 시도해 주세요.");
-				setMessage({ type: "error", text: msg });
-				return;
-			}
+            if (json.status === "error") {
+                setMessage({ type: "error", text: json.message ?? "요청에 실패했습니다." });
+                return;
+            }
+
+			// const res = await fetch("/api/users/recovery_question", {
+			// 	method: "POST",
+			// 	headers: { "Content-Type": "application/json" },
+			// 	body: JSON.stringify(payload),
+			// });
+            //
+			// const json = await res.json().catch(() => null);
+            //
+			// if (!res.ok || json?.status === "error") {
+			// 	const msg =
+			// 		json?.message ??
+			// 		(res.status === 401
+			// 			? "본인 확인에 실패했습니다."
+			// 			: res.status === 404
+			// 				? "가입된 계정을 찾을 수 없습니다."
+			// 				: "요청에 실패했습니다. 다시 시도해 주세요.");
+			// 	setMessage({ type: "error", text: msg });
+			// 	return;
+			// }
 
 			const sid = json?.data?.recoverySessionId;
 			const qid = json?.data?.questionId;
