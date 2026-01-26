@@ -5,35 +5,33 @@ import { CommunityBoard } from "./CommunityBoard";
 import { PostDetail } from "./PostDetail";
 import { NewPostForm } from "./NewPostForm";
 
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Input } from "./ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 
 import { Info, Plus, Search as SearchIcon } from "lucide-react";
 
-import type { Post, PostCategory, SortKey, NewPostDraft } from "../types/community";
+import type { NewPostDraft, Post, PostCategory, SortKey } from "../types/community";
 import {
-	fetchCommunityPosts,
-	fetchCommunityPost,
+	createCommunityComment,
 	createCommunityPost,
-	updateCommunityPost,
+	deleteCommunityComment,
 	deleteCommunityPost,
+	fetchCommunityPost,
+	fetchCommunityPosts,
 	likeCommunityPost,
 	unlikeCommunityPost,
-	createCommunityComment,
-	deleteCommunityComment,
+	updateCommunityPost,
 	uploadCommunityAttachments,
 } from "../api/community";
-
-type Id = string | number;
 
 type ViewMode = "list" | "detail" | "new";
 type CategoryFilter = "all" | PostCategory;
 
-const categoryLabel: Record<CategoryFilter, string> = {
+const category_label: Record<CategoryFilter, string> = {
 	all: "전체",
 	question: "질문",
 	info: "정보",
@@ -41,26 +39,24 @@ const categoryLabel: Record<CategoryFilter, string> = {
 	discussion: "토론",
 };
 
-function safeUserId() {
-	return localStorage.getItem("userId") || "";
-}
-function isAuthedNow() {
+function is_authed_now() {
 	return !!localStorage.getItem("userId");
 }
-function same_id(a: Id, b: Id) {
-	return String(a) === String(b);
+
+function safe_user_id() {
+	return localStorage.getItem("userId") || "";
 }
 
 export function CommunityPage() {
 	const navigate = useNavigate();
 
-	const [viewMode, setViewMode] = useState<ViewMode>("list");
-	const [searchQuery, setSearchQuery] = useState("");
-	const [category, setCategory] = useState<CategoryFilter>("all");
-	const [sortKey, setSortKey] = useState<SortKey>("latest");
+	const [view_mode, set_view_mode] = useState<ViewMode>("list");
+	const [search_query, set_search_query] = useState("");
+	const [category, set_category] = useState<CategoryFilter>("all");
+	const [sort_key, set_sort_key] = useState<SortKey>("latest");
 
-	const [posts, setPosts] = useState<Post[]>([]);
-	const [counts, setCounts] = useState<Record<"all" | PostCategory, number>>({
+	const [posts, set_posts] = useState<Post[]>([]);
+	const [counts, set_counts] = useState<Record<"all" | PostCategory, number>>({
 		all: 0,
 		question: 0,
 		info: 0,
@@ -68,159 +64,157 @@ export function CommunityPage() {
 		discussion: 0,
 	});
 
-	const [listLoading, setListLoading] = useState(false);
-	const [listError, setListError] = useState<string | null>(null);
+	const [list_loading, set_list_loading] = useState(false);
+	const [list_error, set_list_error] = useState<string | null>(null);
 
-	const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-	const [detailLoading, setDetailLoading] = useState(false);
-	const [detailError, setDetailError] = useState<string | null>(null);
+	const [selected_post, set_selected_post] = useState<Post | null>(null);
+	const [detail_loading, set_detail_loading] = useState(false);
+	const [detail_error, set_detail_error] = useState<string | null>(null);
 
-	const currentUserId = useMemo(() => safeUserId(), []);
-	const authed = isAuthedNow();
+	const authed = is_authed_now();
+	const current_user_id = useMemo(() => safe_user_id(), []);
 
-	const goLogin = () => navigate("/login", { state: { from: "/community" } });
+	const go_login = () => navigate("/login", { state: { from: "/community" } });
 
-	const loadList = async (opts?: { q?: string; category?: CategoryFilter; sort?: SortKey }) => {
-		setListLoading(true);
-		setListError(null);
+	const load_list = async (opts?: { q?: string; c?: CategoryFilter; s?: SortKey }) => {
+		set_list_loading(true);
+		set_list_error(null);
 
 		try {
-			const selectedCategory = opts?.category ?? category;
-			const apiCategory = selectedCategory === "all" ? undefined : selectedCategory;
+			const c = opts?.c ?? category;
+			const api_category = c === "all" ? undefined : c;
+			const q = (opts?.q ?? search_query).trim() || undefined;
+			const s = opts?.s ?? sort_key;
 
 			const data = await fetchCommunityPosts({
-				category: apiCategory,
-				q: (opts?.q ?? searchQuery).trim() || undefined,
-				sort: opts?.sort ?? sortKey,
+				category: api_category,
+				q,
+				sort: s,
 				page: 1,
 				size: 50,
 			});
 
-			setPosts(data.items);
+			set_posts(data.items);
 
 			if (data.counts) {
-				setCounts({ ...data.counts, all: data.counts.all });
+				set_counts({ ...data.counts, all: data.counts.all });
 			} else {
-				const base = {
+				const base: Record<"all" | PostCategory, number> = {
 					all: data.items.length,
 					question: 0,
 					info: 0,
 					review: 0,
 					discussion: 0,
-				} as any;
+				};
 
 				data.items.forEach((p) => {
 					base[p.category] += 1;
 				});
-				setCounts(base);
+				set_counts(base);
 			}
 		} catch (e: any) {
-			setListError(e?.message || "게시글 목록을 불러오지 못했습니다.");
+			set_list_error(e?.message || "게시글 목록을 불러오지 못했습니다.");
 		} finally {
-			setListLoading(false);
+			set_list_loading(false);
 		}
 	};
 
-	const loadDetail = async (postId: Id) => {
-		setDetailLoading(true);
-		setDetailError(null);
+	const load_detail = async (post_id: number) => {
+		set_detail_loading(true);
+		set_detail_error(null);
 
 		try {
-			const data = await fetchCommunityPost(postId);
-
+			const data = await fetchCommunityPost(post_id);
 			const fixed: Post = {
 				...data,
 				comments: data.comments ?? [],
 				attachments: data.attachments ?? [],
 			};
-
-			setSelectedPost(fixed);
+			set_selected_post(fixed);
 		} catch (e: any) {
-			setDetailError(e?.message || "게시글을 불러오지 못했습니다.");
+			set_detail_error(e?.message || "게시글을 불러오지 못했습니다.");
 		} finally {
-			setDetailLoading(false);
+			set_detail_loading(false);
 		}
 	};
 
 	useEffect(() => {
 		const t = window.setTimeout(() => {
-			loadList();
+			load_list();
 		}, 250);
 
 		return () => window.clearTimeout(t);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [category, sortKey, searchQuery]);
+	}, [category, sort_key, search_query]);
 
-	const onSubmitSearch = (e: React.FormEvent) => {
+	const on_submit_search = (e: React.FormEvent) => {
 		e.preventDefault();
-		loadList({ q: searchQuery });
+		load_list({ q: search_query });
 	};
 
-	const openDetail = (post: Post) => {
-		setViewMode("detail");
-		setSelectedPost(null);
-		loadDetail(post.id as any);
+	const open_detail = (post: Post) => {
+		set_view_mode("detail");
+		set_selected_post(null);
+		load_detail(post.id);
 	};
 
-	const backToList = () => {
-		setSelectedPost(null);
-		setViewMode("list");
+	const back_to_list = () => {
+		set_selected_post(null);
+		set_view_mode("list");
 	};
 
-	const onClickWrite = () => {
-		if (!authed) return goLogin();
-		setViewMode("new");
+	const on_click_write = () => {
+		if (!authed) return go_login();
+		set_view_mode("new");
 	};
 
-	const canEditSelected = useMemo(() => {
-		if (!authed || !selectedPost) return false;
-		if (!selectedPost.authorId) return false;
-		return selectedPost.authorId === currentUserId;
-	}, [authed, selectedPost, currentUserId]);
+	const can_edit_selected = useMemo(() => {
+		if (!authed || !selected_post) return false;
+		if (!selected_post.authorId) return false;
+		return selected_post.authorId === current_user_id;
+	}, [authed, selected_post, current_user_id]);
 
-	const addPost = async (draft: NewPostDraft) => {
-		if (!authed) return goLogin();
+	const add_post = async (draft: NewPostDraft) => {
+		if (!authed) return go_login();
 
 		try {
-			let attachmentIds: string[] | undefined;
+			let attachment_ids: string[] | undefined;
 			if (draft.files.length > 0) {
 				const uploaded = await uploadCommunityAttachments(draft.files);
-				attachmentIds = uploaded.map((a) => String((a as any).id));
+				attachment_ids = uploaded.map((a) => String(a.id));
 			}
 
 			const created = await createCommunityPost({
 				title: draft.title,
 				content: draft.content,
 				category: draft.category,
-				attachmentIds,
+				attachmentIds: attachment_ids,
 			});
 
-			setViewMode("detail");
-			setSelectedPost(null);
-			await loadList();
-			await loadDetail((created as any).id);
+			set_view_mode("detail");
+			set_selected_post(null);
+			await load_list();
+			await load_detail(created.id);
 		} catch (e: any) {
 			alert(e?.message || "게시글 작성에 실패했습니다.");
 		}
 	};
 
-	const addComment = async (postId: Id, content: string) => {
-		if (!authed) return goLogin();
+	const add_comment = async (post_id: number, content: string) => {
+		if (!authed) return go_login();
 
 		try {
-			const created = await createCommunityComment(postId, content);
+			const created = await createCommunityComment(post_id, content);
 
-			setSelectedPost((prev) => {
-				if (!prev || !same_id(prev.id as any, postId)) return prev;
-				const nextComments = [...(prev.comments ?? []), created];
-				return { ...prev, comments: nextComments, commentCount: nextComments.length };
+			set_selected_post((prev) => {
+				if (!prev || prev.id !== post_id) return prev;
+				const next_comments = [...(prev.comments ?? []), created];
+				return { ...prev, comments: next_comments, commentCount: next_comments.length };
 			});
 
-			setPosts((prev) =>
+			set_posts((prev) =>
 				prev.map((p) =>
-					same_id(p.id as any, postId)
-						? { ...p, commentCount: (p.commentCount ?? 0) + 1 }
-						: p,
+					p.id === post_id ? { ...p, commentCount: (p.commentCount ?? 0) + 1 } : p,
 				),
 			);
 		} catch (e: any) {
@@ -228,14 +222,14 @@ export function CommunityPage() {
 		}
 	};
 
-	const updatePost = async (
-		postId: Id,
+	const update_post = async (
+		post_id: number,
 		patch: Partial<Pick<Post, "title" | "content" | "category">>,
 	) => {
-		if (!authed) return goLogin();
+		if (!authed) return go_login();
 
 		try {
-			const updated = await updateCommunityPost(postId, {
+			const updated = await updateCommunityPost(post_id, {
 				title: patch.title,
 				content: patch.content,
 				category: patch.category,
@@ -247,53 +241,49 @@ export function CommunityPage() {
 				attachments: updated.attachments ?? [],
 			};
 
-			setSelectedPost((prev) => (prev && same_id(prev.id as any, postId) ? fixed : prev));
-			setPosts((prev) =>
-				prev.map((p) => (same_id(p.id as any, postId) ? { ...p, ...fixed } : p)),
-			);
+			set_selected_post((prev) => (prev?.id === post_id ? fixed : prev));
+			set_posts((prev) => prev.map((p) => (p.id === post_id ? { ...p, ...fixed } : p)));
 		} catch (e: any) {
 			alert(e?.message || "게시글 수정에 실패했습니다.");
 		}
 	};
 
-	const deletePost = async (postId: Id) => {
-		if (!authed) return goLogin();
+	const delete_post = async (post_id: number) => {
+		if (!authed) return go_login();
 
 		try {
-			await deleteCommunityPost(postId);
-			backToList();
-			await loadList();
+			await deleteCommunityPost(post_id);
+			back_to_list();
+			await load_list();
 		} catch (e: any) {
 			alert(e?.message || "게시글 삭제에 실패했습니다.");
 		}
 	};
 
-	const togglePostLike = async (postId: Id) => {
-		if (!authed) return goLogin();
+	const toggle_post_like = async (post_id: number) => {
+		if (!authed) return go_login();
 
 		const target =
-			selectedPost && same_id(selectedPost.id as any, postId)
-				? selectedPost
-				: posts.find((p) => same_id(p.id as any, postId));
-
+			selected_post?.id === post_id ? selected_post : posts.find((p) => p.id === post_id);
 		const liked = !!target?.likedByMe;
 
 		try {
-			if (liked) await unlikeCommunityPost(postId);
-			else await likeCommunityPost(postId);
+			// community.ts 기준: unlike는 DELETE /dislike
+			if (liked) await unlikeCommunityPost(post_id);
+			else await likeCommunityPost(post_id);
 
 			const delta = liked ? -1 : 1;
 
-			setPosts((prev) =>
+			set_posts((prev) =>
 				prev.map((p) =>
-					same_id(p.id as any, postId)
+					p.id === post_id
 						? { ...p, likedByMe: !liked, likes: Math.max(0, p.likes + delta) }
 						: p,
 				),
 			);
 
-			setSelectedPost((prev) => {
-				if (!prev || !same_id(prev.id as any, postId)) return prev;
+			set_selected_post((prev) => {
+				if (!prev || prev.id !== post_id) return prev;
 				return { ...prev, likedByMe: !liked, likes: Math.max(0, prev.likes + delta) };
 			});
 		} catch (e: any) {
@@ -301,21 +291,21 @@ export function CommunityPage() {
 		}
 	};
 
-	const deleteComment = async (postId: Id, commentId: Id) => {
-		if (!authed) return goLogin();
+	const delete_comment = async (post_id: number, comment_id: string) => {
+		if (!authed) return go_login();
 
 		try {
-			await deleteCommunityComment(postId, commentId);
+			await deleteCommunityComment(post_id, comment_id);
 
-			setSelectedPost((prev) => {
-				if (!prev || !same_id(prev.id as any, postId)) return prev;
-				const next = (prev.comments ?? []).filter((c: any) => !same_id(c.id, commentId));
+			set_selected_post((prev) => {
+				if (!prev || prev.id !== post_id) return prev;
+				const next = (prev.comments ?? []).filter((c) => String(c.id) !== comment_id);
 				return { ...prev, comments: next, commentCount: next.length };
 			});
 
-			setPosts((prev) =>
+			set_posts((prev) =>
 				prev.map((p) =>
-					same_id(p.id as any, postId)
+					p.id === post_id
 						? { ...p, commentCount: Math.max(0, (p.commentCount ?? 0) - 1) }
 						: p,
 				),
@@ -327,7 +317,7 @@ export function CommunityPage() {
 
 	return (
 		<div className="space-y-4">
-			{viewMode === "list" && (
+			{view_mode === "list" && (
 				<Card>
 					<CardHeader className="space-y-1">
 						<div className="flex items-start justify-between gap-4">
@@ -341,7 +331,7 @@ export function CommunityPage() {
 							<div className="shrink-0">
 								<Button
 									variant={authed ? "default" : "outline"}
-									onClick={onClickWrite}
+									onClick={on_click_write}
 									className="gap-2"
 								>
 									{authed ? <Plus className="h-4 w-4" /> : null}
@@ -352,51 +342,41 @@ export function CommunityPage() {
 					</CardHeader>
 
 					<CardContent className="space-y-3">
-						<Tabs value={category} onValueChange={(v) => setCategory(v as CategoryFilter)}>
+						<Tabs value={category} onValueChange={(v) => set_category(v as CategoryFilter)}>
 							<div className="flex items-center justify-between gap-3">
 								<TabsList className="w-fit justify-start rounded-lg">
 									<TabsTrigger value="all" className="flex-none px-3 rounded-md text-[13px]">
 										전체 <span className="ml-1 text-xs opacity-70">{counts.all}</span>
 									</TabsTrigger>
-									<TabsTrigger
-										value="question"
-										className="flex-none px-3 rounded-md text-[13px]"
-									>
+									<TabsTrigger value="question" className="flex-none px-3 rounded-md text-[13px]">
 										질문 <span className="ml-1 text-xs opacity-70">{counts.question}</span>
 									</TabsTrigger>
 									<TabsTrigger value="info" className="flex-none px-3 rounded-md text-[13px]">
 										정보 <span className="ml-1 text-xs opacity-70">{counts.info}</span>
 									</TabsTrigger>
-									<TabsTrigger
-										value="review"
-										className="flex-none px-3 rounded-md text-[13px]"
-									>
+									<TabsTrigger value="review" className="flex-none px-3 rounded-md text-[13px]">
 										후기 <span className="ml-1 text-xs opacity-70">{counts.review}</span>
 									</TabsTrigger>
-									<TabsTrigger
-										value="discussion"
-										className="flex-none px-3 rounded-md text-[13px]"
-									>
-										토론{" "}
-										<span className="ml-1 text-xs opacity-70">{counts.discussion}</span>
+									<TabsTrigger value="discussion" className="flex-none px-3 rounded-md text-[13px]">
+										토론 <span className="ml-1 text-xs opacity-70">{counts.discussion}</span>
 									</TabsTrigger>
 								</TabsList>
 
 								<div className="hidden md:block text-xs text-gray-500 tabular-nums">
-									{categoryLabel[category]} · {posts.length}건
+									{category_label[category]} · {posts.length}건
 								</div>
 							</div>
 						</Tabs>
 
 						<form
-							onSubmit={onSubmitSearch}
+							onSubmit={on_submit_search}
 							className="flex flex-col md:flex-row md:items-center gap-2"
 						>
 							<div className="relative flex-1">
 								<SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
 								<Input
-									value={searchQuery}
-									onChange={(e) => setSearchQuery(e.target.value)}
+									value={search_query}
+									onChange={(e) => set_search_query(e.target.value)}
 									placeholder="검색: 제목/내용/작성자"
 									className="pl-9"
 								/>
@@ -407,7 +387,7 @@ export function CommunityPage() {
 									검색하기
 								</Button>
 
-								<Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+								<Select value={sort_key} onValueChange={(v) => set_sort_key(v as SortKey)}>
 									<SelectTrigger className="w-[140px]">
 										<SelectValue placeholder="정렬" />
 									</SelectTrigger>
@@ -425,54 +405,50 @@ export function CommunityPage() {
 							<Alert className="bg-slate-50">
 								<Info />
 								<AlertTitle>게스트 모드</AlertTitle>
-								<AlertDescription>
-									글쓰기/좋아요/댓글은 로그인 후 이용할 수 있습니다.
-								</AlertDescription>
+								<AlertDescription>글쓰기/좋아요/댓글은 로그인 후 이용할 수 있습니다.</AlertDescription>
 							</Alert>
 						)}
 
-						{listError && (
+						{list_error && (
 							<div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-								{listError}
+								{list_error}
 							</div>
 						)}
 					</CardContent>
 				</Card>
 			)}
 
-			{viewMode === "list" &&
-				(listLoading ? (
+			{view_mode === "list" &&
+				(list_loading ? (
 					<div className="text-sm text-gray-500 py-8 text-center">목록을 불러오는 중...</div>
 				) : (
-					<CommunityBoard posts={posts} onSelectPost={openDetail} />
+					<CommunityBoard posts={posts} onSelectPost={open_detail} />
 				))}
 
-			{viewMode === "detail" &&
-				(detailLoading ? (
+			{view_mode === "detail" &&
+				(detail_loading ? (
 					<div className="text-sm text-gray-500 py-8 text-center">게시글을 불러오는 중...</div>
-				) : detailError ? (
+				) : detail_error ? (
 					<div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-						{detailError}
+						{detail_error}
 					</div>
-				) : selectedPost ? (
+				) : selected_post ? (
 					<PostDetail
-						post={selectedPost}
-						onBack={backToList}
-						onAddComment={addComment}
-						onUpdatePost={updatePost}
-						onDeletePost={deletePost}
-						onToggleLike={togglePostLike}
-						onDeleteComment={deleteComment}
-						canEdit={canEditSelected}
+						post={selected_post}
+						onBack={back_to_list}
+						onAddComment={add_comment}
+						onUpdatePost={update_post}
+						onDeletePost={delete_post}
+						onToggleLike={toggle_post_like}
+						onDeleteComment={delete_comment}
+						canEdit={can_edit_selected}
 						canInteract={authed}
-						onRequireAuth={goLogin}
-						currentUserId={currentUserId}
+						onRequireAuth={go_login}
+						currentUserId={current_user_id}
 					/>
 				) : null)}
 
-			{viewMode === "new" && (
-				<NewPostForm onSubmit={addPost} onCancel={() => setViewMode("list")} />
-			)}
+			{view_mode === "new" && <NewPostForm onSubmit={add_post} onCancel={() => set_view_mode("list")} />}
 		</div>
 	);
 }
