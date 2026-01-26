@@ -34,7 +34,7 @@ export function FindAccountPage() {
 	const [step, setStep] = useState<"identify" | "answer" | "result">("identify");
 	const [questionIndex, setQuestionIndex] = useState<number | null>(null);
 	const [identifiedEmail, setIdentifiedEmail] = useState<string>("");
-	const [requestId, setRequestId] = useState<string>("");
+    const [requestId, setRequestId] = useState<number | null>(null);
 
 	const [message, setMessage] = useState<Notice>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,13 +44,13 @@ export function FindAccountPage() {
 	}, [formData.name, formData.birthDate]);
 
 	const canAnswer = useMemo(() => {
-		return Boolean(requestId && questionIndex !== null && formData.answer.trim());
+        return Boolean(requestId !== null && questionIndex !== null && formData.answer.trim());
 	}, [requestId, questionIndex, formData.answer]);
 
 	const resetToIdentify = () => {
 		setStep("identify");
 		setQuestionIndex(null);
-		setRequestId("");
+        setRequestId(null);
 		setIdentifiedEmail("");
 		setFormData((prev) => ({ ...prev, answer: "" }));
 		setMessage(null);
@@ -66,9 +66,10 @@ export function FindAccountPage() {
 
 			const name = formData.name.trim();
 			const birth = formData.birthDate;
-			const qs = new URLSearchParams({ name, birth }).toString();
+            const qs = new URLSearchParams({ name, birth }).toString();
 
-			const res = await fetch(`/api/users/find_email/identify?${qs}`, { method: "GET" });
+
+            const res = await fetch(`/api/users/find-email/identify?${qs}`, { method: "GET" });
 			const json = await res.json().catch(() => null);
 
 			if (!res.ok || json?.status === "error") {
@@ -82,10 +83,10 @@ export function FindAccountPage() {
 			const rid = json?.data?.requestId;
 			const qIndex = json?.data?.questionIndex;
 
-			if (typeof rid !== "string" || typeof qIndex !== "number") {
-				setMessage({ type: "error", text: "서버 응답 형식이 올바르지 않아요." });
-				return;
-			}
+            if (typeof rid !== "number" || typeof qIndex !== "number") {
+                setMessage({ type: "error", text: "서버 응답 형식이 올바르지 않아요." });
+                return;
+            }
 
 			setRequestId(rid);
 			setQuestionIndex(qIndex);
@@ -107,9 +108,11 @@ export function FindAccountPage() {
 			setIsSubmitting(true);
 
 			const answer = formData.answer.trim();
-			const qs = new URLSearchParams({ requestId, answer }).toString();
-
-			const res = await fetch(`/api/users/find_email/verify?${qs}`, { method: "GET" });
+            const qs = new URLSearchParams({
+                userId: String(requestId),
+                answer,
+            }).toString();
+			const res = await fetch(`/api/users/find-email/verify?${qs}`, { method: "GET" });
 			const json = await res.json().catch(() => null);
 
 			if (!res.ok || json?.status === "error") {
@@ -120,15 +123,22 @@ export function FindAccountPage() {
 				return;
 			}
 
-			const email = json?.data?.email;
-			if (typeof email !== "string") {
-				setMessage({ type: "error", text: "서버 응답 형식이 올바르지 않아요." });
-				return;
-			}
+            const email =
+                typeof json?.data?.email === "string"
+                    ? json.data.email
+                    : typeof json?.message === "string"
+                        ? json.message
+                        : null;
 
-			setIdentifiedEmail(email);
-			setStep("result");
-			setMessage({ type: "success", text: "계정을 찾았어요!" });
+            if (!email) {
+                setMessage({ type: "error", text: "서버 응답 형식이 올바르지 않아요." });
+                return;
+            }
+
+            setIdentifiedEmail(email);
+            setStep("result");
+            setMessage({ type: "success", text: "계정을 찾았어요!" });
+
 		} catch {
 			setMessage({ type: "error", text: "서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요." });
 		} finally {
@@ -160,21 +170,22 @@ export function FindAccountPage() {
 							</CardDescription>
 						</div>
 
-						{message && (
-							<div
-								role="alert"
-								className={[
-									"rounded-lg border px-3 py-2 text-sm",
-									message.type === "success"
-										? "border-green-200 bg-green-50 text-green-700"
-										: "border-red-200 bg-red-50 text-red-700",
-								].join(" ")}
-							>
-								{message.text}
-							</div>
-						)}
+                        {message && step !== "result" && (
+                            <div
+                                role="alert"
+                                className={[
+                                    "rounded-lg border px-3 py-2 text-sm",
+                                    message.type === "success"
+                                        ? "border-green-200 bg-green-50 text-green-700"
+                                        : "border-red-200 bg-red-50 text-red-700",
+                                ].join(" ")}
+                            >
+                                {message.text}
+                            </div>
+                        )}
 
-						{step === "identify" && (
+
+                        {step === "identify" && (
 							<>
 								<div className="space-y-2">
 									<Label htmlFor="name" className="text-sm font-medium">이름</Label>
@@ -259,7 +270,7 @@ export function FindAccountPage() {
 									onClick={() => {
 										setStep("identify");
 										setQuestionIndex(null);
-										setRequestId("");
+                                        setRequestId(null);
 										setIdentifiedEmail("");
 										setFormData({ name: "", birthDate: "", answer: "" });
 										setMessage(null);

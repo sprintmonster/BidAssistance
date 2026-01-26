@@ -50,6 +50,7 @@ export async function checkLogin(): Promise<LoginSuccessData | null> {
 	const candidates = [
 		"/users/login/check",
 		"/users/check",
+        "/users/checkLogin",
 		"/users/me",
 		"/users/session",
 	];
