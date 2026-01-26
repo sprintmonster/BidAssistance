@@ -6,10 +6,8 @@ export type LoginSuccessData = {
 	userId: number | string;
 	name: string;
 	email?: string;
-
 	accessToken?: string;
 	refreshToken?: string;
-
 	role?: number;
 };
 
@@ -21,7 +19,10 @@ export interface LoginApiResponse {
 
 export function persistLogin(data: LoginSuccessData) {
 	localStorage.setItem("userId", String(data.userId));
-	if (data.name != null) localStorage.setItem("userName", String(data.name));
+	if (data.name != null) {
+		localStorage.setItem("userName", String(data.name));
+		localStorage.setItem("name", String(data.name));
+	}
 	if (data.email != null) localStorage.setItem("email", String(data.email));
 	if (typeof data.role === "number") localStorage.setItem("role", String(data.role));
 	if (data.accessToken) localStorage.setItem("accessToken", String(data.accessToken));
@@ -46,7 +47,6 @@ export function login(email: string, password: string) {
 }
 
 export async function checkLogin(): Promise<LoginSuccessData | null> {
-
 	try {
 		const res = await api<LoginApiResponse>("/checkLogin", { method: "GET" });
 		if (res.status === "success" && res.data) return res.data;

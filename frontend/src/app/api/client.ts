@@ -32,11 +32,11 @@ function clear_auth_storage() {
 	localStorage.removeItem("email");
 	localStorage.removeItem("role");
 	localStorage.removeItem("accessToken");
+	localStorage.removeItem("refreshToken");
 }
 
 export async function api<T>(url: string, options: RequestInit = {}): Promise<T> {
 	const headers = build_headers(options);
-	const method = String(options.method || "GET").toUpperCase();
 
 	const res = await fetch(`${BASE_URL}${url}`, {
 		...options,
@@ -45,13 +45,7 @@ export async function api<T>(url: string, options: RequestInit = {}): Promise<T>
 	});
 
 	if (res.status === 401) {
-		/**
-		 * 핵심 수정:
-		 * - GET(특히 checkLogin 같은 "상태 확인")에서 401이 나왔다고 userId까지 지워버리면
-		 *   테스트로그인/프론트 로그인 유지가 불가능해짐.
-		 * - 쓰기(POST/PATCH/DELETE 등)에서 401이면 그때 정리하는 것이 안전.
-		 */
-		if (method !== "GET") clear_auth_storage();
+		clear_auth_storage();
 		throw new Error("인증이 필요합니다.");
 	}
 

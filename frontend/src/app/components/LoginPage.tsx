@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { login } from "../api/auth";
+import { login, persistLogin } from "../api/auth";
 import {
 	format_mmss,
 	is_login_locked,
@@ -19,12 +19,7 @@ import { SimpleCaptcha } from "./SimpleCaptcha";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import {
-	Card,
-	CardContent,
-	CardFooter,
-	CardHeader,
-} from "./ui/card";
+import { Card, CardContent, CardFooter, CardHeader } from "./ui/card";
 import { ENABLE_TEST_LOGIN, TEST_LOGIN } from "../utils/testLogin";
 import { mark_reco_popup_trigger } from "./RecommendedBidsModal";
 
@@ -35,32 +30,28 @@ function parse_user_id(res: any): string | null {
 	if (typeof cand === "string" && cand.trim()) return cand.trim();
 	return null;
 }
+
 function cleanLoginErrorMessage(input: unknown) {
-    // input이 문자열이면 그대로, 객체면 message 우선
-    let msg =
-        typeof input === "string"
-            ? input
-            : typeof (input as any)?.message === "string"
-                ? (input as any).message
-                : "";
+	let msg =
+		typeof input === "string"
+			? input
+			: typeof (input as any)?.message === "string"
+				? (input as any).message
+				: "";
 
-    // JSON 문자열이면 파싱해서 message만 뽑기
-    try {
-        const parsed = JSON.parse(msg);
-        if (parsed?.message) msg = String(parsed.message);
-    } catch {
-        // ignore
-    }
+	try {
+		const parsed = JSON.parse(msg);
+		if (parsed?.message) msg = String(parsed.message);
+	} catch {
+	}
 
-    // 접두어 제거
-    msg = msg.replace(/^서버 내부 오류가 발생했습니다:\s*/g, "").trim();
+	msg = msg.replace(/^서버 내부 오류가 발생했습니다:\s*/g, "").trim();
 
-    // 매핑
-    if (msg.includes("비밀번호가 일치하지 않습니다")) return "비밀번호가 올바르지 않습니다.";
-    if (msg.includes("존재하지") || msg.includes("계정을 찾을 수")) return "등록되지 않은 이메일입니다.";
-    if (!msg) return "로그인에 실패했습니다. 다시 시도해 주세요.";
+	if (msg.includes("비밀번호가 일치하지 않습니다")) return "비밀번호가 올바르지 않습니다.";
+	if (msg.includes("존재하지") || msg.includes("계정을 찾을 수")) return "등록되지 않은 이메일입니다.";
+	if (!msg) return "로그인에 실패했습니다. 다시 시도해 주세요.";
 
-    return msg;
+	return msg;
 }
 
 export function LoginPage() {
@@ -104,89 +95,97 @@ export function LoginPage() {
 		return is_login_locked(em);
 	}, [email, lockRemaining]);
 
-    const doLogin = async (em: string, pw: string) => {
-        setErrorMsg(null);
+	const doLogin = async (em: string, pw: string) => {
+		setErrorMsg(null);
 
-        if (!em || !pw) {
-            setErrorMsg("이메일과 비밀번호를 입력해 주세요.");
-            return;
-        }
+		if (!em || !pw) {
+			setErrorMsg("이메일과 비밀번호를 입력해 주세요.");
+			return;
+		}
 
-        if (is_login_locked(em)) {
-            setErrorMsg(`로그인이 잠겨 있습니다. ${format_mmss(login_lock_remaining_ms(em))} 후 다시 시도해 주세요.`);
-            return;
-        }
+		if (is_login_locked(em)) {
+			setErrorMsg(`로그인이 잠겨 있습니다. ${format_mmss(login_lock_remaining_ms(em))} 후 다시 시도해 주세요.`);
+			return;
+		}
 
-        if (should_require_captcha(em) && !captchaValid) {
-            setErrorMsg("캡챠 인증을 완료해 주세요.");
-            return;
-        }
+		if (should_require_captcha(em) && !captchaValid) {
+			setErrorMsg("캡챠 인증을 완료해 주세요.");
+			return;
+		}
 
-        try {
-            setSubmitting(true);
-            const res = await login(em, pw);
+		try {
+			setSubmitting(true);
+			const res = await login(em, pw);
 
-            if (res.status !== "success" || !res.data) {
-                const st = record_login_failure(em);
-                const remaining = Math.max(0, 5 - st.count);
+			if (res.status !== "success" || !res.data) {
+				const st = record_login_failure(em);
+				const remaining = Math.max(0, 5 - st.count);
 
-                if (st.lock_until && st.lock_until > Date.now()) {
-                    setErrorMsg(
-                        `로그인 실패가 누적되어 계정이 잠겼습니다. ${format_mmss(login_lock_remaining_ms(em))} 후 다시 시도해 주세요.`,
-                    );
-                    return;
-                }
+				if (st.lock_until && st.lock_until > Date.now()) {
+					setErrorMsg(
+						`로그인 실패가 누적되어 계정이 잠겼습니다. ${format_mmss(login_lock_remaining_ms(em))} 후 다시 시도해 주세요.`,
+					);
+					return;
+				}
 
-                const clean = cleanLoginErrorMessage(res);
-                setErrorMsg(`${clean} (남은 시도: ${remaining}회)`);
-                return;
-            }
+				const clean = cleanLoginErrorMessage(res);
+				setErrorMsg(`${clean} (남은 시도: ${remaining}회)`);
+				return;
+			}
 
-            const userId = parse_user_id(res);
-            if (!userId) {
-                setErrorMsg("로그인 정보 처리 중 문제가 발생했습니다. 다시 시도해주세요.");
-                return;
-            }
+			const userId = parse_user_id(res);
+			if (!userId) {
+				setErrorMsg("로그인 정보 처리 중 문제가 발생했습니다. 다시 시도해주세요.");
+				return;
+			}
 
-            record_login_success(em);
-            localStorage.setItem("userId", userId);
-            localStorage.setItem("userName", String(res.data.name ?? ""));
-            localStorage.setItem("email", String(res.data.email ?? em));
+			// 핵심: accessToken/refreshToken까지 저장해야 이후 /api/board 같은 인증 API가 동작함
+			persistLogin({
+				...res.data,
+				userId,
+				name: String(res.data.name ?? ""),
+				email: String(res.data.email ?? em),
+			});
+
+			// 일부 컴포넌트가 "name" 키를 참고하므로 보강 저장(프로젝트 내 호환성)
+			localStorage.setItem("name", String(res.data.name ?? ""));
+
+			record_login_success(em);
 			mark_reco_popup_trigger();
 
-            migrate_password_changed_at(String(res.data.email ?? em), userId);
-            ensure_password_changed_at_initialized(userId);
+			migrate_password_changed_at(String(res.data.email ?? em), userId);
+			ensure_password_changed_at_initialized(userId);
 
-            if (is_password_expired(userId)) {
-                navigate("/profile", {
-                    replace: true,
-                    state: { passwordExpired: true, fromAfterChange: from },
-                });
-                return;
-            }
+			if (is_password_expired(userId)) {
+				navigate("/profile", {
+					replace: true,
+					state: { passwordExpired: true, fromAfterChange: from },
+				});
+				return;
+			}
 
-            navigate(from, { replace: true });
-        } catch (err: any) {
-            const st = record_login_failure(em);
+			navigate(from, { replace: true });
+		} catch (err: any) {
+			const st = record_login_failure(em);
 
-            if (st.lock_until && st.lock_until > Date.now()) {
-                setErrorMsg(
-                    `로그인 실패가 누적되어 계정이 잠겼습니다. ${format_mmss(login_lock_remaining_ms(em))} 후 다시 시도해 주세요.`,
-                );
-            } else {
-                const remaining = Math.max(0, 5 - st.count);
-                const clean = cleanLoginErrorMessage(err);
-                setErrorMsg(`${clean} (남은 시도: ${remaining}회)`);
-            }
-        } finally {
-            setSubmitting(false);
-        }
-    };
+			if (st.lock_until && st.lock_until > Date.now()) {
+				setErrorMsg(
+					`로그인 실패가 누적되어 계정이 잠겼습니다. ${format_mmss(login_lock_remaining_ms(em))} 후 다시 시도해 주세요.`,
+				);
+			} else {
+				const remaining = Math.max(0, 5 - st.count);
+				const clean = cleanLoginErrorMessage(err);
+				setErrorMsg(`${clean} (남은 시도: ${remaining}회)`);
+			}
+		} finally {
+			setSubmitting(false);
+		}
+	};
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        await doLogin(email.trim(), password);
-    };
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		await doLogin(email.trim(), password);
+	};
 
 	return (
 		<div className="min-h-screen flex items-center justify-center p-4 bg-slate-950 bg-[radial-gradient(1200px_500px_at_50%_-20%,rgba(59,130,246,0.18),transparent),radial-gradient(900px_420px_at_15%_110%,rgba(99,102,241,0.12),transparent)]">
@@ -228,6 +227,7 @@ export function LoginPage() {
 							<Input
 								id="password"
 								type="password"
+								placeholder="••••••••"
 								value={password}
 								onChange={(e) => setPassword(e.target.value)}
 								className="h-11"
@@ -236,7 +236,9 @@ export function LoginPage() {
 							/>
 						</div>
 
-						<SimpleCaptcha required={captchaRequired} onValidChange={setCaptchaValid} />
+						{captchaRequired && (
+							<SimpleCaptcha onValidChange={setCaptchaValid} />
+						)}
 
 						{errorMsg && (
 							<div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -260,23 +262,23 @@ export function LoginPage() {
 							{submitting ? "로그인 중..." : "로그인"}
 						</Button>
 
-                        {ENABLE_TEST_LOGIN && (
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className="w-full h-11"
-                                disabled={submitting}
-                                onClick={async () => {
-                                    setEmail(TEST_LOGIN.email);
-                                    setPassword(TEST_LOGIN.password);
-                                    await doLogin(TEST_LOGIN.email, TEST_LOGIN.password);
-                                }}
-                            >
-                                테스트 로그인
-                            </Button>
-                        )}
+						{ENABLE_TEST_LOGIN && (
+							<Button
+								type="button"
+								variant="outline"
+								className="w-full h-11"
+								disabled={submitting}
+								onClick={async () => {
+									setEmail(TEST_LOGIN.email);
+									setPassword(TEST_LOGIN.password);
+									await doLogin(TEST_LOGIN.email, TEST_LOGIN.password);
+								}}
+							>
+								테스트 로그인
+							</Button>
+						)}
 
-                        <div className="text-sm text-center text-muted-foreground">
+						<div className="text-sm text-center text-muted-foreground">
 							계정이 없으신가요?{" "}
 							<button
 								type="button"
