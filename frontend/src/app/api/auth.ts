@@ -7,7 +7,6 @@ export type LoginSuccessData = {
 	name: string;
 	email?: string;
 
-	// 백엔드가 내려줘도 세션 기반이면 프론트 인증에 사용하지 않음
 	accessToken?: string;
 	refreshToken?: string;
 
@@ -48,6 +47,7 @@ export function login(email: string, password: string) {
 
 export async function checkLogin(): Promise<LoginSuccessData | null> {
 	const candidates = [
+		"/checkLogin",
 		"/users/login/check",
 		"/users/check",
 		"/users/me",
@@ -59,6 +59,7 @@ export async function checkLogin(): Promise<LoginSuccessData | null> {
 			const res = await api<LoginApiResponse>(path, { method: "GET" });
 			if (res.status === "success" && res.data) return res.data;
 		} catch {
+
 		}
 	}
 	return null;
