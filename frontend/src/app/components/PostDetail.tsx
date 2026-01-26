@@ -13,23 +13,21 @@ import type { Post, PostCategory } from "../types/community";
 
 import { mask_name } from "../utils/masking";
 
+type Id = string | number;
+
 interface PostDetailProps {
 	post: Post;
 	onBack: () => void;
-	onAddComment: (postId: string, content: string) => void;
-	onUpdatePost: (
-		postId: string,
-		patch: Partial<Pick<Post, "title" | "content" | "category">>,
-	) => void;
-	onDeletePost: (postId: string) => void;
-	onToggleLike: (postId: string) => void;
-	onDeleteComment: (postId: string, commentId: string) => void;
+	onAddComment: (postId: Id, content: string) => void;
+	onUpdatePost: (postId: Id, patch: Partial<Pick<Post, "title" | "content" | "category">>) => void;
+	onDeletePost: (postId: Id) => void;
+	onToggleLike: (postId: Id) => void;
+	onDeleteComment: (postId: Id, commentId: Id) => void;
 
 	canEdit?: boolean;
 	canInteract?: boolean;
 	onRequireAuth?: () => void;
 
-	// ✅ 댓글/권한 판단용 (로그인 사용자)
 	currentUserId?: string;
 }
 
@@ -97,7 +95,7 @@ export function PostDetail({
 		const text = commentText.trim();
 		if (!text) return;
 
-		onAddComment(post.id, text);
+		onAddComment(post.id as any, text);
 		setCommentText("");
 	};
 
@@ -129,7 +127,7 @@ export function PostDetail({
 		const c = editContent.trim();
 		if (!t || !c) return;
 
-		onUpdatePost(post.id, { title: t, content: c, category: editCategory });
+		onUpdatePost(post.id as any, { title: t, content: c, category: editCategory });
 		setIsEditing(false);
 	};
 
@@ -140,7 +138,7 @@ export function PostDetail({
 		}
 		const ok = window.confirm("이 게시글을 삭제할까요? 삭제 후 복구할 수 없습니다.");
 		if (!ok) return;
-		onDeletePost(post.id);
+		onDeletePost(post.id as any);
 	};
 
 	const handleLike = () => {
@@ -148,7 +146,7 @@ export function PostDetail({
 			onRequireAuth?.();
 			return;
 		}
-		onToggleLike(post.id);
+		onToggleLike(post.id as any);
 	};
 
 	const localName = safeLocalName();
@@ -194,9 +192,7 @@ export function PostDetail({
 								className="w-full text-2xl font-bold border rounded-lg px-3 py-2"
 							/>
 						) : (
-							<h1 className="text-3xl font-bold text-gray-900 truncate">
-								{post.title}
-							</h1>
+							<h1 className="text-3xl font-bold text-gray-900 truncate">{post.title}</h1>
 						)}
 					</div>
 
@@ -214,27 +210,15 @@ export function PostDetail({
 						{canEdit &&
 							(isEditing ? (
 								<>
-									<button
-										type="button"
-										onClick={cancelEdit}
-										className="px-3 py-2 rounded-lg border"
-									>
+									<button type="button" onClick={cancelEdit} className="px-3 py-2 rounded-lg border">
 										취소
 									</button>
-									<button
-										type="button"
-										onClick={saveEdit}
-										className="px-3 py-2 rounded-lg bg-blue-600 text-white"
-									>
+									<button type="button" onClick={saveEdit} className="px-3 py-2 rounded-lg bg-blue-600 text-white">
 										저장
 									</button>
 								</>
 							) : (
-								<button
-									type="button"
-									onClick={startEdit}
-									className="px-3 py-2 rounded-lg border"
-								>
+								<button type="button" onClick={startEdit} className="px-3 py-2 rounded-lg border">
 									수정
 								</button>
 							))}
@@ -260,9 +244,7 @@ export function PostDetail({
 							className="w-full border rounded-lg px-3 py-2 min-h-[240px]"
 						/>
 					) : (
-						<p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-							{post.content ?? ""}
-						</p>
+						<p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{post.content ?? ""}</p>
 					)}
 				</div>
 
@@ -272,8 +254,8 @@ export function PostDetail({
 
 						<div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
 							{attachments
-								.filter((a) => a.isImage)
-								.map((a) => (
+								.filter((a: any) => a.isImage)
+								.map((a: any) => (
 									<button
 										key={a.id}
 										type="button"
@@ -288,11 +270,8 @@ export function PostDetail({
 						</div>
 
 						<div className="space-y-2">
-							{attachments.map((a) => (
-								<div
-									key={a.id}
-									className="flex items-center justify-between gap-3 border rounded-lg px-3 py-2"
-								>
+							{attachments.map((a: any) => (
+								<div key={a.id} className="flex items-center justify-between gap-3 border rounded-lg px-3 py-2">
 									<div className="flex items-center gap-2 min-w-0">
 										{a.isImage ? (
 											<ImageIcon className="w-4 h-4 text-gray-500" />
@@ -301,9 +280,7 @@ export function PostDetail({
 										)}
 										<div className="min-w-0">
 											<div className="text-sm text-gray-900 truncate">{a.name}</div>
-											<div className="text-xs text-gray-500">
-												{Math.round((a.size ?? 0) / 1024)} KB
-											</div>
+											<div className="text-xs text-gray-500">{Math.round((a.size ?? 0) / 1024)} KB</div>
 										</div>
 									</div>
 
@@ -327,15 +304,11 @@ export function PostDetail({
 						type="button"
 						onClick={handleLike}
 						className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-							post.likedByMe
-								? "bg-blue-600 text-white hover:bg-blue-700"
-								: "bg-blue-50 text-blue-600 hover:bg-blue-100"
+							post.likedByMe ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-blue-50 text-blue-600 hover:bg-blue-100"
 						} ${canInteract ? "" : "opacity-60"}`}
 					>
 						<ThumbsUp className="w-5 h-5" />
-						<span>
-							{canInteract ? `좋아요 ${post.likes}` : `로그인 후 좋아요 (${post.likes})`}
-						</span>
+						<span>{canInteract ? `좋아요 ${post.likes}` : `로그인 후 좋아요 (${post.likes})`}</span>
 					</button>
 				</div>
 			</div>
@@ -380,10 +353,7 @@ export function PostDetail({
 								(!!localName && commentAuthorName === localName));
 
 						return (
-							<div
-								key={comment.id}
-								className="border-b border-gray-100 pb-6 last:border-b-0 last:pb-0"
-							>
+							<div key={comment.id} className="border-b border-gray-100 pb-6 last:border-b-0 last:pb-0">
 								<div className="flex items-center justify-between mb-2">
 									<div className="flex items-center gap-3">
 										<span className="font-medium text-gray-900">{mask_name(commentAuthorName)}</span>
@@ -396,7 +366,7 @@ export function PostDetail({
 											onClick={() => {
 												const ok = window.confirm("이 댓글을 삭제할까요?");
 												if (!ok) return;
-												onDeleteComment(post.id, comment.id);
+												onDeleteComment(post.id as any, comment.id as any);
 											}}
 											className="text-sm text-gray-400 hover:text-red-600"
 										>
@@ -421,9 +391,7 @@ export function PostDetail({
 						);
 					})}
 
-					{comments.length === 0 && (
-						<p className="text-center text-gray-500 py-8">첫 번째 댓글을 작성해보세요!</p>
-					)}
+					{comments.length === 0 && <p className="text-center text-gray-500 py-8">첫 번째 댓글을 작성해보세요!</p>}
 				</div>
 			</div>
 		</div>

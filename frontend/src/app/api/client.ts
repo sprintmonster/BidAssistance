@@ -10,8 +10,13 @@ export async function api<T>(url: string, options: RequestInit = {}): Promise<T>
 		...((options.headers as Record<string, string>) ?? {}),
 	};
 
+	const token = localStorage.getItem("accessToken");
+	if (token && !headers.Authorization) {
+		headers.Authorization = `Bearer ${token}`;
+	}
+
 	if (options.body && isFormData(options.body)) {
-		// do nothing
+		// multipart/form-data는 브라우저가 boundary 포함해 자동 세팅
 	} else {
 		if (!headers["Content-Type"]) headers["Content-Type"] = "application/json";
 	}
@@ -23,12 +28,12 @@ export async function api<T>(url: string, options: RequestInit = {}): Promise<T>
 	});
 
 	if (res.status === 401) {
-		// 세션 만료/미인증
 		localStorage.removeItem("userId");
 		localStorage.removeItem("userName");
 		localStorage.removeItem("name");
 		localStorage.removeItem("email");
 		localStorage.removeItem("role");
+		localStorage.removeItem("accessToken");
 		throw new Error("인증이 필요합니다.");
 	}
 

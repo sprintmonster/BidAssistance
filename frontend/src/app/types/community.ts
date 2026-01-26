@@ -1,7 +1,9 @@
+export type Id = string | number;
+
 export type PostCategory = "question" | "info" | "review" | "discussion";
 
 export interface Attachment {
-	id: number;
+	id: Id;            // <- 변경
 	name: string;
 	type: string;
 	url: string;
@@ -10,7 +12,7 @@ export interface Attachment {
 }
 
 export interface Comment {
-	id: number;
+	id: Id;            // <- 변경
 	authorId?: string;
 	authorName: string;
 	content: string;
@@ -20,7 +22,7 @@ export interface Comment {
 }
 
 export interface Post {
-	id: number;
+	id: Id;            // <- 변경
 	title: string;
 
 	content?: string;
@@ -31,7 +33,7 @@ export interface Post {
 	authorId?: string;
 	authorName: string;
 
-	createdAt: string; // YYYY-MM-DD
+	createdAt: string;
 	views: number;
 	likes: number;
 	likedByMe: boolean;
@@ -57,11 +59,4 @@ export interface ApiResponse<T> {
 	status: "success" | "error";
 	message?: string;
 	data: T;
-}
-
-export interface NewPostDraft {
-	title: string;
-	content: string;
-	category: PostCategory;
-	files: File[];
 }

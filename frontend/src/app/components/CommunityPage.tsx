@@ -28,6 +28,8 @@ import {
 	uploadCommunityAttachments,
 } from "../api/community";
 
+type Id = string | number;
+
 type ViewMode = "list" | "detail" | "new";
 type CategoryFilter = "all" | PostCategory;
 
@@ -45,6 +47,9 @@ function safeUserId() {
 function isAuthedNow() {
 	return !!localStorage.getItem("userId");
 }
+function same_id(a: Id, b: Id) {
+	return String(a) === String(b);
+}
 
 export function CommunityPage() {
 	const navigate = useNavigate();
@@ -56,7 +61,11 @@ export function CommunityPage() {
 
 	const [posts, setPosts] = useState<Post[]>([]);
 	const [counts, setCounts] = useState<Record<"all" | PostCategory, number>>({
-		all: 0, question: 0, info: 0, review: 0, discussion: 0,
+		all: 0,
+		question: 0,
+		info: 0,
+		review: 0,
+		discussion: 0,
 	});
 
 	const [listLoading, setListLoading] = useState(false);
@@ -77,7 +86,6 @@ export function CommunityPage() {
 
 		try {
 			const selectedCategory = opts?.category ?? category;
-
 			const apiCategory = selectedCategory === "all" ? undefined : selectedCategory;
 
 			const data = await fetchCommunityPosts({
@@ -93,9 +101,17 @@ export function CommunityPage() {
 			if (data.counts) {
 				setCounts({ ...data.counts, all: data.counts.all });
 			} else {
-				// fallback: 현재 로드된 items 기준
-				const base = { all: data.items.length, question: 0, info: 0, review: 0, discussion: 0 } as any;
-				data.items.forEach((p) => { base[p.category] += 1; });
+				const base = {
+					all: data.items.length,
+					question: 0,
+					info: 0,
+					review: 0,
+					discussion: 0,
+				} as any;
+
+				data.items.forEach((p) => {
+					base[p.category] += 1;
+				});
 				setCounts(base);
 			}
 		} catch (e: any) {
@@ -105,14 +121,13 @@ export function CommunityPage() {
 		}
 	};
 
-	const loadDetail = async (postId: number) => {
+	const loadDetail = async (postId: Id) => {
 		setDetailLoading(true);
 		setDetailError(null);
 
 		try {
 			const data = await fetchCommunityPost(postId);
 
-			// 안전하게 배열 기본값 세팅
 			const fixed: Post = {
 				...data,
 				comments: data.comments ?? [],
@@ -128,7 +143,6 @@ export function CommunityPage() {
 	};
 
 	useEffect(() => {
-		// category/sort/search 변경 시 250ms 디바운스 로딩
 		const t = window.setTimeout(() => {
 			loadList();
 		}, 250);
@@ -145,7 +159,7 @@ export function CommunityPage() {
 	const openDetail = (post: Post) => {
 		setViewMode("detail");
 		setSelectedPost(null);
-		loadDetail(post.id);
+		loadDetail(post.id as any);
 	};
 
 	const backToList = () => {
@@ -168,11 +182,10 @@ export function CommunityPage() {
 		if (!authed) return goLogin();
 
 		try {
-			// 첨부가 있으면 먼저 업로드(정의서에 API 추가 필요)
 			let attachmentIds: string[] | undefined;
 			if (draft.files.length > 0) {
 				const uploaded = await uploadCommunityAttachments(draft.files);
-				attachmentIds = uploaded.map((a) => a.id);
+				attachmentIds = uploaded.map((a) => String((a as any).id));
 			}
 
 			const created = await createCommunityPost({
@@ -185,27 +198,27 @@ export function CommunityPage() {
 			setViewMode("detail");
 			setSelectedPost(null);
 			await loadList();
-			await loadDetail(created.id);
+			await loadDetail((created as any).id);
 		} catch (e: any) {
 			alert(e?.message || "게시글 작성에 실패했습니다.");
 		}
 	};
 
-	const addComment = async (postId: number, content: string) => {
+	const addComment = async (postId: Id, content: string) => {
 		if (!authed) return goLogin();
 
 		try {
 			const created = await createCommunityComment(postId, content);
 
 			setSelectedPost((prev) => {
-				if (!prev || prev.id !== postId) return prev;
+				if (!prev || !same_id(prev.id as any, postId)) return prev;
 				const nextComments = [...(prev.comments ?? []), created];
 				return { ...prev, comments: nextComments, commentCount: nextComments.length };
 			});
 
 			setPosts((prev) =>
 				prev.map((p) =>
-					p.id === postId
+					same_id(p.id as any, postId)
 						? { ...p, commentCount: (p.commentCount ?? 0) + 1 }
 						: p,
 				),
@@ -215,7 +228,10 @@ export function CommunityPage() {
 		}
 	};
 
-	const updatePost = async (postId: string, patch: Partial<Pick<Post, "title" | "content" | "category">>) => {
+	const updatePost = async (
+		postId: Id,
+		patch: Partial<Pick<Post, "title" | "content" | "category">>,
+	) => {
 		if (!authed) return goLogin();
 
 		try {
@@ -225,15 +241,22 @@ export function CommunityPage() {
 				category: patch.category,
 			});
 
-			const fixed: Post = { ...updated, comments: updated.comments ?? [], attachments: updated.attachments ?? [] };
-			setSelectedPost((prev) => (prev?.id === postId ? fixed : prev));
-			setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, ...fixed } : p)));
+			const fixed: Post = {
+				...updated,
+				comments: updated.comments ?? [],
+				attachments: updated.attachments ?? [],
+			};
+
+			setSelectedPost((prev) => (prev && same_id(prev.id as any, postId) ? fixed : prev));
+			setPosts((prev) =>
+				prev.map((p) => (same_id(p.id as any, postId) ? { ...p, ...fixed } : p)),
+			);
 		} catch (e: any) {
 			alert(e?.message || "게시글 수정에 실패했습니다.");
 		}
 	};
 
-	const deletePost = async (postId: number) => {
+	const deletePost = async (postId: Id) => {
 		if (!authed) return goLogin();
 
 		try {
@@ -245,10 +268,14 @@ export function CommunityPage() {
 		}
 	};
 
-	const togglePostLike = async (postId: string) => {
+	const togglePostLike = async (postId: Id) => {
 		if (!authed) return goLogin();
 
-		const target = selectedPost?.id === postId ? selectedPost : posts.find((p) => p.id === postId);
+		const target =
+			selectedPost && same_id(selectedPost.id as any, postId)
+				? selectedPost
+				: posts.find((p) => same_id(p.id as any, postId));
+
 		const liked = !!target?.likedByMe;
 
 		try {
@@ -259,14 +286,14 @@ export function CommunityPage() {
 
 			setPosts((prev) =>
 				prev.map((p) =>
-					p.id === postId
+					same_id(p.id as any, postId)
 						? { ...p, likedByMe: !liked, likes: Math.max(0, p.likes + delta) }
 						: p,
 				),
 			);
 
 			setSelectedPost((prev) => {
-				if (!prev || prev.id !== postId) return prev;
+				if (!prev || !same_id(prev.id as any, postId)) return prev;
 				return { ...prev, likedByMe: !liked, likes: Math.max(0, prev.likes + delta) };
 			});
 		} catch (e: any) {
@@ -274,21 +301,21 @@ export function CommunityPage() {
 		}
 	};
 
-	const deleteComment = async (postId: number, commentId: string) => {
+	const deleteComment = async (postId: Id, commentId: Id) => {
 		if (!authed) return goLogin();
 
 		try {
 			await deleteCommunityComment(postId, commentId);
 
 			setSelectedPost((prev) => {
-				if (!prev || prev.id !== postId) return prev;
-				const next = (prev.comments ?? []).filter((c) => c.id !== commentId);
+				if (!prev || !same_id(prev.id as any, postId)) return prev;
+				const next = (prev.comments ?? []).filter((c: any) => !same_id(c.id, commentId));
 				return { ...prev, comments: next, commentCount: next.length };
 			});
 
 			setPosts((prev) =>
 				prev.map((p) =>
-					p.id === postId
+					same_id(p.id as any, postId)
 						? { ...p, commentCount: Math.max(0, (p.commentCount ?? 0) - 1) }
 						: p,
 				),
@@ -331,17 +358,27 @@ export function CommunityPage() {
 									<TabsTrigger value="all" className="flex-none px-3 rounded-md text-[13px]">
 										전체 <span className="ml-1 text-xs opacity-70">{counts.all}</span>
 									</TabsTrigger>
-									<TabsTrigger value="question" className="flex-none px-3 rounded-md text-[13px]">
+									<TabsTrigger
+										value="question"
+										className="flex-none px-3 rounded-md text-[13px]"
+									>
 										질문 <span className="ml-1 text-xs opacity-70">{counts.question}</span>
 									</TabsTrigger>
 									<TabsTrigger value="info" className="flex-none px-3 rounded-md text-[13px]">
 										정보 <span className="ml-1 text-xs opacity-70">{counts.info}</span>
 									</TabsTrigger>
-									<TabsTrigger value="review" className="flex-none px-3 rounded-md text-[13px]">
+									<TabsTrigger
+										value="review"
+										className="flex-none px-3 rounded-md text-[13px]"
+									>
 										후기 <span className="ml-1 text-xs opacity-70">{counts.review}</span>
 									</TabsTrigger>
-									<TabsTrigger value="discussion" className="flex-none px-3 rounded-md text-[13px]">
-										토론 <span className="ml-1 text-xs opacity-70">{counts.discussion}</span>
+									<TabsTrigger
+										value="discussion"
+										className="flex-none px-3 rounded-md text-[13px]"
+									>
+										토론{" "}
+										<span className="ml-1 text-xs opacity-70">{counts.discussion}</span>
 									</TabsTrigger>
 								</TabsList>
 
@@ -351,7 +388,10 @@ export function CommunityPage() {
 							</div>
 						</Tabs>
 
-						<form onSubmit={onSubmitSearch} className="flex flex-col md:flex-row md:items-center gap-2">
+						<form
+							onSubmit={onSubmitSearch}
+							className="flex flex-col md:flex-row md:items-center gap-2"
+						>
 							<div className="relative flex-1">
 								<SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
 								<Input
@@ -363,7 +403,9 @@ export function CommunityPage() {
 							</div>
 
 							<div className="flex items-center gap-2">
-								<Button type="submit" className="whitespace-nowrap">검색하기</Button>
+								<Button type="submit" className="whitespace-nowrap">
+									검색하기
+								</Button>
 
 								<Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
 									<SelectTrigger className="w-[140px]">
@@ -383,7 +425,9 @@ export function CommunityPage() {
 							<Alert className="bg-slate-50">
 								<Info />
 								<AlertTitle>게스트 모드</AlertTitle>
-								<AlertDescription>글쓰기/좋아요/댓글은 로그인 후 이용할 수 있습니다.</AlertDescription>
+								<AlertDescription>
+									글쓰기/좋아요/댓글은 로그인 후 이용할 수 있습니다.
+								</AlertDescription>
 							</Alert>
 						)}
 
@@ -396,16 +440,15 @@ export function CommunityPage() {
 				</Card>
 			)}
 
-			{viewMode === "list" && (
-				listLoading ? (
+			{viewMode === "list" &&
+				(listLoading ? (
 					<div className="text-sm text-gray-500 py-8 text-center">목록을 불러오는 중...</div>
 				) : (
 					<CommunityBoard posts={posts} onSelectPost={openDetail} />
-				)
-			)}
+				))}
 
-			{viewMode === "detail" && (
-				detailLoading ? (
+			{viewMode === "detail" &&
+				(detailLoading ? (
 					<div className="text-sm text-gray-500 py-8 text-center">게시글을 불러오는 중...</div>
 				) : detailError ? (
 					<div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -425,8 +468,7 @@ export function CommunityPage() {
 						onRequireAuth={goLogin}
 						currentUserId={currentUserId}
 					/>
-				) : null
-			)}
+				) : null)}
 
 			{viewMode === "new" && (
 				<NewPostForm onSubmit={addPost} onCancel={() => setViewMode("list")} />
