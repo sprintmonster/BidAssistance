@@ -12,8 +12,8 @@ function build_headers(options: RequestInit) {
 		...((options.headers as Record<string, string>) ?? {}),
 	};
 
-	const token = localStorage.getItem("accessToken");
-	if (token && !headers.Authorization) headers.Authorization = `Bearer ${token}`;
+	// const token = localStorage.getItem("accessToken");
+	// if (token && !headers.Authorization) headers.Authorization = `Bearer ${token}`;
 
 	if (!(options.body && is_form_data(options.body))) {
 		if (!headers["Content-Type"]) headers["Content-Type"] = "application/json";
