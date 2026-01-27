@@ -71,12 +71,13 @@ export function likeCommunityPost(postId: number) {
         method: "POST",
     }).then(unwrap);
 }
- 
+
 export function unlikeCommunityPost(postId: number) {
     return api<ApiResponse<{ liked: false }>>(`/board/posts/${postId}/dislike`, {
-        method: "DELETE",
+        method: "POST", // DELETE가 아니라 POST
     }).then(unwrap);
 }
+
  
 export function createCommunityComment(postId: number, content: string) {
     return api<ApiResponse<Comment>>(`/community/posts/${postId}/comments`, {

@@ -10,8 +10,8 @@ function build_headers(options: RequestInit) {
 		...((options.headers as Record<string, string>) ?? {}),
 	};
 
-	const token = localStorage.getItem("accessToken");
-	if (token && !headers.Authorization) headers.Authorization = `Bearer ${token}`;
+	// const token = localStorage.getItem("accessToken");
+	// if (token && !headers.Authorization) headers.Authorization = `Bearer ${token}`;
 
 	if (!(options.body && is_form_data(options.body))) {
 		if (!headers["Content-Type"]) headers["Content-Type"] = "application/json";
@@ -34,6 +34,11 @@ function clear_auth_storage() {
 	localStorage.removeItem("accessToken");
 	localStorage.removeItem("refreshToken");
 }
+function to_post_id(id: string | number): number {
+    const n = typeof id === "number" ? id : Number(id);
+    if (!Number.isFinite(n)) throw new Error("잘못된 post id");
+    return n;
+}
 
 export async function api<T>(url: string, options: RequestInit = {}): Promise<T> {
 	const headers = build_headers(options);
@@ -45,7 +50,7 @@ export async function api<T>(url: string, options: RequestInit = {}): Promise<T>
 	});
 
 	if (res.status === 401) {
-		clear_auth_storage();
+		// clear_auth_storage();
 		throw new Error("인증이 필요합니다.");
 	}
 
