@@ -147,7 +147,7 @@ export function ResetPasswordPage() {
 			};
 
 			const res = await fetch("/api/users/reset_password", {
-				method: "POST",
+				method: "GET",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(payload),
 			});
