@@ -507,3 +507,96 @@ export function BidDiscovery({
 												{/* ✅ 액션: 우측 패딩 + 버튼 높이/라운드 통일 */}
 												<TableCell className="pr-6">
 													<div className="flex justify-end gap-2">
+														<Button
+															variant="outline"
+															size="sm"
+															className="h-9 rounded-xl"
+															onClick={(e) => {
+																e.stopPropagation();
+																navigate(`/bids/${b.bidId}`);
+															}}
+														>
+															<Eye className="mr-2 size-4" />
+															상세
+														</Button>
+
+														<Button
+															size="sm"
+															disabled={addingId === b.bidId || !wishlistSynced}
+															className={cn("h-9 rounded-xl", alreadyAdded && "opacity-70")}
+															onClick={(e) => {
+																e.stopPropagation();
+
+																if (!wishlistSynced) {
+																	showToast("장바구니 상태를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.", "error");
+																	return;
+																}
+
+																if (alreadyAdded) {
+																	showToast("이미 장바구니에 담긴 공고입니다.", "success");
+																	return;
+																}
+
+																void addToCart(b.bidId);
+															}}
+														>
+															<Plus className="mr-2 size-4" />
+															{alreadyAdded ? "담김" : "담기"}
+														</Button>
+													</div>
+												</TableCell>
+											</TableRow>
+										);
+									})
+								)}
+							</TableBody>
+						</Table>
+					</div>
+
+					{totalPages > 1 && (
+						<div className="border-t py-3">
+							<Pagination>
+								<PaginationContent>
+									<PaginationItem>
+										<PaginationPrevious
+											href="#"
+											onClick={(e) => {
+												e.preventDefault();
+												setPage((p) => Math.max(1, p - 1));
+											}}
+										/>
+									</PaginationItem>
+
+									{paginationNumbers.map((n) => (
+										<PaginationItem key={n}>
+											<PaginationLink
+												href="#"
+												isActive={n === safePage}
+												onClick={(e) => {
+													e.preventDefault();
+													setPage(n);
+												}}
+											>
+												{n}
+											</PaginationLink>
+										</PaginationItem>
+									))}
+
+									<PaginationItem>
+										<PaginationNext
+											href="#"
+											onClick={(e) => {
+												e.preventDefault();
+												setPage((p) => Math.min(totalPages, p + 1));
+											}}
+										/>
+									</PaginationItem>
+								</PaginationContent>
+							</Pagination>
+						</div>
+					)}
+				</CardContent>
+			</Card>
+		</div>
+	);
+}
