@@ -12,11 +12,9 @@ import { Input } from "./ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 
-
-
 import { Info, Plus, Search as SearchIcon } from "lucide-react";
 import type {NewPostDraftForm} from "./NewPostForm";
-import type { Id, Post, PostCategory, SortKey } from "../types/community";
+import type { Post, PostCategory, SortKey } from "../types/community";
 import {
 	createCommunityComment,
 	createCommunityPost,
@@ -48,11 +46,6 @@ function is_authed_now() {
 function safe_user_id() {
 	return localStorage.getItem("userId") || "";
 }
-function to_num_id(id: Id): number {
-    const n = typeof id === "number" ? id : Number(id);
-    if (!Number.isFinite(n)) throw new Error(`Invalid id: ${String(id)}`);
-    return n;
-}
 
 export function CommunityPage() {
 	const navigate = useNavigate();
@@ -79,8 +72,7 @@ export function CommunityPage() {
 	const [detail_error, set_detail_error] = useState<string | null>(null);
 
 	const authed = is_authed_now();
-	// const current_user_id = useMemo(() => safe_user_id(), []);
-    const current_user_id = safe_user_id(); // useMemo 제거
+	const current_user_id = useMemo(() => safe_user_id(), []);
 
 	const go_login = () => navigate("/login", { state: { from: "/community" } });
 
@@ -163,7 +155,7 @@ export function CommunityPage() {
 	const open_detail = (post: Post) => {
 		set_view_mode("detail");
 		set_selected_post(null);
-        load_detail(to_num_id(post.id));
+		load_detail(post.id);
 	};
 
 	const back_to_list = () => {
@@ -202,7 +194,7 @@ export function CommunityPage() {
 			set_view_mode("detail");
 			set_selected_post(null);
 			await load_list();
-            await load_detail(to_num_id(created.id));
+			await load_detail(created.id);
 		} catch (e: any) {
 			alert(e?.message || "게시글 작성에 실패했습니다.");
 		}
@@ -215,14 +207,14 @@ export function CommunityPage() {
 			const created = await createCommunityComment(post_id, content);
 
 			set_selected_post((prev) => {
-                if (!prev || String(prev.id) !== String(post_id)) return prev;
+				if (!prev || prev.id !== post_id) return prev;
 				const next_comments = [...(prev.comments ?? []), created];
 				return { ...prev, comments: next_comments, commentCount: next_comments.length };
 			});
 
 			set_posts((prev) =>
 				prev.map((p) =>
-                    String(p.id) === String(post_id) ? { ...p, commentCount: (p.commentCount ?? 0) + 1 } : p,
+					p.id === post_id ? { ...p, commentCount: (p.commentCount ?? 0) + 1 } : p,
 				),
 			);
 		} catch (e: any) {
@@ -249,7 +241,7 @@ export function CommunityPage() {
 				attachments: updated.attachments ?? [],
 			};
 
-            set_selected_post((prev) => (prev && String(prev.id) === String(post_id) ? fixed : prev));
+			set_selected_post((prev) => (prev?.id === post_id ? fixed : prev));
 			set_posts((prev) => prev.map((p) => (p.id === post_id ? { ...p, ...fixed } : p)));
 		} catch (e: any) {
 			alert(e?.message || "게시글 수정에 실패했습니다.");
@@ -271,12 +263,9 @@ export function CommunityPage() {
 	const toggle_post_like = async (post_id: number) => {
 		if (!authed) return go_login();
 
-        const target =
-            selected_post && String(selected_post.id) === String(post_id)
-                ? selected_post
-                : posts.find((p) => String(p.id) === String(post_id));
-
-        const liked = !!target?.likedByMe;
+		const target =
+			selected_post?.id === post_id ? selected_post : posts.find((p) => p.id === post_id);
+		const liked = !!target?.likedByMe;
 
 		try {
 			// community.ts 기준: unlike는 DELETE /dislike

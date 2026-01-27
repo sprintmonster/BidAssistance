@@ -50,99 +50,142 @@ export function ResetPasswordPage() {
 		return Boolean(questionIndex !== null && formData.answer.trim());
 	}, [questionIndex, formData.answer]);
 
-    const handleIdentify = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setMessage(null);
-        if (!canIdentify) return;
+	const handleIdentify = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setMessage(null);
+		if (!canIdentify) return;
 
-        try {
-            setIsSubmitting(true);
+		try {
+			setIsSubmitting(true);
+
+			const payload = {
+				email: formData.email.trim(),
+				name: formData.name.trim(),
+				birth: formData.birthDate,
+			};
 
             type RecoveryQuestionRes = {
                 status: "success" | "error";
                 message?: string;
-                data?: { userId: string | number; questionIndex: number };
+                data?: { recoverySessionId: string; questionId: number };
             };
 
-            const qs = new URLSearchParams({
-                email: formData.email.trim(),
-                name: formData.name.trim(),
-                birth: formData.birthDate, // "YYYY-MM-DD"
-            }).toString();
-
-            const json = await api<RecoveryQuestionRes>(`/users/recovery_question?${qs}`, {
-                method: "GET",
-            });
+            let json: RecoveryQuestionRes;
+            try {
+                json = await api<RecoveryQuestionRes>("/users/recovery_question", {
+                    method: "POST",
+                    body: JSON.stringify(payload),
+                });
+            } catch (e) {
+                setMessage({ type: "error", text: e instanceof Error ? e.message : "요청에 실패했습니다." });
+                return;
+            }
 
             if (json.status === "error") {
                 setMessage({ type: "error", text: json.message ?? "요청에 실패했습니다." });
                 return;
             }
 
-            const uid = json?.data?.userId;
-            const qidx = json?.data?.questionIndex;
+			// const res = await fetch("/api/users/recovery_question", {
+			// 	method: "POST",
+			// 	headers: { "Content-Type": "application/json" },
+			// 	body: JSON.stringify(payload),
+			// });
+            //
+			// const json = await res.json().catch(() => null);
+            //
+			// if (!res.ok || json?.status === "error") {
+			// 	const msg =
+			// 		json?.message ??
+			// 		(res.status === 401
+			// 			? "본인 확인에 실패했습니다."
+			// 			: res.status === 404
+			// 				? "가입된 계정을 찾을 수 없습니다."
+			// 				: "요청에 실패했습니다. 다시 시도해 주세요.");
+			// 	setMessage({ type: "error", text: msg });
+			// 	return;
+			// }
 
-            // qidx 검증 (0~3만 허용)
-            if (typeof qidx !== "number" || qidx < 0 || qidx >= SECURITY_QUESTIONS.length) {
-                setMessage({ type: "error", text: "질문 정보를 불러오지 못했어요." });
-                return;
-            }
+			const sid = json?.data?.recoverySessionId;
+			const qid = json?.data?.questionId;
 
-            //  recoverySessionId는 백엔드에 없으니 'userId'를 임시로 저장해둠(아래 reset에 쓰진 않음)
-            setRecoverySessionId(String(uid ?? ""));
-            setQuestionIndex(qidx);
-            setIdentifiedEmail(formData.email.trim());
-            setStep("challenge");
+			if (typeof sid !== "string" || typeof qid !== "number") {
+				setMessage({ type: "error", text: "서버 응답 형식이 올바르지 않아요." });
+				return;
+			}
 
-            setMessage({ type: "success", text: "확인 완료. 가입 시 설정한 질문에 답변해 주세요." });
-        } catch (e) {
-            setMessage({ type: "error", text: e instanceof Error ? e.message : "요청에 실패했습니다." });
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+			setRecoverySessionId(sid);
+			setQuestionIndex(qid);
+			setIdentifiedEmail(formData.email.trim()); // 화면 표시용
+			setStep("challenge");
 
+			setMessage({ type: "success", text: "확인 완료. 가입 시 설정한 질문에 답변해 주세요." });
+		} catch {
+			setMessage({ type: "error", text: "서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요." });
+		} finally {
+			setIsSubmitting(false);
+		}
+	};
 
-    const handleSendTempPassword = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setMessage(null);
-        if (!canChallenge) return;
+	const handleSendTempPassword = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setMessage(null);
+		if (!canChallenge) return;
 
-        try {
-            setIsSubmitting(true);
+		if (!recoverySessionId) {
+			setMessage({ type: "error", text: "세션 정보가 없어요. 다시 시도해 주세요." });
+			setStep("identify");
+			return;
+		}
 
-            const payload = {
-                email: formData.email.trim(),
-                name: formData.name.trim(),
-                birth: formData.birthDate,
-                answer: formData.answer.trim(),
-            };
+		try {
+			setIsSubmitting(true);
 
-            const json = await api<{
-                status: "success" | "error";
-                message?: string;
-                data?: { message?: string };
-            }>("/users/reset_password", {
-                method: "POST",
-                body: JSON.stringify(payload),
-            });
+			const payload = {
+				recoverySessionId,
+				answer: formData.answer.trim(),
+			};
 
-            if (json.status === "error") {
-                setMessage({ type: "error", text: json.message ?? "요청에 실패했습니다." });
-                return;
-            }
+			const res = await fetch("/api/users/reset_password", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(payload),
+			});
 
-            const serverMsg = json?.data?.message ?? "임시 비밀번호가 발급되었습니다. 이메일을 확인해 주세요.";
-            setMessage({ type: "success", text: serverMsg });
-        } catch (e) {
-            setMessage({ type: "error", text: e instanceof Error ? e.message : "요청에 실패했습니다." });
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+			const json = await res.json().catch(() => null);
 
+			if (!res.ok || json?.status === "error") {
+				const msg =
+					json?.message ??
+					(res.status === 401
+						? "답변이 일치하지 않습니다."
+						: res.status === 410
+							? "요청이 만료되었습니다. 다시 시도해 주세요."
+							: res.status === 429
+								? "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."
+								: "요청에 실패했습니다. 다시 시도해 주세요.");
+				setMessage({ type: "error", text: msg });
 
-    return (
+				if (res.status === 410) {
+					setStep("identify");
+					setRecoverySessionId("");
+					setQuestionIndex(null);
+					setFormData((prev) => ({ ...prev, answer: "" }));
+				}
+				return;
+			}
+
+			const serverMsg =
+				json?.data?.message ?? "임시 비밀번호가 발급되었습니다. 이메일을 확인해 주세요.";
+			setMessage({ type: "success", text: serverMsg });
+		} catch {
+			setMessage({ type: "error", text: "서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요." });
+		} finally {
+			setIsSubmitting(false);
+		}
+	};
+
+	return (
 		<div className="min-h-screen flex items-center justify-center p-4 bg-slate-950 bg-[radial-gradient(1200px_500px_at_50%_-20%,rgba(59,130,246,0.18),transparent),radial-gradient(900px_420px_at_15%_110%,rgba(99,102,241,0.12),transparent)]">
 			<Card className="w-full max-w-[420px] rounded-2xl border-slate-200/60 shadow-xl">
 				<CardHeader className="space-y-2 pb-5">
