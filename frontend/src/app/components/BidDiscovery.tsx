@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Eye, FilterX, Plus, RefreshCw, Search } from "lucide-react";
 import { fetchWishlist, toggleWishlist } from "../api/wishlist";
 import { fetchBids } from "../api/bids";
-import { api } from "../api/client";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 
@@ -98,7 +97,7 @@ export function BidDiscovery({
 		const q = new URLSearchParams(location.search).get("q");
 		return (q || "").trim();
 	}, [location.search]);
-    const [wishlistSynced, setWishlistSynced] = useState(false);
+	const [wishlistSynced, setWishlistSynced] = useState(false);
 
 	const [bids, setBids] = useState<UiBid[]>([]);
 	const [keyword, setKeyword] = useState<string>(urlQuery);
@@ -111,27 +110,27 @@ export function BidDiscovery({
 	const [addingId, setAddingId] = useState<number | null>(null);
 	const [addedIds, setAddedIds] = useState<Set<number>>(() => new Set());
 
-    const navigate = useNavigate();
+	const navigate = useNavigate();
 
-    useEffect(() => {
+	useEffect(() => {
 		setKeyword(urlQuery);
 		setPage(1);
 	}, [urlQuery]);
 
 	const load = async () => {
-        console.log("load() start");
+		console.log("load() start");
 		try {
 			setGlobalLoading(true);
 			const res = await fetchBids();
-            console.log("after fetchBids()");
-            console.log("fetchBids res:", res);
-            const items = Array.isArray(res)
-                ? res
-                : Array.isArray((res as any)?.data)
-                    ? (res as any).data
-                    : Array.isArray((res as any)?.data?.items)
-                        ? (res as any).data.items
-                        : [];
+			console.log("after fetchBids()");
+			console.log("fetchBids res:", res);
+			const items = Array.isArray(res)
+				? res
+				: Array.isArray((res as any)?.data)
+					? (res as any).data
+					: Array.isArray((res as any)?.data?.items)
+						? (res as any).data.items
+						: [];
 
 			const mapped: UiBid[] = items
 				.map((it: any) => {
@@ -154,8 +153,8 @@ export function BidDiscovery({
 				.filter(Boolean) as UiBid[];
 
 			setBids(mapped);
-		} catch (e){
-            console.error("load() failed:", e);
+		} catch (e) {
+			console.error("load() failed:", e);
 			showToast("공고 목록을 불러오지 못했습니다.", "error");
 			setBids([]);
 		} finally {
@@ -168,33 +167,33 @@ export function BidDiscovery({
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-    useEffect(() => {
-        const syncAddedFromServer = async () => {
-            setWishlistSynced(false);
+	useEffect(() => {
+		const syncAddedFromServer = async () => {
+			setWishlistSynced(false);
 
-            const userIdStr = localStorage.getItem("userId");
-            const userId = Number(userIdStr);
+			const userIdStr = localStorage.getItem("userId");
+			const userId = Number(userIdStr);
 
-            if (!userIdStr || !Number.isFinite(userId)) {
-                setAddedIds(new Set());
-                setWishlistSynced(true);
-                return;
-            }
+			if (!userIdStr || !Number.isFinite(userId)) {
+				setAddedIds(new Set());
+				setWishlistSynced(true);
+				return;
+			}
 
-            try {
-                const items = await fetchWishlist(userId);
-                setAddedIds(new Set(items.map((it) => it.bidId)));
-            } catch {
-                setAddedIds(new Set());
-            } finally {
-                setWishlistSynced(true);
-            }
-        };
+			try {
+				const items = await fetchWishlist(userId);
+				setAddedIds(new Set(items.map((it) => it.bidId)));
+			} catch {
+				setAddedIds(new Set());
+			} finally {
+				setWishlistSynced(true);
+			}
+		};
 
-        void syncAddedFromServer();
-    }, []);
+		void syncAddedFromServer();
+	}, []);
 
-    const agencies = useMemo(() => {
+	const agencies = useMemo(() => {
 		const set = new Set<string>();
 		bids.forEach((b) => {
 			const a = (b.agency || "").trim();
@@ -252,46 +251,45 @@ export function BidDiscovery({
 		setPage(1);
 	};
 
-    const addToCart = async (bidId: number) => {
-        try {
-            const userIdStr = localStorage.getItem("userId");
-            const userId = Number(userIdStr);
+	const addToCart = async (bidId: number) => {
+		try {
+			const userIdStr = localStorage.getItem("userId");
+			const userId = Number(userIdStr);
 
-            if (!userIdStr || !Number.isFinite(userId)) {
-                showToast("로그인이 필요합니다. 다시 로그인 해주세요.", "error");
-                return;
-            }
+			if (!userIdStr || !Number.isFinite(userId)) {
+				showToast("로그인이 필요합니다. 다시 로그인 해주세요.", "error");
+				return;
+			}
 
-            setAddingId(bidId);
-            setGlobalLoading(true);
+			setAddingId(bidId);
+			setGlobalLoading(true);
 
-            const res = await toggleWishlist(userId, bidId);
+			const res = await toggleWishlist(userId, bidId);
 
-            if (res.status !== "success") {
-                showToast(res.message || "추가 실패", "error");
-                return;
-            }
+			if (res.status !== "success") {
+				showToast(res.message || "추가 실패", "error");
+				return;
+			}
 
-            setAddedIds((prev) => {
-                const next = new Set(prev);
-                next.add(bidId);
-                return next;
-            });
+			setAddedIds((prev) => {
+				const next = new Set(prev);
+				next.add(bidId);
+				return next;
+			});
 
-            const items = await fetchWishlist(userId);
-            setAddedIds(new Set(items.map((it) => it.bidId)));
+			const items = await fetchWishlist(userId);
+			setAddedIds(new Set(items.map((it) => it.bidId)));
 
-            showToast("장바구니에 추가됨", "success");
-        } catch (e) {
-            showToast("추가 실패", "error");
-        } finally {
-            setGlobalLoading(false);
-            setAddingId(null);
-        }
-    };
+			showToast("장바구니에 추가됨", "success");
+		} catch (e) {
+			showToast("추가 실패", "error");
+		} finally {
+			setGlobalLoading(false);
+			setAddingId(null);
+		}
+	};
 
-
-    const paginationNumbers = useMemo(() => {
+	const paginationNumbers = useMemo(() => {
 		const numbers: number[] = [];
 		const windowSize = 5;
 		const half = Math.floor(windowSize / 2);
@@ -301,29 +299,29 @@ export function BidDiscovery({
 		for (let i = start; i <= end; i += 1) numbers.push(i);
 		return numbers;
 	}, [safePage, totalPages]);
-    function formatDateTimeLines(dateStr: string) {
-        if (!dateStr) return { dateLine: "-", timeLine: "" };
 
-        const d = new Date(dateStr);
-        if (!Number.isFinite(d.getTime())) return { dateLine: "-", timeLine: "" };
+	function formatDateTimeLines(dateStr: string) {
+		if (!dateStr) return { dateLine: "-", timeLine: "" };
 
-        const dateLine = d.toLocaleDateString("ko-KR", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-        });
+		const d = new Date(dateStr);
+		if (!Number.isFinite(d.getTime())) return { dateLine: "-", timeLine: "" };
 
-        const timeLine = d.toLocaleTimeString("ko-KR", {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true, // "오전/오후" 나오게
-        });
+		const dateLine = d.toLocaleDateString("ko-KR", {
+			year: "numeric",
+			month: "2-digit",
+			day: "2-digit",
+		});
 
-        return { dateLine, timeLine };
-    }
+		const timeLine = d.toLocaleTimeString("ko-KR", {
+			hour: "2-digit",
+			minute: "2-digit",
+			hour12: true, // "오전/오후" 나오게
+		});
 
+		return { dateLine, timeLine };
+	}
 
-    return (
+	return (
 		<div className="space-y-4">
 			<Card>
 				<CardHeader className="space-y-1">
@@ -416,16 +414,23 @@ export function BidDiscovery({
 						</div>
 					</div>
 
-					<div className="rounded-lg border">
+					{/* ✅ Table wrapper에 배경/그림자 추가 + 헤더 배경 */}
+					<div className="rounded-lg border bg-white shadow-sm">
 						<Table>
-							<TableHeader>
-								<TableRow>
+							<TableHeader className="bg-slate-50/60">
+								<TableRow className="hover:bg-transparent">
 									<TableHead className="w-[120px] pl-6">마감</TableHead>
 									<TableHead>공고명</TableHead>
 									<TableHead className="w-[220px]">발주기관</TableHead>
-									<TableHead className="w-[160px] text-right">예산</TableHead>
-									<TableHead className="w-[140px]">상태</TableHead>
-									<TableHead className="w-[160px] text-right">액션</TableHead>
+
+									{/* ✅ 숫자 컬럼: 오른쪽 정렬 + 우측 패딩 */}
+									<TableHead className="w-[160px] pr-6 text-right">예산</TableHead>
+
+									{/* ✅ 상태: 중앙 정렬 */}
+									<TableHead className="w-[140px] text-center">상태</TableHead>
+
+									{/* ✅ 액션: 오른쪽 정렬 + 우측 패딩 */}
+									<TableHead className="w-[180px] pr-6 text-right">액션</TableHead>
 								</TableRow>
 							</TableHeader>
 
@@ -448,44 +453,37 @@ export function BidDiscovery({
 											<TableRow
 												key={`${b.bidId}-${b.realId}`}
 												className="cursor-pointer"
-                                                onClick={() => navigate(`/bids/${b.bidId}`)}
+												onClick={() => navigate(`/bids/${b.bidId}`)}
 											>
-                                                <TableCell className="whitespace-normal pl-6">
-                                                    <div className="flex flex-col">
-                                                         {/*<span className="text-sm font-medium">*/}
-                                                         {/*     {dday || formatDateTime(b.deadline)}*/}
-                                                         {/*   </span>*/}
+												<TableCell className="whitespace-normal pl-6">
+													<div className="flex flex-col">
+														{(() => {
+															const { dateLine, timeLine } = formatDateTimeLines(b.deadline);
 
-                                                        {(() => {
-                                                            const { dateLine, timeLine } = formatDateTimeLines(b.deadline);
+															return (
+																<div className="flex flex-col">
+																	<span className="text-sm font-medium">
+																		{dday || dateLine}
+																	</span>
 
-                                                            return (
-                                                                <div className="flex flex-col">
-                                                                      <span className="text-sm font-medium">
-                                                                        {dday || dateLine}
-                                                                      </span>
+																	{dday ? (
+																		<span className="text-xs text-muted-foreground">
+																			{dateLine} <br /> {timeLine}
+																		</span>
+																	) : (
+																		timeLine && (
+																			<span className="text-xs text-muted-foreground">
+																				{timeLine}
+																			</span>
+																		)
+																	)}
+																</div>
+															);
+														})()}
+													</div>
+												</TableCell>
 
-                                                                    {/* dday가 있으면 두 번째 줄에 날짜+시간을, 없으면 시간만 */}
-                                                                    {dday ? (
-                                                                        <span className="text-xs text-muted-foreground">
-                                                                                  {dateLine} <br /> {timeLine}
-                                                                                </span>
-                                                                    ) : (
-                                                                        timeLine && (
-                                                                            <span className="text-xs text-muted-foreground">
-                                                                                {timeLine}
-                                                                              </span>
-                                                                        )
-                                                                    )}
-                                                                </div>
-                                                            );
-                                                        })()}
-
-                                                    </div>
-                                                </TableCell>
-
-
-                                                <TableCell className="whitespace-normal">
+												<TableCell className="whitespace-normal">
 													<div className="line-clamp-2 font-medium">{b.title}</div>
 													<div className="text-xs text-muted-foreground">{b.realId}</div>
 												</TableCell>
@@ -494,159 +492,18 @@ export function BidDiscovery({
 													<div className="line-clamp-2">{b.agency}</div>
 												</TableCell>
 
-												<TableCell className="text-right"> {Number(b.budget).toLocaleString()}</TableCell>
-
-												<TableCell>
-													<Badge variant={statusVariant}>{statusLabel}</Badge>
+												{/* ✅ 숫자 가독성: tabular-nums + 우측 패딩 */}
+												<TableCell className="pr-6 text-right tabular-nums">
+													{Number(b.budget).toLocaleString()}
 												</TableCell>
 
-												<TableCell className="text-right">
+												{/* ✅ 상태: 중앙 정렬 + 뱃지 padding 통일 */}
+												<TableCell className="text-center">
+													<Badge variant={statusVariant} className="px-2.5">
+														{statusLabel}
+													</Badge>
+												</TableCell>
+
+												{/* ✅ 액션: 우측 패딩 + 버튼 높이/라운드 통일 */}
+												<TableCell className="pr-6">
 													<div className="flex justify-end gap-2">
-														<Button
-															variant="outline"
-															size="sm"
-															onClick={(e) => {
-																e.stopPropagation();
-                                                                navigate(`/bids/${b.bidId}`);
-															}}
-														>
-															<Eye className="mr-2 size-4" />
-															상세
-														</Button>
-
-                                                        <Button
-                                                            size="sm"
-                                                            disabled={addingId === b.bidId || !wishlistSynced}
-                                                            className={cn(alreadyAdded && "opacity-70")}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-
-                                                                if (!wishlistSynced) {
-                                                                    showToast("장바구니 상태를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.", "error");
-                                                                    return;
-                                                                }
-
-                                                                if (alreadyAdded) {
-                                                                    showToast("이미 장바구니에 담긴 공고입니다.", "success");
-                                                                    return;
-                                                                }
-
-                                                                void addToCart(b.bidId);
-                                                            }}
-                                                        >
-                                                            <Plus className="mr-2 size-4" />
-                                                            {alreadyAdded ? "담김" : "담기"}
-                                                        </Button>
-
-                                                    </div>
-												</TableCell>
-											</TableRow>
-										);
-									})
-								)}
-							</TableBody>
-						</Table>
-					</div>
-
-					{totalPages > 1 && (
-						<div className="border-t py-3">
-							<Pagination>
-								<PaginationContent>
-									<PaginationItem>
-										<PaginationPrevious
-											href="#"
-											onClick={(e) => {
-												e.preventDefault();
-												setPage((p) => Math.max(1, p - 1));
-											}}
-										/>
-									</PaginationItem>
-
-									{paginationNumbers.map((n) => (
-										<PaginationItem key={n}>
-											<PaginationLink
-												href="#"
-												isActive={n === safePage}
-												onClick={(e) => {
-													e.preventDefault();
-													setPage(n);
-												}}
-											>
-												{n}
-											</PaginationLink>
-										</PaginationItem>
-									))}
-
-									<PaginationItem>
-										<PaginationNext
-											href="#"
-											onClick={(e) => {
-												e.preventDefault();
-												setPage((p) => Math.min(totalPages, p + 1));
-											}}
-										/>
-									</PaginationItem>
-								</PaginationContent>
-							</Pagination>
-						</div>
-					)}
-				</CardContent>
-			</Card>
-
-			{/*<Dialog*/}
-			{/*	open={!!selected}*/}
-			{/*	onOpenChange={(open) => {*/}
-			{/*		if (!open) setSelected(null);*/}
-			{/*	}}*/}
-			{/*>*/}
-			{/*	<DialogContent className="sm:max-w-2xl">*/}
-			{/*		{selected && (*/}
-			{/*			<>*/}
-			{/*				<DialogHeader>*/}
-			{/*					<DialogTitle className="leading-snug">{selected.title}</DialogTitle>*/}
-			{/*					<DialogDescription>*/}
-			{/*						발주기관: {selected.agency} · 예산: {selected.budget} · 마감: {selected.deadline}*/}
-			{/*					</DialogDescription>*/}
-			{/*				</DialogHeader>*/}
-
-			{/*				<div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">*/}
-			{/*					<div className="rounded-lg border p-3">*/}
-			{/*						<div className="text-xs text-muted-foreground">마감</div>*/}
-			{/*						<div className="mt-1 flex items-center gap-2">*/}
-			{/*							<span className="text-sm font-medium">*/}
-			{/*								{formatDday(selected.deadline) || selected.deadline}*/}
-			{/*							</span>*/}
-			{/*							<Badge variant="secondary">공고</Badge>*/}
-			{/*						</div>*/}
-			{/*					</div>*/}
-
-			{/*					<div className="rounded-lg border p-3">*/}
-			{/*						<div className="text-xs text-muted-foreground">예산</div>*/}
-			{/*						<div className="mt-1 text-sm font-medium">{selected.budget}</div>*/}
-			{/*					</div>*/}
-
-			{/*					<div className="rounded-lg border p-3 sm:col-span-2">*/}
-			{/*						<div className="text-xs text-muted-foreground">기관</div>*/}
-			{/*						<div className="mt-1 text-sm font-medium">{selected.agency}</div>*/}
-			{/*					</div>*/}
-
-			{/*					<div className="sm:col-span-2 flex justify-end gap-2">*/}
-			{/*						<Button variant="outline" onClick={() => setSelected(null)}>*/}
-			{/*							닫기*/}
-			{/*						</Button>*/}
-			{/*						<Button*/}
-			{/*							disabled={addingId === selected.bidId || addedIds.has(selected.bidId)}*/}
-			{/*							onClick={() => void addToCart(selected.bidId)}*/}
-			{/*						>*/}
-			{/*							<Plus className="mr-2 size-4" />*/}
-			{/*							{addedIds.has(selected.bidId) ? "담김" : "트래킹에 담기"}*/}
-			{/*						</Button>*/}
-			{/*					</div>*/}
-			{/*				</div>*/}
-			{/*			</>*/}
-			{/*		)}*/}
-			{/*	</DialogContent>*/}
-			{/*</Dialog>*/}
-		</div>
-	);
-}
