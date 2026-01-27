@@ -676,7 +676,7 @@ export function BidSummary() {
                                         {bid.priceGuidance.competitors || "데이터 준비 중"}
                                     </p>
                                 </div>
-p
+
                                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                                     <p className="text-sm">
                                         <strong>💡 인사이트:</strong> 유사 규모·지역의 낙찰률 분포를 참고해 84.0% 전후의

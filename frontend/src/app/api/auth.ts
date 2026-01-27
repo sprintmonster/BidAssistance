@@ -48,7 +48,7 @@ export function login(email: string, password: string) {
 
 export async function checkLogin(): Promise<LoginSuccessData | null> {
 	try {
-		const res = await api<LoginApiResponse>("/checkLogin", { method: "GET" });
+		const res = await api<LoginApiResponse>("/users/checkLogin", { method: "GET" });
 		if (res.status === "success" && res.data) return res.data;
 		return null;
 	} catch {
