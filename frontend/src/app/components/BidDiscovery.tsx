@@ -424,13 +424,13 @@ export function BidDiscovery({
 									<TableHead className="w-[220px]">발주기관</TableHead>
 
 									{/* ✅ 숫자 컬럼: 오른쪽 정렬 + 우측 패딩 */}
-									<TableHead className="w-[160px] pr-6 text-right">예산</TableHead>
+									<TableHead className="w-[160px] pr-6 text-center">예산</TableHead>
 
 									{/* ✅ 상태: 중앙 정렬 */}
 									<TableHead className="w-[140px] text-center">상태</TableHead>
 
 									{/* ✅ 액션: 오른쪽 정렬 + 우측 패딩 */}
-									<TableHead className="w-[180px] pr-6 text-right">액션</TableHead>
+									<TableHead className="w-[180px] pr-6 text-center">액션</TableHead>
 								</TableRow>
 							</TableHeader>
 
