@@ -56,7 +56,8 @@ function format_krw_eok(raw: unknown): string {
 
 function pick_bid_id(b: Bid): number {
   if (typeof b.id === "number" && Number.isFinite(b.id)) return b.id;
-  if (typeof (b as any).bidId === "number" && Number.isFinite((b as any).bidId)) return (b as any).bidId;
+  if (typeof (b as any).bidId === "number" && Number.isFinite((b as any).bidId))
+    return (b as any).bidId;
   return 0;
 }
 
@@ -147,8 +148,12 @@ export function RecommendedBidsModal({
   const recommended = useMemo(() => {
     const items = [...bids];
     items.sort((a, b) => {
-      const ad = parse_date(String((a as any).endDate ?? ""))?.getTime() ?? Number.MAX_SAFE_INTEGER;
-      const bd = parse_date(String((b as any).endDate ?? ""))?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const ad =
+        parse_date(String((a as any).endDate ?? ""))?.getTime() ??
+        Number.MAX_SAFE_INTEGER;
+      const bd =
+        parse_date(String((b as any).endDate ?? ""))?.getTime() ??
+        Number.MAX_SAFE_INTEGER;
       return ad - bd;
     });
     return items.slice(0, 10);
@@ -191,17 +196,26 @@ export function RecommendedBidsModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(next) => (next ? onOpenChange(true) : on_close())}>
-      <DialogContent className="p-0 sm:max-w-3xl rounded-3xl overflow-hidden border-0 shadow-2xl">
+    <Dialog
+      open={open}
+      onOpenChange={(next) => (next ? onOpenChange(true) : on_close())}
+    >
+      <DialogContent
+        hideClose
+        overlayClassName="bg-black/40 backdrop-blur-sm"
+        className="p-0 sm:max-w-3xl rounded-3xl overflow-hidden border-0 shadow-2xl ring-1 ring-black/5"
+      >
         {/* Header */}
-        <div className="relative px-7 pt-7 pb-5 bg-[radial-gradient(1200px_400px_at_20%_-20%,rgba(59,130,246,0.18),transparent),radial-gradient(900px_380px_at_90%_0%,rgba(99,102,241,0.16),transparent)]">
+        <div className="relative px-7 pt-7 pb-5 border-b border-white/40 bg-[radial-gradient(1200px_400px_at_20%_-20%,rgba(59,130,246,0.18),transparent),radial-gradient(900px_380px_at_90%_0%,rgba(99,102,241,0.16),transparent)]">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-2xl bg-white/70 border flex items-center justify-center">
                   <Star className="w-5 h-5 text-slate-900" />
                 </div>
-                <div className="text-lg font-semibold text-slate-900">추천 공고</div>
+                <div className="text-lg font-semibold text-slate-900">
+                  추천 공고
+                </div>
               </div>
               <div className="mt-2 text-sm text-slate-600 flex items-center gap-2">
                 <Sparkles className="w-4 h-4" />
@@ -212,7 +226,7 @@ export function RecommendedBidsModal({
             <button
               type="button"
               onClick={on_close}
-              className="w-10 h-10 rounded-2xl bg-white/70 border hover:bg-white transition flex items-center justify-center"
+              className="w-10 h-10 rounded-2xl bg-white/60 backdrop-blur border-white/40 shadow-sm hover:bg-white/80 transition flex items-center justify-center"
               aria-label="닫기"
             >
               <X className="w-5 h-5 text-slate-700" />
@@ -227,7 +241,7 @@ export function RecommendedBidsModal({
         </div>
 
         {/* Body */}
-        <div className="px-7 py-6 bg-white">
+        <div className="px-7 py-6 bg-slate-50">
           <div className="max-h-[440px] overflow-y-auto pr-1">
             {loading ? (
               <div className="space-y-3">
@@ -252,7 +266,8 @@ export function RecommendedBidsModal({
                 {recommended.map((b) => {
                   const bidId = pick_bid_id(b);
                   const dleft = days_left(String((b as any).endDate ?? ""));
-                  const dText = dleft === null ? "-" : dleft <= 0 ? "마감" : `D-${dleft}`;
+                  const dText =
+                    dleft === null ? "-" : dleft <= 0 ? "마감" : `D-${dleft}`;
 
                   const badgeCls =
                     dleft !== null && dleft > 0
@@ -263,8 +278,13 @@ export function RecommendedBidsModal({
 
                   return (
                     <div
-                      key={String(bidId || (b as any).realId || (b as any).RealId || b.name)}
-                      className="group border rounded-2xl p-5 bg-white hover:border-slate-300 hover:shadow-sm transition"
+                      key={String(
+                        bidId ||
+                          (b as any).realId ||
+                          (b as any).RealId ||
+                          b.name,
+                      )}
+                      className="group border border-slate-200/80 rounded-2xl p-5 bg-white hover:border-slate-300 hover:shadow-sm hover:bg-white transition"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -277,10 +297,12 @@ export function RecommendedBidsModal({
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="px-2.5 py-1 rounded-full text-xs border bg-white">
+                          <span className="px-2.5 py-1 rounded-full text-xs border border-slate-200 bg-white/80">
                             {(b as any).region || "-"}
                           </span>
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${badgeCls}`}>
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-xs font-semibold ${badgeCls}`}
+                          >
                             {dText}
                           </span>
                         </div>
@@ -328,6 +350,7 @@ export function RecommendedBidsModal({
                 type="checkbox"
                 checked={dontShowToday}
                 onChange={(e) => setDontShowToday(e.target.checked)}
+                className="accent-slate-900"
               />
               오늘 다시 보지 않기
             </label>
