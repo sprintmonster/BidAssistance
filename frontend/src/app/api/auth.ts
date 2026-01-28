@@ -81,7 +81,7 @@ export function login(email: string, password: string) {
 export async function checkLogin(): Promise<LoginSuccessData | null> {
 	try {
 		const res = await api<CheckLoginApiResponse>(
-			"users/checkLogin",
+			"/users/checkLogin",
 			{ method: "GET" },
 			{ on401: "ignore" },
 		);
