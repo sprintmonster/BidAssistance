@@ -1,5 +1,13 @@
-const DOMAIN = import.meta.env.VITE_API_URL || "";
-const BASE_URL = `${DOMAIN}/api`;
+// const DOMAIN = import.meta.env.VITE_API_URL || "";
+// const BASE_URL = `${DOMAIN}/api`;
+
+const RAW = import.meta.env.VITE_API_URL || "";
+const DOMAIN = RAW.replace(/\/+$/g, ""); // trailing slash 제거
+
+// VITE_API_URL이 이미 /api를 포함하면 중복 방지
+const BASE_URL = DOMAIN
+    ? (DOMAIN.endsWith("/api") ? DOMAIN : `${DOMAIN}/api`)
+    : "/api";
 
 function is_form_data(body: unknown): body is FormData {
 	return typeof FormData !== "undefined" && body instanceof FormData;
@@ -45,7 +53,7 @@ export async function api<T>(url: string, options: RequestInit = {}): Promise<T>
 	});
 
 	if (res.status === 401) {
-		clear_auth_storage();
+		// clear_auth_storage();
 		throw new Error("인증이 필요합니다.");
 	}
 

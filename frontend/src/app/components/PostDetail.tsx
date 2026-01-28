@@ -12,6 +12,7 @@ import {
 
 import type { Post, PostCategory } from "../types/community";
 import { mask_name } from "../utils/masking";
+import {Badge} from "./ui/badge";
 
 interface PostDetailProps {
 	post: Post;
@@ -48,10 +49,43 @@ const category_colors: Record<PostCategory, string> = {
 
 function safe_local_name() {
 	try {
-		return localStorage.getItem("name") || "";
+		return localStorage.getItem("userName")|| "";
 	} catch {
 		return "";
 	}
+}
+function formatCreatedAt(input: unknown) {
+    if (!input) return "";
+
+    // 1) Date 객체면 그대로
+    if (input instanceof Date) {
+        return new Intl.DateTimeFormat("ko-KR", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+        }).format(input);
+    }
+
+    // 2) 문자열/숫자면 Date로 파싱 시도
+    const s = String(input).trim();
+
+    // "2026-01-28 15:03:00" 같은 형태도 파싱되게 공백을 'T'로 바꿔줌
+    const normalized = s.includes(" ") && !s.includes("T") ? s.replace(" ", "T") : s;
+
+    const d = new Date(normalized);
+    if (Number.isNaN(d.getTime())) return s; // 파싱 실패하면 원문 유지
+
+    return new Intl.DateTimeFormat("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+    }).format(d);
 }
 
 export function PostDetail({
@@ -71,7 +105,11 @@ export function PostDetail({
 	const attachments = useMemo(() => post.attachments ?? [], [post.attachments]);
 	const comment_count = post.commentCount ?? comments.length;
 
-	const author_name = (post as any).authorName ?? (post as any).author ?? "—";
+    const author_name =
+        (post as any).authorName ??
+        (post as any).userName ??
+        (post as any).author ??
+        "—";
 
 	const [comment_text, set_comment_text] = useState("");
 	const [is_editing, set_is_editing] = useState(false);
@@ -142,13 +180,17 @@ export function PostDetail({
 		onDeletePost(post.id);
 	};
 
-	const toggle_like = () => {
-		if (!canInteract) {
-			onRequireAuth?.();
-			return;
-		}
-		onToggleLike(post.id);
-	};
+    const toggle_like = () => {
+        if (!canInteract) { onRequireAuth?.(); return; }
+
+        const idNum = Number(post.id);
+        if (!Number.isFinite(idNum)) {
+            alert("게시글 ID가 없습니다. 새로고침 후 다시 시도해주세요.");
+            return;
+        }
+        onToggleLike(idNum);
+    };
+
 
 	const local_name = safe_local_name();
 
@@ -241,7 +283,7 @@ export function PostDetail({
 				<div className="flex items-center gap-4 text-sm text-gray-500 mb-6 pb-6 border-b border-gray-200">
 					<span className="font-medium text-gray-700">{mask_name(author_name)}</span>
 					<span>·</span>
-					<span>{post.createdAt}</span>
+                    <span>{formatCreatedAt(post.createdAt)}</span>
 					<span>·</span>
 					<div className="flex items-center gap-1">
 						<Eye className="w-4 h-4" />
@@ -363,18 +405,17 @@ export function PostDetail({
 
 				<div className="space-y-6">
 					{comments.map((comment: any) => {
-						const comment_author_name = comment.authorName ?? comment.author ?? "—";
-						const comment_author_id = comment.authorId as string | undefined;
+                        const comment_author_name = comment.authorName ?? comment.author ?? "—";
+                        const comment_author_id =
+                            comment.authorId != null ? String(comment.authorId) : undefined;
+                        const me = currentUserId != null ? String(currentUserId) : undefined;
 
-						const can_delete_this_comment =
-							!!canInteract &&
-							(!!canEdit ||
-								(!!comment_author_id &&
-									!!currentUserId &&
-									comment_author_id === currentUserId) ||
-								(!!local_name && comment_author_name === local_name));
+                        const can_delete_this_comment =
+                            !!canInteract &&
+                            (!!canEdit || (!!comment_author_id && !!me && comment_author_id === me));
 
-						return (
+
+                        return (
 							<div
 								key={comment.id}
 								className="border-b border-gray-100 pb-6 last:border-b-0 last:pb-0"
@@ -384,7 +425,7 @@ export function PostDetail({
 										<span className="font-medium text-gray-900">
 											{mask_name(comment_author_name)}
 										</span>
-										<span className="text-sm text-gray-500">{comment.createdAt}</span>
+                                        <span className="text-sm text-gray-500">{formatCreatedAt(comment.createdAt)}</span>
 									</div>
 
 									{can_delete_this_comment && (

@@ -1,9 +1,11 @@
 export type Id = string | number;
-
+export type PostId = number;
+export type CommentId = number;
+export type AttachmentId = number;
 export type PostCategory = "question" | "info" | "review" | "discussion";
 
 export interface Attachment {
-	id: Id;            // <- 변경
+	id: AttachmentId;            // <- 변경
 	name: string;
 	type: string;
 	url: string;
@@ -12,7 +14,7 @@ export interface Attachment {
 }
 
 export interface Comment {
-	id: Id;            // <- 변경
+	id:CommentId;            // <- 변경
 	authorId?: string;
 	authorName: string;
 	content: string;
@@ -22,7 +24,7 @@ export interface Comment {
 }
 
 export interface Post {
-	id: Id;            // <- 변경
+	id: PostId;            // <- 변경
 	title: string;
 
 	content?: string;

@@ -71,10 +71,27 @@ export function CommunityPage() {
 	const [detail_loading, set_detail_loading] = useState(false);
 	const [detail_error, set_detail_error] = useState<string | null>(null);
 
-	const authed = is_authed_now();
-	const current_user_id = useMemo(() => safe_user_id(), []);
+    const [authed, set_authed] = useState(() => is_authed_now());
+    const [current_user_id, set_current_user_id] = useState(() => safe_user_id());
 
-	const go_login = () => navigate("/login", { state: { from: "/community" } });
+    useEffect(() => {
+        const sync = () => {
+            set_authed(is_authed_now());
+            set_current_user_id(safe_user_id());
+        };
+        sync();
+
+        window.addEventListener("focus", sync);
+        document.addEventListener("visibilitychange", sync);
+
+        return () => {
+            window.removeEventListener("focus", sync);
+            document.removeEventListener("visibilitychange", sync);
+        };
+    }, []);
+
+
+    const go_login = () => navigate("/login", { state: { from: "/community" } });
 
 	const load_list = async (opts?: { q?: string; c?: CategoryFilter; s?: SortKey }) => {
 		set_list_loading(true);
@@ -99,19 +116,21 @@ export function CommunityPage() {
 			if (data.counts) {
 				set_counts({ ...data.counts, all: data.counts.all });
 			} else {
-				const base: Record<"all" | PostCategory, number> = {
-					all: data.items.length,
-					question: 0,
-					info: 0,
-					review: 0,
-					discussion: 0,
-				};
+                const base: Record<"all" | PostCategory, number> = {
+                    all: data.items.length,
+                    question: 0,
+                    info: 0,
+                    review: 0,
+                    discussion: 0,
+                };
 
-				data.items.forEach((p) => {
-					base[p.category] += 1;
-				});
-				set_counts(base);
-			}
+                data.items.forEach((p: Post) => {
+                    const key: PostCategory = p.category;
+                    base[key] += 1;
+                });
+
+                set_counts(base);
+            }
 		} catch (e: any) {
 			set_list_error(e?.message || "게시글 목록을 불러오지 못했습니다.");
 		} finally {
@@ -152,11 +171,18 @@ export function CommunityPage() {
 		load_list({ q: search_query });
 	};
 
-	const open_detail = (post: Post) => {
-		set_view_mode("detail");
-		set_selected_post(null);
-		load_detail(post.id);
-	};
+    const open_detail = (post: Post) => {
+        const idNum = Number(post.id);
+        if (!Number.isFinite(idNum) || idNum <= 0) {
+            alert(`게시글 ID가 올바르지 않습니다. (id=${String(post.id)})`);
+            return;
+        }
+        set_view_mode("detail");
+        set_selected_post(null);
+        load_detail(idNum);
+    };
+
+
 
 	const back_to_list = () => {
 		set_selected_post(null);
@@ -171,34 +197,37 @@ export function CommunityPage() {
 	const can_edit_selected = useMemo(() => {
 		if (!authed || !selected_post) return false;
 		if (!selected_post.authorId) return false;
-		return selected_post.authorId === current_user_id;
+        return String(selected_post.authorId) === String(current_user_id);
 	}, [authed, selected_post, current_user_id]);
 
-	const add_post = async (draft: NewPostDraftForm) => {
-		if (!authed) return go_login();
+    const add_post = async (draft: NewPostDraftForm) => {
+        if (!authed) return go_login();
 
-		try {
-			let attachment_ids: string[] | undefined;
-			if (draft.files.length > 0) {
-				const uploaded = await uploadCommunityAttachments(draft.files);
-				attachment_ids = uploaded.map((a) => String(a.id));
-			}
+        try {
+            let attachment_ids: string[] | undefined;
 
-			const created = await createCommunityPost({
-				title: draft.title,
-				content: draft.content,
-				category: draft.category,
-				attachmentIds: attachment_ids,
-			});
+            if (draft.files.length > 0) {
+                const uploaded = await uploadCommunityAttachments(draft.files);
+                attachment_ids = uploaded.map((a) => String(a.id));
+            }
 
-			set_view_mode("detail");
-			set_selected_post(null);
-			await load_list();
-			await load_detail(created.id);
-		} catch (e: any) {
-			alert(e?.message || "게시글 작성에 실패했습니다.");
-		}
-	};
+            const created = await createCommunityPost({
+                title: draft.title,
+                content: draft.content,
+                category: draft.category,
+                attachmentIds: attachment_ids,
+            });
+
+            set_view_mode("detail");
+            set_selected_post(null);
+
+            await load_list();
+            await load_detail(Number(created.id));
+        } catch (e: any) {
+            alert(e?.message || "게시글 작성에 실패했습니다.");
+        }
+    };
+
 
 	const add_comment = async (post_id: number, content: string) => {
 		if (!authed) return go_login();
@@ -206,13 +235,13 @@ export function CommunityPage() {
 		try {
 			const created = await createCommunityComment(post_id, content);
 
-			set_selected_post((prev) => {
-				if (!prev || prev.id !== post_id) return prev;
-				const next_comments = [...(prev.comments ?? []), created];
-				return { ...prev, comments: next_comments, commentCount: next_comments.length };
-			});
+            set_selected_post((prev) => {
+                if (!prev || Number(prev.id) !== post_id) return prev;
+                const next_comments = [...(prev.comments ?? []), created];
+                return { ...prev, comments: next_comments, commentCount: next_comments.length };
+            });
 
-			set_posts((prev) =>
+            set_posts((prev) =>
 				prev.map((p) =>
 					p.id === post_id ? { ...p, commentCount: (p.commentCount ?? 0) + 1 } : p,
 				),
@@ -295,15 +324,16 @@ export function CommunityPage() {
 		if (!authed) return go_login();
 
 		try {
-			await deleteCommunityComment(post_id, comment_id);
+			await deleteCommunityComment(comment_id);
 
-			set_selected_post((prev) => {
-				if (!prev || prev.id !== post_id) return prev;
-				const next = (prev.comments ?? []).filter((c) => String(c.id) !== comment_id);
-				return { ...prev, comments: next, commentCount: next.length };
-			});
+            set_selected_post((prev) => {
+                if (!prev || Number(prev.id) !== post_id) return prev;
+                const next = (prev.comments ?? []).filter((c) => String(c.id) !== comment_id);
+                return { ...prev, comments: next, commentCount: next.length };
+            });
 
-			set_posts((prev) =>
+
+            set_posts((prev) =>
 				prev.map((p) =>
 					p.id === post_id
 						? { ...p, commentCount: Math.max(0, (p.commentCount ?? 0) - 1) }

@@ -35,6 +35,39 @@ function CategoryBadge({ category }: { category: Post["category"] }) {
 		</Badge>
 	);
 }
+function formatCreatedAt(input: unknown) {
+    if (!input) return "";
+
+    // 1) Date 객체면 그대로
+    if (input instanceof Date) {
+        return new Intl.DateTimeFormat("ko-KR", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+        }).format(input);
+    }
+
+    // 2) 문자열/숫자면 Date로 파싱 시도
+    const s = String(input).trim();
+
+    // "2026-01-28 15:03:00" 같은 형태도 파싱되게 공백을 'T'로 바꿔줌
+    const normalized = s.includes(" ") && !s.includes("T") ? s.replace(" ", "T") : s;
+
+    const d = new Date(normalized);
+    if (Number.isNaN(d.getTime())) return s; // 파싱 실패하면 원문 유지
+
+    return new Intl.DateTimeFormat("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+    }).format(d);
+}
 
 export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 	return (
@@ -83,7 +116,9 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 										</TableCell>
 
 									<TableCell className="text-gray-700">{mask_name(post.authorName)}</TableCell>
-										<TableCell className="text-gray-500 tabular-nums">{post.createdAt}</TableCell>
+										<TableCell className="text-gray-500 tabular-nums">
+                                            {formatCreatedAt(post.createdAt)}
+                                        </TableCell>
 
 										<TableCell className="text-right text-gray-600 tabular-nums">
 											<span className="inline-flex items-center gap-1 justify-end">
@@ -139,7 +174,7 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 								<CategoryBadge category={post.category} />
 									<span className="text-xs text-gray-500">{mask_name(post.authorName)}</span>
 								<span className="text-xs text-gray-400">·</span>
-								<span className="text-xs text-gray-500">{post.createdAt}</span>
+								<span className="text-xs text-gray-500">{formatCreatedAt(post.createdAt)}</span>
 							</div>
 
 							<div className="font-semibold text-gray-900 mb-1">{post.title}</div>
