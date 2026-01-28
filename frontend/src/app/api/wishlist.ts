@@ -1,7 +1,7 @@
 import { api } from "./client";
 import type { WishlistItem } from "../types/wishlist";
 import type { BidStage } from "../types/bid";
-import { isBidStage } from "../types/bid";
+import { bid_stage_from_code, bid_stage_to_code } from "../types/bid";
 
 type ApiBase<T> = {
 	status: "success" | "error";
@@ -20,7 +20,6 @@ function pick_list(res: any): any[] {
 }
 
 function pick_bid(source: AnyObj): AnyObj {
-	// 서버가 Wishlist DTO에서 bid를 nested로 줄 수 있는 케이스 대응
 	return (
 		source?.bid ??
 		source?.bidDto ??
@@ -38,13 +37,12 @@ function to_string(v: any): string {
 }
 
 function parse_stage(v: any): BidStage {
-	if (typeof v === "string" && isBidStage(v)) return v;
-	return "INTEREST";
+	return bid_stage_from_code(v);
 }
 
 function parse_wishlist_item(userId: number, raw: AnyObj): WishlistItem {
-	// 1) Wishlist 레코드 형태
-	const hasWishlistShape = raw && (raw.bidId !== undefined || raw.userId !== undefined || raw.stage !== undefined);
+	const hasWishlistShape =
+		raw && (raw.bidId !== undefined || raw.userId !== undefined || raw.stage !== undefined);
 
 	const bid = pick_bid(raw);
 
@@ -111,35 +109,61 @@ type UpdateWishlistResponse = {
 	data?: any;
 };
 
-export async function updateWishlist(
-	params: {
-		userId: number;
-		bidId: number;
-		wishlistId?: number;
-		stage?: BidStage;
-		memo?: string;
-	},
+async function patch_stage(userId: number, bidId: number, stage: BidStage): Promise<UpdateWishlistResponse> {
+	const code = bid_stage_to_code(stage);
+	return (await api(`/wishlist/stage/${userId}/${bidId}?stage=${code}`, {
+		method: "PATCH",
+	})) as UpdateWishlistResponse;
+}
+
+async function patch_memo_fallback(
+	userId: number,
+	bidId: number,
+	wishlistId: number | undefined,
+	memo: string,
 ): Promise<UpdateWishlistResponse> {
-	const body: Record<string, any> = {};
-	if (params.stage) body.stage = params.stage;
-	if (params.memo !== undefined) body.memo = params.memo;
+	const body: Record<string, any> = { memo };
 
 	try {
-		return (await api(`/wishlist?userId=${params.userId}&bidId=${params.bidId}`, {
+		return (await api(`/wishlist?userId=${userId}&bidId=${bidId}`, {
 			method: "PATCH",
 			body: JSON.stringify(body),
 		})) as UpdateWishlistResponse;
 	} catch {
-		// fallthrough
 	}
 
-	if (params.wishlistId && params.wishlistId > 0) {
-		return (await api(`/wishlist/${params.wishlistId}`, {
+	if (wishlistId && wishlistId > 0) {
+		return (await api(`/wishlist/${wishlistId}`, {
 			method: "PATCH",
 			body: JSON.stringify(body),
 		})) as UpdateWishlistResponse;
 	}
 
-	// 둘 다 실패
-	throw new Error("위시리스트 업데이트 API 호출에 실패했습니다. (엔드포인트 확인 필요)");
+	throw new Error("위시리스트 메모 업데이트 API 호출에 실패했습니다. (엔드포인트 확인 필요)");
+}
+
+export async function updateWishlist(params: {
+	userId: number;
+	bidId: number;
+	wishlistId?: number;
+	stage?: BidStage;
+	memo?: string;
+}): Promise<UpdateWishlistResponse> {
+	const hasStage = params.stage !== undefined;
+	const hasMemo = params.memo !== undefined;
+
+	if (hasStage && !hasMemo) {
+		return await patch_stage(params.userId, params.bidId, params.stage as BidStage);
+	}
+
+	if (!hasStage && hasMemo) {
+		return await patch_memo_fallback(params.userId, params.bidId, params.wishlistId, String(params.memo));
+	}
+
+	if (hasStage && hasMemo) {
+		await patch_stage(params.userId, params.bidId, params.stage as BidStage);
+		return await patch_memo_fallback(params.userId, params.bidId, params.wishlistId, String(params.memo));
+	}
+
+	throw new Error("업데이트할 값이 없습니다.");
 }
