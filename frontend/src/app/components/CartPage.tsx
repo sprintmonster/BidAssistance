@@ -15,58 +15,37 @@ function parse_time(v: string): number {
 	if (Number.isFinite(t)) return t;
 	return 0;
 }
+
 function formatAmount(value: unknown): string {
-    if (value == null || value === "") return "-";
-
-    // "123,000" 같은 문자열도 처리
-    const n =
-        typeof value === "number"
-            ? value
-            : Number(String(value).replace(/[^\d.-]/g, ""));
-
-    if (!Number.isFinite(n)) return "-";
-    return n.toLocaleString("ko-KR");
+	if (value == null || value === "") return "-";
+	const n =
+		typeof value === "number"
+			? value
+			: Number(String(value).replace(/[^\d.-]/g, ""));
+	if (!Number.isFinite(n)) return "-";
+	return n.toLocaleString("ko-KR");
 }
 
-function formatDateTimeLines(dateStr: string) {
-    if (!dateStr) return { dateLine: "-", timeLine: "" };
-
-    const d = new Date(dateStr);
-    if (!Number.isFinite(d.getTime())) return { dateLine: "-", timeLine: "" };
-
-    const dateLine = d.toLocaleDateString("ko-KR", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-    });
-
-    const timeLine = d.toLocaleTimeString("ko-KR", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true, // 오전/오후
-    });
-
-    return { dateLine, timeLine };
-}
 function formatDateTimeOneLine(dateStr: string) {
-    if (!dateStr) return "-";
+	if (!dateStr) return "-";
+	const d = new Date(dateStr);
+	if (!Number.isFinite(d.getTime())) return "-";
 
-    const d = new Date(dateStr);
-    if (!Number.isFinite(d.getTime())) return "-";
+	const date = d
+		.toLocaleDateString("ko-KR", {
+			year: "numeric",
+			month: "2-digit",
+			day: "2-digit",
+		})
+		.replace(/\.\s*/g, ".");
 
-    const date = d.toLocaleDateString("ko-KR", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-    }).replace(/\.\s*/g, ".");
+	const time = d.toLocaleTimeString("ko-KR", {
+		hour: "2-digit",
+		minute: "2-digit",
+		hour12: false,
+	});
 
-    const time = d.toLocaleTimeString("ko-KR", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false, // 24시간제 → 오전/오후 제거
-    });
-
-    return `${date} ${time}`;
+	return `${date} ${time}`;
 }
 
 function stage_label(stage: BidStage): string {
@@ -80,6 +59,22 @@ function get_user_id(): number | null {
 	const n = Number(raw);
 	if (!Number.isFinite(n)) return null;
 	return n;
+}
+
+function days_until(dateStr: string): number | null {
+	if (!dateStr) return null;
+	const end = new Date(dateStr);
+	if (!Number.isFinite(end.getTime())) return null;
+	const now = new Date();
+	const diff = end.getTime() - now.getTime();
+	return Math.ceil(diff / 86400000);
+}
+
+function dday_label(daysLeft: number): string | null {
+	if (!Number.isFinite(daysLeft)) return null;
+	if (daysLeft < 0) return null;
+	if (daysLeft === 0) return "D-DAY";
+	return `D-${daysLeft}`;
 }
 
 export function CartPage({
@@ -133,7 +128,8 @@ export function CartPage({
 		}
 
 		items.sort((a, b) => {
-			if (sortKey === "TITLE_ASC") return String(a.title).localeCompare(String(b.title));
+			if (sortKey === "TITLE_ASC")
+				return String(a.title).localeCompare(String(b.title));
 			const ta = parse_time(String(a.bidEnd));
 			const tb = parse_time(String(b.bidEnd));
 			if (sortKey === "DEADLINE_DESC") return tb - ta;
@@ -177,8 +173,9 @@ export function CartPage({
 				stage,
 			});
 
-			// 낙/탈/제출/결정 등 timestamp는 보통 백엔드가 처리하므로, 우선 stage만 프론트 반영
-			setWishlist((prev) => prev.map((it) => (it.bidId === item.bidId ? { ...it, stage } : it)));
+			setWishlist((prev) =>
+				prev.map((it) => (it.bidId === item.bidId ? { ...it, stage } : it)),
+			);
 			showToast(res.message || "단계가 변경되었습니다.", "success");
 		} catch (e: any) {
 			showToast(e?.message || "단계 변경 실패", "error");
@@ -188,139 +185,191 @@ export function CartPage({
 	};
 
 	return (
-		<div className="space-y-5">
-			<div>
-				<h2 className="text-2xl font-bold">장바구니</h2>
-				<div className="text-sm text-slate-500">장바구니에 담은 공고를 관리하세요</div>
-			</div>
+		<div className="w-full">
+			<div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 space-y-5">
+				<div>
+					<h2 className="text-2xl font-bold">장바구니</h2>
+					<div className="text-sm text-slate-500">
+						장바구니에 담은 공고를 관리하세요
+					</div>
+				</div>
 
-			{/* 파이프라인 요약 */}
-			<div className="bg-white border rounded-2xl p-4">
-				<div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-					{BID_STAGES.map((st) => {
-						const label = stage_label(st);
-						const count = stageCounts[st] ?? 0;
-						const active = activeStage === st;
-						return (
+				<div className="bg-white border rounded-2xl p-4 sm:p-5">
+					<div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+						{BID_STAGES.map((st) => {
+							const label = stage_label(st);
+							const count = stageCounts[st] ?? 0;
+							const active = activeStage === st;
+							return (
+								<button
+									key={st}
+									type="button"
+									onClick={() => setActiveStage(active ? "ALL" : st)}
+									className={[
+										"rounded-xl px-3 py-2 border text-left hover:bg-slate-50 transition-colors",
+										active
+											? "border-slate-900 bg-slate-50"
+											: "border-slate-200 bg-white",
+									].join(" ")}
+								>
+									<div className="text-xs text-slate-500">{label}</div>
+									<div className="text-lg font-semibold text-slate-900">
+										{count}건
+									</div>
+								</button>
+							);
+						})}
+					</div>
+
+					{activeStage !== "ALL" && (
+						<div className="mt-3 text-sm text-slate-600 flex items-center gap-2">
+							<span>
+								필터 적용됨:{" "}
+								<span className="font-semibold">{stage_label(activeStage)}</span>
+							</span>
 							<button
-								key={st}
 								type="button"
-								onClick={() => setActiveStage(active ? "ALL" : st)}
-								className={[
-									"rounded-xl px-3 py-2 border text-left hover:bg-slate-50",
-									active ? "border-slate-900 bg-slate-50" : "border-slate-200",
-								].join(" ")}
+								onClick={() => setActiveStage("ALL")}
+								className="text-blue-600 hover:underline"
 							>
-								<div className="text-xs text-slate-500">{label}</div>
-								<div className="text-lg font-semibold text-slate-900">{count}건</div>
+								해제
 							</button>
-						);
-					})}
-				</div>
-				{activeStage !== "ALL" && (
-					<div className="mt-3 text-sm text-slate-600">
-						필터 적용됨: <span className="font-semibold">{stage_label(activeStage)}</span>
-						<button
-							type="button"
-							onClick={() => setActiveStage("ALL")}
-							className="ml-2 text-blue-600 hover:underline"
-						>
-							해제
-						</button>
-					</div>
-				)}
-			</div>
-
-			{/* 목록 */}
-			<div className="bg-white border rounded-2xl overflow-hidden">
-				<div className="flex items-center justify-between px-4 py-3 border-b">
-					<div className="font-semibold text-slate-900">장바구니 공고 목록</div>
-					<select
-						className="h-9 rounded-lg border bg-white px-3 text-sm"
-						value={sortKey}
-						onChange={(e) => setSortKey(e.target.value as SortKey)}
-					>
-						<option value="DEADLINE_ASC">마감 빠른순</option>
-						<option value="DEADLINE_DESC">마감 늦은순</option>
-						<option value="TITLE_ASC">제목순</option>
-					</select>
+						</div>
+					)}
 				</div>
 
-				{wishlist.length === 0 ? (
-					<div className="p-4 text-slate-500">찜한 공고가 없습니다.</div>
-				) : visibleItems.length === 0 ? (
-					<div className="p-4 text-slate-500">해당 단계에 공고가 없습니다.</div>
-				) : (
-					<div className="divide-y">
-						{visibleItems.map((w) => (
-							<div
-								key={`${w.id}:${w.bidId}`}
-								className="px-4 py-4 flex items-start justify-between gap-4 hover:bg-slate-50 cursor-pointer"
-								onClick={() => navigate(`/bids/${w.bidId}`)}
-								role="button"
-								tabIndex={0}
+				<div className="bg-white border rounded-2xl overflow-hidden">
+					<div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b">
+						<div className="font-semibold text-slate-900">장바구니 공고 목록</div>
+
+						<div className="flex items-center gap-2">
+							<span className="hidden sm:inline text-sm text-slate-500">
+								정렬
+							</span>
+							<select
+								className="h-9 rounded-lg border bg-white px-3 text-sm shadow-sm"
+								value={sortKey}
+								onChange={(e) => setSortKey(e.target.value as SortKey)}
 							>
-								<div className="min-w-0">
-									<div className="font-semibold text-slate-900 truncate">{w.title}</div>
-                                    <div className="mt-1 text-sm text-slate-500">
-                                        {(() => {
-                                            const amountText = w.baseAmount ? `${formatAmount(w.baseAmount)}원` : "";
-                                            const { dateLine, timeLine } = w.bidEnd ? formatDateTimeLines(String(w.bidEnd)) : { dateLine: "", timeLine: "" };
-
-                                            return (
-                                                <>
-                                                    <span>{w.agency}</span>
-
-                                                    {w.baseAmount ? (
-                                                        <>
-                                                            <span>{` · `}</span>
-                                                            <span>{amountText}</span>
-                                                        </>
-                                                    ) : null}
-
-                                                    {w.bidEnd ? ` · 마감 ${formatDateTimeOneLine(String(w.bidEnd))}` : ""}
-
-                                                </>
-                                            );
-                                        })()}
-                                    </div>
-
-                                </div>
-
-								<div className="flex items-center gap-2 shrink-0">
-									<select
-										className="h-9 rounded-lg border bg-slate-50 px-3 text-sm"
-										value={w.stage}
-										onClick={(e) => e.stopPropagation()}
-										onChange={(e) => {
-											e.stopPropagation();
-											void onChangeStage(w, e.target.value as BidStage);
-										}}
-									>
-										{BID_STAGE_OPTIONS.map((opt) => (
-											<option key={opt.value} value={opt.value}>
-												{opt.label}
-											</option>
-										))}
-									</select>
-
-									<button
-										type="button"
-										className="h-9 w-9 inline-flex items-center justify-center rounded-lg border hover:bg-red-50 hover:border-red-200"
-										onClick={(e) => {
-											e.stopPropagation();
-											void onDelete(w.bidId);
-										}}
-										aria-label="삭제"
-										title="삭제"
-									>
-										<Trash2 className="h-4 w-4 text-red-500" />
-									</button>
-								</div>
-							</div>
-						))}
+								<option value="DEADLINE_ASC">마감 빠른순</option>
+								<option value="DEADLINE_DESC">마감 늦은순</option>
+								<option value="TITLE_ASC">제목순</option>
+							</select>
+						</div>
 					</div>
-				)}
+
+					{wishlist.length === 0 ? (
+						<div className="p-5 text-slate-500">찜한 공고가 없습니다.</div>
+					) : visibleItems.length === 0 ? (
+						<div className="p-5 text-slate-500">
+							해당 단계에 공고가 없습니다.
+						</div>
+					) : (
+						<div className="divide-y">
+							{visibleItems.map((w) => {
+								const amountText = w.baseAmount
+									? `${formatAmount(w.baseAmount)}원`
+									: "";
+								const endText = w.bidEnd
+									? `마감 ${formatDateTimeOneLine(String(w.bidEnd))}`
+									: "";
+
+								const daysLeft = w.bidEnd ? days_until(String(w.bidEnd)) : null;
+								const label = daysLeft == null ? null : dday_label(daysLeft);
+								const showBadge = label != null && daysLeft != null && daysLeft <= 7;
+
+								return (
+									<div
+										key={`${w.id}:${w.bidId}`}
+										className="px-4 sm:px-5 py-4 hover:bg-slate-50 transition-colors"
+									>
+										<div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 sm:gap-4 items-start">
+											<button
+												type="button"
+												className="text-left min-w-0"
+												onClick={() => navigate(`/bids/${w.bidId}`)}
+											>
+												<div className="flex items-center gap-2 min-w-0">
+													<div className="font-semibold text-slate-900 truncate">
+														{w.title}
+													</div>
+													{showBadge ? (
+														<span
+															className={[
+																"shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
+																daysLeft === 0
+																	? "bg-rose-100 text-rose-700"
+																	: daysLeft <= 3
+																		? "bg-amber-100 text-amber-800"
+																		: "bg-slate-100 text-slate-700",
+															].join(" ")}
+														>
+															{label}
+														</span>
+													) : null}
+												</div>
+
+												<div className="mt-1 text-sm text-slate-500 flex flex-wrap gap-x-2 gap-y-1">
+													<span>{w.agency}</span>
+													{w.baseAmount ? (
+														<>
+															<span className="text-slate-300">·</span>
+															<span>{amountText}</span>
+														</>
+													) : null}
+													{w.bidEnd ? (
+														<>
+															<span className="text-slate-300">·</span>
+															<span>{endText}</span>
+														</>
+													) : null}
+												</div>
+											</button>
+
+											<div className="flex items-center justify-end">
+												<div className="inline-flex items-center gap-2 rounded-full border bg-slate-50 px-2 py-1 shadow-sm">
+													<div className="w-[128px] sm:w-[140px]">
+														<select
+															className="h-9 w-full rounded-full border bg-white px-3 text-sm"
+															value={w.stage}
+															onClick={(e) => e.stopPropagation()}
+															onChange={(e) => {
+																e.stopPropagation();
+																void onChangeStage(
+																	w,
+																	e.target.value as BidStage,
+																);
+															}}
+														>
+															{BID_STAGE_OPTIONS.map((opt) => (
+																<option key={opt.value} value={opt.value}>
+																	{opt.label}
+																</option>
+															))}
+														</select>
+													</div>
+
+													<button
+														type="button"
+														className="h-9 w-9 inline-flex items-center justify-center rounded-full border bg-white hover:bg-red-50 hover:border-red-200 transition-colors"
+														onClick={(e) => {
+															e.stopPropagation();
+															void onDelete(w.bidId);
+														}}
+														aria-label="삭제"
+														title="삭제"
+													>
+														<Trash2 className="h-4 w-4 text-red-500" />
+													</button>
+												</div>
+											</div>
+										</div>
+									</div>
+								);
+							})}
+						</div>
+					)}
+				</div>
 			</div>
 		</div>
 	);
