@@ -186,11 +186,18 @@ export function unlikeCommunityPost(postId: number) {
 
 
 export function createCommunityComment(postId: number, content: string) {
+    const userId = localStorage.getItem("userId");
+    if (!userId) throw new Error("로그인이 필요합니다.");
+
     return api<ApiResponse<Comment>>(`/boards/${postId}/comments`, {
         method: "POST",
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({
+            content,
+            userId: Number(userId),
+        }),
     }).then(unwrap);
 }
+
 
 export function deleteCommunityComment(commentId: string) {
     const userId = localStorage.getItem("userId");

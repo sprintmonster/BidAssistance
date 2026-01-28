@@ -194,11 +194,18 @@ export function CommunityPage() {
 		set_view_mode("new");
 	};
 
-	const can_edit_selected = useMemo(() => {
-		if (!authed || !selected_post) return false;
-		if (!selected_post.authorId) return false;
-        return String(selected_post.authorId) === String(current_user_id);
-	}, [authed, selected_post, current_user_id]);
+    const can_edit_selected = useMemo(() => {
+        if (!authed || !selected_post) return false;
+
+        // 1) authorId 있으면 그걸로 비교 (정석)
+        if (selected_post.authorId) {
+            return String(selected_post.authorId) === String(current_user_id);
+        }
+
+        // 2) 없으면 이름으로 임시 비교
+        const myName = localStorage.getItem("userName") || "";
+        return !!myName && selected_post.authorName === myName;
+    }, [authed, selected_post, current_user_id]);
 
     const add_post = async (draft: NewPostDraftForm) => {
         if (!authed) return go_login();
@@ -242,11 +249,12 @@ export function CommunityPage() {
             });
 
             set_posts((prev) =>
-				prev.map((p) =>
-					p.id === post_id ? { ...p, commentCount: (p.commentCount ?? 0) + 1 } : p,
-				),
-			);
-		} catch (e: any) {
+                prev.map((p) =>
+                    Number(p.id) === post_id ? { ...p, commentCount: (p.commentCount ?? 0) + 1 } : p
+                )
+            );
+
+        } catch (e: any) {
 			alert(e?.message || "댓글 작성에 실패했습니다.");
 		}
 	};
@@ -303,19 +311,22 @@ export function CommunityPage() {
 
 			const delta = liked ? -1 : 1;
 
-			set_posts((prev) =>
-				prev.map((p) =>
-					p.id === post_id
-						? { ...p, likedByMe: !liked, likes: Math.max(0, p.likes + delta) }
-						: p,
-				),
-			);
+            set_posts((prev) =>
+                prev.map((p) =>
+                    Number(p.id) === post_id
+                        ? { ...p, likedByMe: !liked, likes: Math.max(0, p.likes + delta) }
+                        : p
+                )
+            );
 
-			set_selected_post((prev) => {
-				if (!prev || prev.id !== post_id) return prev;
-				return { ...prev, likedByMe: !liked, likes: Math.max(0, prev.likes + delta) };
-			});
-		} catch (e: any) {
+            set_selected_post((prev) => {
+                if (!prev || Number(prev.id) !== post_id) return prev;
+                return { ...prev, likedByMe: !liked, likes: Math.max(0, prev.likes + delta) };
+            });
+            await load_detail(post_id);
+
+
+        } catch (e: any) {
 			alert(e?.message || "좋아요 처리에 실패했습니다.");
 		}
 	};
