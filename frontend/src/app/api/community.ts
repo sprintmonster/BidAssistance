@@ -26,6 +26,22 @@ function normalizeAttachment(a: any): Attachment {
         isImage: !!a?.isImage || isImageByName(name) || url.startsWith("data:image"),
     };
 }
+function normalizeComment(raw: any): Comment {
+    const id = toNum(raw?.id ?? raw?.commentId);
+    if (!Number.isFinite(id) || id <= 0) {
+        throw new Error(`댓글 ID가 올바르지 않습니다. (id=${String(raw?.id ?? raw?.commentId)})`);
+    }
+
+    return {
+        id,
+        authorId: raw?.authorId != null ? String(raw.authorId) : undefined,
+        authorName: toStr(raw?.authorName ?? raw?.userName ?? raw?.author ?? "—"),
+        content: toStr(raw?.content ?? ""),
+        createdAt: toStr(raw?.createdAt ?? ""),
+        likes: toNum(raw?.likes ?? raw?.likeCount ?? 0),
+        likedByMe: !!raw?.likedByMe,
+    };
+}
 
 function normalizePostFromDetail(raw: any): Post {
     const id = toNum(raw?.id ?? raw?.postId);
@@ -48,8 +64,9 @@ function normalizePostFromDetail(raw: any): Post {
         likes: toNum(raw?.likeCount ?? raw?.likes ?? 0),
         likedByMe: !!raw?.likedByMe,
 
-        commentCount: toNum(raw?.commentCount ?? 0),
-        comments: raw?.comments ?? [],
+        comments: (raw?.comments ?? []).map(normalizeComment),
+        commentCount: toNum(raw?.commentCount ?? (raw?.comments?.length ?? 0)),
+
 
         attachmentCount: toNum(raw?.attachmentCount ?? attachments.length),
         attachments,
@@ -184,19 +201,30 @@ export function unlikeCommunityPost(postId: number) {
     }).then(unwrap);
 }
 
-
+export function fetchCommunityComments(boardId: number) {
+    return api<ApiResponse<any[]>>(`/boards/${boardId}/comments`, { method: "GET" })
+        .then(unwrap)
+        .then((list) => (list ?? []).map(normalizeComment));
+}
 export function createCommunityComment(postId: number, content: string) {
-    const userId = localStorage.getItem("userId");
-    if (!userId) throw new Error("로그인이 필요합니다.");
+    const userIdRaw = localStorage.getItem("userId");
+    const userId = userIdRaw ? Number(userIdRaw) : NaN;
+    if (!Number.isFinite(userId) || userId <= 0) {
+        throw new Error("로그인이 필요합니다. (userId 없음)");
+    }
 
-    return api<ApiResponse<Comment>>(`/boards/${postId}/comments`, {
+    return api<ApiResponse<any>>(`/boards/${postId}/comments`, {
         method: "POST",
         body: JSON.stringify({
             content,
-            userId: Number(userId),
+            userId, // ⭐ 백엔드가 필요로 하는 값일 확률 큼
         }),
-    }).then(unwrap);
+    })
+        .then(unwrap)
+        .then(normalizeComment);
 }
+
+
 
 
 export function deleteCommunityComment(commentId: string) {
@@ -226,28 +254,28 @@ export async function uploadCommunityAttachments(files: File[]) {
 
 
 
-function toNumId(v: any, fallback?: number): number {
-    const n = Number(v);
-    if (Number.isFinite(n)) return n;
-    if (fallback != null && Number.isFinite(Number(fallback))) return Number(fallback);
-    throw new Error(`게시글 ID가 올바르지 않습니다. (id=${String(v)})`);
-}
-
-function normalizePost(raw: any, fallbackId?: number) {
-    const id = toNumId(raw?.postId ?? raw?.id ?? raw?.boardId, fallbackId);
-
-    return {
-        ...raw,
-        id,
-        authorId: raw?.authorId != null ? String(raw.authorId) : undefined,
-        comments: raw?.comments ?? [],
-        attachments: raw?.attachments ?? [],
-        views: Number(raw?.views ?? 0),
-        likes: Number(raw?.likes ?? 0),
-        likedByMe: !!raw?.likedByMe,
-        commentCount: raw?.commentCount != null ? Number(raw.commentCount) : (raw?.comments?.length ?? 0),
-        attachmentCount: raw?.attachmentCount != null ? Number(raw.attachmentCount) : (raw?.attachments?.length ?? 0),
-    };
-}
+// function toNumId(v: any, fallback?: number): number {
+//     const n = Number(v);
+//     if (Number.isFinite(n)) return n;
+//     if (fallback != null && Number.isFinite(Number(fallback))) return Number(fallback);
+//     throw new Error(`게시글 ID가 올바르지 않습니다. (id=${String(v)})`);
+// }
+//
+// function normalizePost(raw: any, fallbackId?: number) {
+//     const id = toNumId(raw?.postId ?? raw?.id ?? raw?.boardId, fallbackId);
+//
+//     return {
+//         ...raw,
+//         id,
+//         authorId: raw?.authorId != null ? String(raw.authorId) : undefined,
+//         comments: raw?.comments ?? [],
+//         attachments: raw?.attachments ?? [],
+//         views: Number(raw?.views ?? 0),
+//         likes: Number(raw?.likes ?? 0),
+//         likedByMe: !!raw?.likedByMe,
+//         commentCount: raw?.commentCount != null ? Number(raw.commentCount) : (raw?.comments?.length ?? 0),
+//         attachmentCount: raw?.attachmentCount != null ? Number(raw.attachmentCount) : (raw?.attachments?.length ?? 0),
+//     };
+// }
 
 
