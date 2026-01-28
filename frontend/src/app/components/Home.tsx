@@ -260,7 +260,6 @@ export function Home() {
 					<section className="col-span-12 lg:col-span-8 bg-white border rounded-2xl p-5 shadow-sm h-full">
 						<div className="flex items-center justify-between mb-4">
 							<h2 className="font-semibold text-slate-900">바로가기</h2>
-							<div className="text-sm text-slate-500">핵심 기능 4개를 빠르게 접근</div>
 						</div>
 
 						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -408,12 +407,6 @@ export function Home() {
 										className="w-full h-11 rounded-xl bg-slate-900 text-white hover:bg-slate-800"
 									>
 										프로필 수정
-									</button>
-									<button
-										onClick={() => navigate("/notifications")}
-										className="w-full h-11 rounded-xl border hover:bg-slate-50"
-									>
-										알림
 									</button>
 									<button
 										onClick={onLogout}
