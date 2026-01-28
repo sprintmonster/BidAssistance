@@ -40,18 +40,18 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 	return (
 		<div className="space-y-3">
 			<div className="hidden md:block">
-				<Card className="border bg-white overflow-hidden">
-					<Table>
+				<Card className="border bg-white">
+					<Table className="table-fixed">
 						<TableHeader>
 							<TableRow className="bg-slate-50 hover:bg-slate-50">
-								<TableHead className="w-[90px] pl-6">유형</TableHead>
-								<TableHead>제목</TableHead>
-								<TableHead className="w-[140px]">작성자</TableHead>
-								<TableHead className="w-[120px]">작성일</TableHead>
-								<TableHead className="w-[90px] text-right">조회</TableHead>
-								<TableHead className="w-[90px] text-right">댓글</TableHead>
-								<TableHead className="w-[90px] text-right">좋아요</TableHead>
-								<TableHead className="w-[44px]" />
+								<TableHead className="w-[88px] pl-6">유형</TableHead>
+								<TableHead className="w-auto">제목</TableHead>
+								<TableHead className="w-[120px]">작성자</TableHead>
+								<TableHead className="w-[132px]">작성일</TableHead>
+								<TableHead className="w-[76px] text-right">조회</TableHead>
+								<TableHead className="w-[76px] text-right">댓글</TableHead>
+								<TableHead className="w-[76px] text-right">좋아요</TableHead>
+								<TableHead className="w-[40px] pr-6" />
 							</TableRow>
 						</TableHeader>
 
@@ -70,20 +70,26 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 											<CategoryBadge category={post.category} />
 										</TableCell>
 
-										<TableCell className="min-w-0">
+										<TableCell className="whitespace-normal max-w-0">
 											<div className="flex items-center gap-2 min-w-0">
-												<div className="font-medium text-gray-900 truncate">
+												<div className="font-medium text-gray-900 truncate min-w-0">
 													{post.title}
 												</div>
-												{hasFile && <Paperclip className="h-4 w-4 text-gray-400 shrink-0" />}
+												{hasFile && (
+													<Paperclip className="h-4 w-4 text-gray-400 shrink-0" />
+												)}
 											</div>
 											<div className="mt-0.5 text-xs text-gray-500 line-clamp-1">
 												{post.contentPreview ?? post.content ?? ""}
 											</div>
 										</TableCell>
 
-									<TableCell className="text-gray-700">{mask_name(post.authorName)}</TableCell>
-										<TableCell className="text-gray-500 tabular-nums">{post.createdAt}</TableCell>
+										<TableCell className="text-gray-700">
+											{mask_name(post.authorName)}
+										</TableCell>
+										<TableCell className="text-gray-500 tabular-nums">
+											{post.createdAt}
+										</TableCell>
 
 										<TableCell className="text-right text-gray-600 tabular-nums">
 											<span className="inline-flex items-center gap-1 justify-end">
@@ -106,8 +112,8 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 											</span>
 										</TableCell>
 
-										<TableCell className="text-right">
-											<ChevronRight className="h-4 w-4 text-gray-400" />
+										<TableCell className="text-right pr-6">
+											<ChevronRight className="h-4 w-4 text-gray-400 inline-block" />
 										</TableCell>
 									</TableRow>
 								);
@@ -125,7 +131,6 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 				</Card>
 			</div>
 
-			{/* 모바일 카드 */}
 			<div className="md:hidden space-y-3">
 				{posts.map((post) => {
 					const commentCount = post.commentCount ?? (post.comments?.length ?? 0);
@@ -137,12 +142,14 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 						>
 							<div className="flex items-center gap-2 mb-2">
 								<CategoryBadge category={post.category} />
-									<span className="text-xs text-gray-500">{mask_name(post.authorName)}</span>
+								<span className="text-xs text-gray-500">{mask_name(post.authorName)}</span>
 								<span className="text-xs text-gray-400">·</span>
 								<span className="text-xs text-gray-500">{post.createdAt}</span>
 							</div>
 
-							<div className="font-semibold text-gray-900 mb-1">{post.title}</div>
+							<div className="font-semibold text-gray-900 mb-1 line-clamp-1">
+								{post.title}
+							</div>
 							<div className="text-sm text-gray-600 line-clamp-2">
 								{post.contentPreview ?? post.content ?? ""}
 							</div>
