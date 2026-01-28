@@ -23,7 +23,7 @@ interface PostDetailProps {
         patch: Partial<Pick<Post, "title" | "content" | "category">>
     ) => void;
     onDeletePost: (postId: number) => void;
-    onToggleLike: (postId: number) => void;
+    onToggleLike: (postId: number) => void | Promise<void>;
     onDeleteComment: (postId: number, commentId: string) => void;
 
     canEdit?: boolean;
@@ -76,6 +76,12 @@ function formatCreatedAt(input: unknown) {
     }).format(d);
 }
 
+function getLikes(post: any): number {
+    const v = post?.likes ?? post?.likeCount ?? 0;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+}
+
 export function PostDetail({
                                post,
                                onBack,
@@ -90,21 +96,21 @@ export function PostDetail({
                                currentUserId,
                            }: PostDetailProps) {
     const postId = useMemo(() => {
-        const n = Number(post.id);
+        const n = Number((post as any).id);
         return Number.isFinite(n) && n > 0 ? n : null;
-    }, [post.id]);
+    }, [post]);
 
     if (postId == null) {
         return (
             <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                게시글 ID가 올바르지 않습니다. (id={String(post.id)})
+                게시글 ID가 올바르지 않습니다. (id={String((post as any).id)})
             </div>
         );
     }
 
-    const comments = useMemo(() => post.comments ?? [], [post.comments]);
-    const attachments = useMemo(() => post.attachments ?? [], [post.attachments]);
-    const comment_count = post.commentCount ?? comments.length;
+    const comments = useMemo(() => (post as any).comments ?? [], [post]);
+    const attachments = useMemo(() => (post as any).attachments ?? [], [post]);
+    const comment_count = (post as any).commentCount ?? comments.length;
 
     const author_name =
         (post as any).authorName ?? (post as any).userName ?? (post as any).author ?? "—";
@@ -112,17 +118,17 @@ export function PostDetail({
     const [comment_text, set_comment_text] = useState("");
     const [is_editing, set_is_editing] = useState(false);
 
-    const [edit_title, set_edit_title] = useState(post.title ?? "");
-    const [edit_content, set_edit_content] = useState(post.content ?? "");
-    const [edit_category, set_edit_category] = useState<PostCategory>(post.category);
+    const [edit_title, set_edit_title] = useState((post as any).title ?? "");
+    const [edit_content, set_edit_content] = useState((post as any).content ?? "");
+    const [edit_category, set_edit_category] = useState<PostCategory>((post as any).category);
 
     useEffect(() => {
         if (!is_editing) {
-            set_edit_title(post.title ?? "");
-            set_edit_content(post.content ?? "");
-            set_edit_category(post.category);
+            set_edit_title((post as any).title ?? "");
+            set_edit_content((post as any).content ?? "");
+            set_edit_category((post as any).category);
         }
-    }, [post.id, is_editing, post.title, post.content, post.category]);
+    }, [postId, is_editing, post]);
 
     const submit_comment = () => {
         if (!canInteract) {
@@ -136,15 +142,21 @@ export function PostDetail({
         onAddComment(postId, text);
         set_comment_text("");
     };
-// 1) start_edit: canEdit 체크 제거(버튼이 canEdit일 때만 보이므로)
+
     const start_edit = () => {
         set_is_editing(true);
-        set_edit_title(post.title ?? "");
-        set_edit_content(post.content ?? "");
-        set_edit_category(post.category);
+        set_edit_title((post as any).title ?? "");
+        set_edit_content((post as any).content ?? "");
+        set_edit_category((post as any).category);
     };
 
-// 2) save_edit: canEdit 체크 제거
+    const cancel_edit = () => {
+        set_is_editing(false);
+        set_edit_title((post as any).title ?? "");
+        set_edit_content((post as any).content ?? "");
+        set_edit_category((post as any).category);
+    };
+
     const save_edit = () => {
         const t = edit_title.trim();
         const c = edit_content.trim();
@@ -154,18 +166,32 @@ export function PostDetail({
         set_is_editing(false);
     };
 
-// 3) delete_post: canEdit 체크 제거 + 확인창 후 바로 삭제
     const delete_post = () => {
         const ok = window.confirm("이 게시글을 삭제할까요? 삭제 후 복구할 수 없습니다.");
         if (!ok) return;
         onDeletePost(postId);
     };
-    const toggle_like = () => {
+
+    /** ✅ 좋아요: 토글 + 연타방지(요청 중만 잠금) */
+    const [like_busy, set_like_busy] = useState(false);
+
+    const likedByMe = !!(post as any).likedByMe;
+    const likes = getLikes(post);
+
+    const toggle_like = async () => {
         if (!canInteract) {
             onRequireAuth?.();
             return;
         }
-        onToggleLike(postId);
+        if (like_busy) return;
+
+        try {
+            set_like_busy(true);
+            await Promise.resolve(onToggleLike(postId));
+            // 좋아요 상태/숫자는 CommunityPage에서 post를 갱신해줌
+        } finally {
+            set_like_busy(false);
+        }
     };
 
     return (
@@ -192,9 +218,9 @@ export function PostDetail({
                             <option value="discussion">토론</option>
                         </select>
                     ) : (
-                        <span className={`px-3 py-1 rounded text-sm font-medium ${category_colors[post.category]}`}>
-              {category_labels[post.category]}
-            </span>
+                        <span className={`px-3 py-1 rounded text-sm font-medium ${category_colors[(post as any).category]}`}>
+                          {category_labels[(post as any).category]}
+                        </span>
                     )}
                 </div>
 
@@ -207,7 +233,7 @@ export function PostDetail({
                                 className="w-full text-2xl font-bold border rounded-lg px-3 py-2"
                             />
                         ) : (
-                            <h1 className="text-3xl font-bold text-gray-900 truncate">{post.title}</h1>
+                            <h1 className="text-3xl font-bold text-gray-900 truncate">{(post as any).title}</h1>
                         )}
                     </div>
 
@@ -243,11 +269,11 @@ export function PostDetail({
                 <div className="flex items-center gap-4 text-sm text-gray-500 mb-6 pb-6 border-b border-gray-200">
                     <span className="font-medium text-gray-700">{mask_name(author_name)}</span>
                     <span>·</span>
-                    <span>{formatCreatedAt(post.createdAt)}</span>
+                    <span>{formatCreatedAt((post as any).createdAt)}</span>
                     <span>·</span>
                     <div className="flex items-center gap-1">
                         <Eye className="w-4 h-4" />
-                        <span>{post.views}</span>
+                        <span>{(post as any).views ?? (post as any).viewCount ?? 0}</span>
                     </div>
                 </div>
 
@@ -259,7 +285,7 @@ export function PostDetail({
                             className="w-full border rounded-lg px-3 py-2 min-h-[240px]"
                         />
                     ) : (
-                        <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{post.content ?? ""}</p>
+                        <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{(post as any).content ?? ""}</p>
                     )}
                 </div>
 
@@ -269,8 +295,8 @@ export function PostDetail({
 
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
                             {attachments
-                                .filter((a) => a.isImage)
-                                .map((a) => (
+                                .filter((a: any) => a.isImage)
+                                .map((a: any) => (
                                     <button
                                         key={a.id}
                                         type="button"
@@ -285,7 +311,7 @@ export function PostDetail({
                         </div>
 
                         <div className="space-y-2">
-                            {attachments.map((a) => (
+                            {attachments.map((a: any) => (
                                 <div key={a.id} className="flex items-center justify-between gap-3 border rounded-lg px-3 py-2">
                                     <div className="flex items-center gap-2 min-w-0">
                                         {a.isImage ? (
@@ -318,12 +344,21 @@ export function PostDetail({
                     <button
                         type="button"
                         onClick={toggle_like}
+                        disabled={!canInteract || like_busy}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                            post.likedByMe ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                        } ${canInteract ? "" : "opacity-60"}`}
+                            likedByMe ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                        } ${canInteract ? "" : "opacity-60"} ${like_busy ? "opacity-60 cursor-not-allowed" : ""}`}
                     >
                         <ThumbsUp className="w-5 h-5" />
-                        <span>{canInteract ? `좋아요 ${post.likes}` : `로그인 후 좋아요 (${post.likes})`}</span>
+                        <span>
+              {!canInteract
+                  ? `로그인 후 좋아요 (${likes})`
+                  : like_busy
+                      ? "처리 중..."
+                      : likedByMe
+                          ? `좋아요 취소 (${likes})`
+                          : `좋아요 (${likes})`}
+            </span>
                     </button>
                 </div>
             </div>

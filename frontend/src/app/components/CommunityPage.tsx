@@ -15,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { Info, Plus, Search as SearchIcon } from "lucide-react";
 import type { NewPostDraftForm } from "./NewPostForm";
 import type { Post, PostCategory, SortKey } from "../types/community";
+
 import {
     createCommunityComment,
     createCommunityPost,
@@ -26,8 +27,8 @@ import {
     unlikeCommunityPost,
     updateCommunityPost,
     uploadCommunityAttachments,
+    fetchCommunityComments,
 } from "../api/community";
-import { fetchCommunityComments } from "../api/community";
 
 type ViewMode = "list" | "detail" | "new";
 type CategoryFilter = "all" | PostCategory;
@@ -51,6 +52,51 @@ function safe_user_id() {
 function toValidId(v: unknown): number | null {
     const n = Number(v);
     return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** ✅ 좋아요 localStorage (유저별) */
+function likeStorageKey(userId?: string) {
+    return `community_likes_v1:${userId ?? "guest"}`;
+}
+
+function loadLikedSet(userId?: string): Set<number> {
+    try {
+        const raw = localStorage.getItem(likeStorageKey(userId));
+        if (!raw) return new Set();
+        const arr = JSON.parse(raw);
+        if (!Array.isArray(arr)) return new Set();
+        return new Set(
+            arr
+                .map((x) => Number(x))
+                .filter((n) => Number.isFinite(n) && n > 0)
+        );
+    } catch {
+        return new Set();
+    }
+}
+
+function saveLikedSet(userId: string | undefined, set: Set<number>) {
+    try {
+        localStorage.setItem(likeStorageKey(userId), JSON.stringify(Array.from(set)));
+    } catch {
+        // ignore
+    }
+}
+
+function isLikedLocal(userId: string | undefined, postId: number) {
+    return loadLikedSet(userId).has(postId);
+}
+
+/** likes 필드가 likes or likeCount 혼재일 수 있어서 안전 처리 */
+function getLikes(p: any): number {
+    const v = p?.likes ?? p?.likeCount ?? 0;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+}
+
+function setLikes(p: any, next: number) {
+    // 둘 다 맞춰두면 UI/타입 혼재에도 안전
+    return { ...p, likes: next, likeCount: next };
 }
 
 export function CommunityPage() {
@@ -80,6 +126,9 @@ export function CommunityPage() {
     const [authed, set_authed] = useState(() => is_authed_now());
     const [current_user_id, set_current_user_id] = useState(() => safe_user_id());
 
+    /** ✅ 게시글별 좋아요 연타 방지 */
+    const [likeBusyByPost, setLikeBusyByPost] = useState<Record<number, boolean>>({});
+
     useEffect(() => {
         const sync = () => {
             set_authed(is_authed_now());
@@ -89,7 +138,7 @@ export function CommunityPage() {
 
         window.addEventListener("focus", sync);
         document.addEventListener("visibilitychange", sync);
-        window.addEventListener("storage", sync); // 다른 탭에서 로그인/로그아웃 반영
+        window.addEventListener("storage", sync);
 
         return () => {
             window.removeEventListener("focus", sync);
@@ -132,8 +181,7 @@ export function CommunityPage() {
                 };
 
                 data.items.forEach((p: Post) => {
-                    const key: PostCategory = p.category;
-                    base[key] += 1;
+                    base[p.category] += 1;
                 });
 
                 set_counts(base);
@@ -155,8 +203,13 @@ export function CommunityPage() {
                 fetchCommunityComments(post_id),
             ]);
 
+            // ✅ 상세 진입 시에도 local 좋아요 상태를 덮어씌워서 버튼 상태가 안정적이게
+            const pid = toValidId(post_id);
+            const localLiked = pid ? isLikedLocal(current_user_id, pid) : false;
+
             const fixed: Post = {
                 ...post,
+                likedByMe: localLiked,
                 comments,
                 commentCount: comments.length,
                 attachments: post.attachments ?? [],
@@ -208,14 +261,12 @@ export function CommunityPage() {
     const can_edit_selected = useMemo(() => {
         if (!authed || !selected_post) return false;
 
-        // 1) authorId 있으면 그걸로 비교 (정석)
-        if (selected_post.authorId) {
-            return String(selected_post.authorId) === String(current_user_id);
+        if ((selected_post as any).authorId) {
+            return String((selected_post as any).authorId) === String(current_user_id);
         }
 
-        // 2) 없으면 이름으로 임시 비교
         const myName = localStorage.getItem("userName") || "";
-        return !!myName && selected_post.authorName === myName;
+        return !!myName && (selected_post as any).authorName === myName;
     }, [authed, selected_post, current_user_id]);
 
     const add_post = async (draft: NewPostDraftForm) => {
@@ -236,7 +287,7 @@ export function CommunityPage() {
                 attachmentIds: attachment_ids,
             });
 
-            const createdId = toValidId(created?.id);
+            const createdId = toValidId((created as any)?.id);
             if (createdId == null) {
                 alert("작성된 게시글 ID가 올바르지 않습니다. 목록에서 다시 확인해주세요.");
                 back_to_list();
@@ -263,17 +314,16 @@ export function CommunityPage() {
         try {
             await createCommunityComment(pid, content);
 
-            //  서버 기준으로 다시 동기화
             const comments = await fetchCommunityComments(pid);
-            set_selected_post((prev) => (prev && Number(prev.id) === pid
-                    ? { ...prev, comments, commentCount: comments.length }
+            set_selected_post((prev) =>
+                prev && Number((prev as any).id) === pid
+                    ? { ...(prev as any), comments, commentCount: comments.length }
                     : prev
-            ));
+            );
         } catch (e: any) {
             alert(e?.message || "댓글 작성에 실패했습니다.");
         }
     };
-
 
     const update_post = async (
         post_id: number,
@@ -294,14 +344,18 @@ export function CommunityPage() {
                 category: patch.category,
             });
 
+            // 좋아요 상태는 local 기준 유지
+            const localLiked = isLikedLocal(current_user_id, pid);
+
             const fixed: Post = {
-                ...updated,
-                comments: updated.comments ?? [],
-                attachments: updated.attachments ?? [],
+                ...(updated as any),
+                likedByMe: localLiked,
+                comments: (updated as any).comments ?? [],
+                attachments: (updated as any).attachments ?? [],
             };
 
-            set_selected_post((prev) => (prev && Number(prev.id) === pid ? fixed : prev));
-            set_posts((prev) => prev.map((p) => (Number(p.id) === pid ? { ...p, ...fixed } : p)));
+            set_selected_post((prev) => (prev && Number((prev as any).id) === pid ? fixed : prev));
+            set_posts((prev) => prev.map((p) => (Number((p as any).id) === pid ? { ...(p as any), ...fixed } : p)));
         } catch (e: any) {
             alert(e?.message || "게시글 수정에 실패했습니다.");
         }
@@ -325,6 +379,7 @@ export function CommunityPage() {
         }
     };
 
+    /** ✅ 좋아요 토글: 서버 응답 data를 안 읽고(localStorage + UI delta)로 처리 */
     const toggle_post_like = async (post_id: number) => {
         if (!authed) return go_login();
 
@@ -334,35 +389,45 @@ export function CommunityPage() {
             return;
         }
 
-        const target =
-            (selected_post && Number(selected_post.id) === pid ? selected_post : null) ??
-            posts.find((p) => Number(p.id) === pid);
+        if (likeBusyByPost[pid]) return;
 
-        const liked = !!target?.likedByMe;
+        const likedNow = isLikedLocal(current_user_id, pid);
+        const delta = likedNow ? -1 : 1;
 
         try {
-            // 백엔드: POST /like, POST /dislike
-            if (liked) await unlikeCommunityPost(pid);
+            setLikeBusyByPost((prev) => ({ ...prev, [pid]: true }));
+
+            //  서버 호출 (응답 data는 무시)
+            if (likedNow) await unlikeCommunityPost(pid);
             else await likeCommunityPost(pid);
 
-            const delta = liked ? -1 : 1;
+            //  localStorage 업데이트
+            const set = loadLikedSet(current_user_id);
+            if (likedNow) set.delete(pid);
+            else set.add(pid);
+            saveLikedSet(current_user_id, set);
 
+            //  리스트 UI 업데이트 (즉시)
             set_posts((prev) =>
-                prev.map((p) =>
-                    Number(p.id) === pid
-                        ? { ...p, likedByMe: !liked, likes: Math.max(0, p.likes + delta) }
-                        : p
-                )
+                prev.map((p: any) => {
+                    if (Number(p.id) !== pid) return p;
+                    const nextLikes = Math.max(0, getLikes(p) + delta);
+                    return { ...setLikes(p, nextLikes), likedByMe: !likedNow };
+                })
             );
 
-            set_selected_post((prev) => {
+            //  상세 UI 업데이트 (즉시)
+            set_selected_post((prev: any) => {
                 if (!prev || Number(prev.id) !== pid) return prev;
-                return { ...prev, likedByMe: !liked, likes: Math.max(0, prev.likes + delta) };
+                const nextLikes = Math.max(0, getLikes(prev) + delta);
+                return { ...setLikes(prev, nextLikes), likedByMe: !likedNow };
             });
 
-            await load_detail(pid);
+            //  여기서 load_detail(pid) 재호출하지 말 것 (느려짐 원인)
         } catch (e: any) {
             alert(e?.message || "좋아요 처리에 실패했습니다.");
+        } finally {
+            setLikeBusyByPost((prev) => ({ ...prev, [pid]: false }));
         }
     };
 
@@ -377,17 +442,16 @@ export function CommunityPage() {
         try {
             await deleteCommunityComment(String(cid));
 
-            // 서버 기준으로 다시 동기화
             const comments = await fetchCommunityComments(pid);
-            set_selected_post((prev) => (prev && Number(prev.id) === pid
-                    ? { ...prev, comments, commentCount: comments.length }
+            set_selected_post((prev) =>
+                prev && Number((prev as any).id) === pid
+                    ? { ...(prev as any), comments, commentCount: comments.length }
                     : prev
-            ));
+            );
         } catch (e: any) {
             alert(e?.message || "댓글 삭제에 실패했습니다.");
         }
     };
-
 
     return (
         <div className="space-y-4">

@@ -189,16 +189,18 @@ export function deleteCommunityPost(postId: number) {
     }).then(unwrap);
 }
 
+type LikeRes = ApiResponse<{
+    postId: string;      // 백엔드가 String으로 준다고 해서 일단 string
+    liked: boolean;
+    likes: number;
+}>;
+
 export function likeCommunityPost(postId: number) {
-    return api<ApiResponse<any>>(`/board/posts/${postId}/like`, {
-        method: "POST",
-    }).then(unwrap);
+    return api<ApiResponse<null>>(`/board/posts/${postId}/like`, { method: "POST" }).then(unwrap);
 }
 
 export function unlikeCommunityPost(postId: number) {
-    return api<ApiResponse<any>>(`/board/posts/${postId}/dislike`, {
-        method: "POST",
-    }).then(unwrap);
+    return api<ApiResponse<null>>(`/board/posts/${postId}/dislike`, { method: "POST" }).then(unwrap);
 }
 
 export function fetchCommunityComments(boardId: number) {
@@ -217,7 +219,7 @@ export function createCommunityComment(postId: number, content: string) {
         method: "POST",
         body: JSON.stringify({
             content,
-            userId, // ⭐ 백엔드가 필요로 하는 값일 확률 큼
+            userId, //
         }),
     })
         .then(unwrap)
