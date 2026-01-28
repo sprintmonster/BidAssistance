@@ -424,7 +424,7 @@ export function BidSummary() {
                             <DollarSign className="h-5 w-5 text-muted-foreground" />
                             <div>
                                 <p className="text-sm text-muted-foreground">예산</p>
-                                <p className="font-semiboldwhitespace-nowrap">
+                                <p className="font-semibold whitespace-nowrap">
                                     {Number(bid.budget).toLocaleString()}
                                 </p>
                             </div>
