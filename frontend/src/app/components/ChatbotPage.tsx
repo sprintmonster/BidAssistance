@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Send, Bot, User } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { useState, useRef, useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import { fetchChatResponse, ChatRequest } from "../api/chatbot";
 
 interface Message {
 	id: number;
@@ -27,6 +29,7 @@ export function ChatbotPage() {
 	]);
 
 	const [inputValue, setInputValue] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
 	const bottomRef = useRef<HTMLDivElement | null>(null);
 
 	useEffect(() => {
@@ -34,7 +37,7 @@ export function ChatbotPage() {
 			behavior: "smooth",
 			block: "end",
 		});
-	}, [messages]);
+	}, [messages, isLoading]);
 
 	const generateBotResponse = (userInput: string): Message => {
 		const input = userInput.toLowerCase();
@@ -64,9 +67,9 @@ export function ChatbotPage() {
 		};
 	};
 
-	const sendMessage = (text: string) => {
+	const sendMessage = async (text: string) => {
 		const trimmed = text.trim();
-		if (!trimmed) return;
+		if (!trimmed || isLoading) return; // 중복 전송 방지
 
 		const userMessage: Message = {
 			id: Date.now(),
@@ -77,11 +80,33 @@ export function ChatbotPage() {
 
 		setMessages((prev) => [...prev, userMessage]);
 		setInputValue("");
+        setIsLoading(true);
 
-		setTimeout(() => {
-			const botResponse = generateBotResponse(trimmed);
-			setMessages((prev) => [...prev, botResponse]);
-		}, 1000);
+        try { // API 호출
+            const requestData: ChatRequest = {
+                query: trimmed,
+                thread_id: "user_session_1",
+            };
+            const result = await fetchChatResponse(requestData);
+
+            const botMessage:Message = { // 화면에 응답 표시
+                id: Date.now() + 1,
+                text: result.data.message,
+                sender: "bot",
+                timestamp: new Date().toLocaleTimeString("ko-KR", {hour: "2-digit", minute: "2-digit"}),
+                suggestions: [],
+            }
+            setMessages((prev) => [...prev, botMessage]);
+        } catch (error) {
+            const errorMessage: Message = {
+                id: Date.now() + 1,
+                text: "죄송합니다. 서버 연결에 실패했습니다.",
+                sender: "bot",
+                timestamp: new Date().toLocaleTimeString(),
+            }
+        } finally {
+            setIsLoading(false);
+        }
 	};
 
 	const handleSend = () => {
@@ -117,8 +142,7 @@ export function ChatbotPage() {
 						<div>
 							<CardTitle className="text-lg">입찰 AI 어시스턴트</CardTitle>
 							<CardDescription className="flex items-center gap-2">
-								<span className="w-2 h-2 bg-green-500 rounded-full"></span>
-								온라인
+                                <span className={`w-2 h-2 rounded-full ${isLoading ? "bg-yellow-500 animate-pulse" : "bg-green-500"}`}></span>								온라인
 							</CardDescription>
 						</div>
 					</div>
@@ -162,6 +186,19 @@ export function ChatbotPage() {
 								</div>
 							</div>
 						))}
+                        {isLoading && (
+                            <div className="flex gap-3">
+                                <Avatar className="flex-shrink-0">
+                                    <AvatarFallback className="bg-blue-600 text-white">
+                                        <Bot className="h-4 w-4" />
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="bg-gray-100 rounded-lg p-4 flex items-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+                                    <span className="text-sm text-gray-500">답변을 작성하고 있습니다...</span>
+                                </div>
+                            </div>
+                        )}
 						<div ref={bottomRef} />
 					</div>
 				</ScrollArea>
