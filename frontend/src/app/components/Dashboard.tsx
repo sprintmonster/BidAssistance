@@ -153,54 +153,55 @@ export function build_monthly_trend_forward(bids: Bid[], n: number): MonthlyTren
 }
 
 function normalize_region(raw: string): string {
-  const v = (raw || "").trim();
-  if (!v) return "기타";
+	const v = (raw || "").trim();
+	if (!v) return "기타";
 
-  const rules: Array<[string, string]> = [
-    ["서울", "서울"],
-    ["경기", "경기"],
-    ["인천", "인천"],
-    ["부산", "부산"],
-    ["대구", "대구"],
-    ["대전", "대전"],
-    ["광주", "광주"],
-    ["울산", "울산"],
-    ["세종", "세종"],
-    ["강원", "강원"],
-    ["충북", "충북"],
-    ["충남", "충남"],
-    ["전북", "전북"],
-    ["전남", "전남"],
-    ["경북", "경북"],
-    ["경남", "경남"],
-    ["제주", "제주"],
-  ];
+	const rules: Array<[string[], string]> = [
+		[["전국"], "전국"],
 
-  for (const [needle, label] of rules) {
-    if (v.includes(needle)) return label;
-  }
+		[["서울", "서울특별시"], "서울특별시"],
+		[["부산", "부산광역시"], "부산광역시"],
+		[["대구", "대구광역시"], "대구광역시"],
+		[["인천", "인천광역시"], "인천광역시"],
+		[["광주", "광주광역시"], "광주광역시"],
+		[["대전", "대전광역시"], "대전광역시"],
+		[["울산", "울산광역시"], "울산광역시"],
+		[["세종", "세종특별자치시"], "세종특별자치시"],
 
-  return v.split(/[\s/,(]/)[0] || "기타";
+		[["경기", "경기도"], "경기도"],
+		[["강원", "강원도", "강원특별자치도"], "강원특별자치도"],
+		[["충북", "충청북도"], "충청북도"],
+		[["충남", "충청남도"], "충청남도"],
+		[["전북", "전라북도", "전북특별자치도"], "전북특별자치도"],
+		[["전남", "전라남도"], "전라남도"],
+		[["경북", "경상북도"], "경상북도"],
+		[["경남", "경상남도"], "경상남도"],
+		[["제주", "제주도", "제주특별자치도"], "제주특별자치도"],
+	];
+
+	for (const [needles, label] of rules) {
+		for (const needle of needles) {
+			if (v.includes(needle)) return label;
+		}
+	}
+
+	return v.split(/[\s/,(]/)[0] || "기타";
 }
 
 export function build_region_dist(bids: Bid[]): RegionDistPoint[] {
-  const counts = new Map<string, number>();
+	const counts = new Map<string, number>();
 
-  bids.forEach((b) => {
-    const region = normalize_region(String((b as any).region ?? ""));
-    counts.set(region, (counts.get(region) ?? 0) + 1);
-  });
+	bids.forEach((b) => {
+		const region = normalize_region(String((b as any).region ?? ""));
+		counts.set(region, (counts.get(region) ?? 0) + 1);
+	});
 
-  const entries = Array.from(counts.entries())
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value);
-
-  const top = entries.slice(0, 3);
-  if (entries.length <= 3) return top;
-
-  const restSum = entries.slice(3).reduce((acc, cur) => acc + cur.value, 0);
-  return [...top, { name: "기타", value: restSum }].filter((x) => x.value > 0);
+	return Array.from(counts.entries())
+		.map(([name, value]) => ({ name, value }))
+		.filter((x) => x.value > 0)
+		.sort((a, b) => b.value - a.value);
 }
+
 
 function is_same_month(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
