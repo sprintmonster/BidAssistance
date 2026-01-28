@@ -35,38 +35,33 @@ function CategoryBadge({ category }: { category: Post["category"] }) {
 		</Badge>
 	);
 }
+
 function formatCreatedAt(input: unknown) {
-    if (!input) return "";
+	if (!input) return "";
+	if (input instanceof Date) {
+		return new Intl.DateTimeFormat("ko-KR", {
+			year: "numeric",
+			month: "2-digit",
+			day: "2-digit",
+			hour: "2-digit",
+			minute: "2-digit",
+			hour12: false,
+		}).format(input);
+	}
 
-    // 1) Date 객체면 그대로
-    if (input instanceof Date) {
-        return new Intl.DateTimeFormat("ko-KR", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-        }).format(input);
-    }
+	const s = String(input).trim();
+	const normalized = s.includes(" ") && !s.includes("T") ? s.replace(" ", "T") : s;
+	const d = new Date(normalized);
+	if (Number.isNaN(d.getTime())) return s;
 
-    // 2) 문자열/숫자면 Date로 파싱 시도
-    const s = String(input).trim();
-
-    // "2026-01-28 15:03:00" 같은 형태도 파싱되게 공백을 'T'로 바꿔줌
-    const normalized = s.includes(" ") && !s.includes("T") ? s.replace(" ", "T") : s;
-
-    const d = new Date(normalized);
-    if (Number.isNaN(d.getTime())) return s; // 파싱 실패하면 원문 유지
-
-    return new Intl.DateTimeFormat("ko-KR", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-    }).format(d);
+	return new Intl.DateTimeFormat("ko-KR", {
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+		hour: "2-digit",
+		minute: "2-digit",
+		hour12: false,
+	}).format(d);
 }
 
 export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
@@ -80,7 +75,7 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 								<TableHead className="w-[88px] pl-6">유형</TableHead>
 								<TableHead className="w-auto">제목</TableHead>
 								<TableHead className="w-[120px]">작성자</TableHead>
-								<TableHead className="w-[132px]">작성일</TableHead>
+								<TableHead className="w-[156px]">작성일</TableHead>
 								<TableHead className="w-[76px] text-right">조회</TableHead>
 								<TableHead className="w-[76px] text-right">댓글</TableHead>
 								<TableHead className="w-[76px] text-right">좋아요</TableHead>
@@ -108,63 +103,63 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 												<div className="font-medium text-gray-900 truncate min-w-0">
 													{post.title}
 												</div>
-												{hasFile && (
+												{hasFile ? (
 													<Paperclip className="h-4 w-4 text-gray-400 shrink-0" />
-												)}
+												) : null}
 											</div>
 											<div className="mt-0.5 text-xs text-gray-500 line-clamp-1">
 												{post.contentPreview ?? post.content ?? ""}
 											</div>
 										</TableCell>
 
-										<TableCell className="text-gray-700">
+										<TableCell className="text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis">
 											{mask_name(post.authorName)}
 										</TableCell>
-										<TableCell className="text-gray-500 tabular-nums">
-                                            {formatCreatedAt(post.createdAt)}
+
+										<TableCell className="text-gray-500 tabular-nums whitespace-nowrap overflow-hidden text-ellipsis">
+											{formatCreatedAt(post.createdAt)}
 										</TableCell>
 
-										<TableCell className="text-right text-gray-600 tabular-nums">
+										<TableCell className="text-right text-gray-600 tabular-nums whitespace-nowrap">
 											<span className="inline-flex items-center gap-1 justify-end">
 												<Eye className="h-4 w-4 text-gray-400" />
 												{post.views}
 											</span>
 										</TableCell>
 
-										<TableCell className="text-right text-gray-600 tabular-nums">
+										<TableCell className="text-right text-gray-600 tabular-nums whitespace-nowrap">
 											<span className="inline-flex items-center gap-1 justify-end">
 												<MessageSquare className="h-4 w-4 text-gray-400" />
 												{commentCount}
 											</span>
 										</TableCell>
 
-										<TableCell className="text-right text-gray-600 tabular-nums">
+										<TableCell className="text-right text-gray-600 tabular-nums whitespace-nowrap">
 											<span className="inline-flex items-center gap-1 justify-end">
 												<ThumbsUp className="h-4 w-4 text-gray-400" />
 												{post.likes}
 											</span>
 										</TableCell>
 
-										<TableCell className="text-right pr-6">
+										<TableCell className="text-right pr-6 whitespace-nowrap">
 											<ChevronRight className="h-4 w-4 text-gray-400 inline-block" />
 										</TableCell>
 									</TableRow>
 								);
 							})}
 
-							{posts.length === 0 && (
+							{posts.length === 0 ? (
 								<TableRow>
 									<TableCell colSpan={8} className="py-12 text-center text-gray-500">
 										조건에 맞는 게시글이 없습니다.
 									</TableCell>
 								</TableRow>
-							)}
+							) : null}
 						</TableBody>
 					</Table>
 				</Card>
 			</div>
 
-			{/* 모바일 카드 */}
 			<div className="md:hidden space-y-3">
 				{posts.map((post) => {
 					const commentCount = post.commentCount ?? (post.comments?.length ?? 0);
@@ -181,9 +176,7 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 								<span className="text-xs text-gray-500">{formatCreatedAt(post.createdAt)}</span>
 							</div>
 
-							<div className="font-semibold text-gray-900 mb-1 line-clamp-1">
-								{post.title}
-							</div>
+							<div className="font-semibold text-gray-900 mb-1 line-clamp-1">{post.title}</div>
 							<div className="text-sm text-gray-600 line-clamp-2">
 								{post.contentPreview ?? post.content ?? ""}
 							</div>
@@ -203,11 +196,9 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 					);
 				})}
 
-				{posts.length === 0 && (
-					<div className="text-center py-12 text-gray-500">
-						조건에 맞는 게시글이 없습니다.
-					</div>
-				)}
+				{posts.length === 0 ? (
+					<div className="text-center py-12 text-gray-500">조건에 맞는 게시글이 없습니다.</div>
+				) : null}
 			</div>
 		</div>
 	);
