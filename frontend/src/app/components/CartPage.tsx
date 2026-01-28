@@ -15,62 +15,71 @@ function parse_time(v: string): number {
 	if (Number.isFinite(t)) return t;
 	return 0;
 }
-
 function formatAmount(value: unknown): string {
-	if (value == null || value === "") return "-";
-	const n =
-		typeof value === "number" ? value : Number(String(value).replace(/[^\d.-]/g, ""));
-	if (!Number.isFinite(n)) return "-";
-	return n.toLocaleString("ko-KR");
+    if (value == null || value === "") return "-";
+
+    // "123,000" 같은 문자열도 처리
+    const n =
+        typeof value === "number"
+            ? value
+            : Number(String(value).replace(/[^\d.-]/g, ""));
+
+    if (!Number.isFinite(n)) return "-";
+    return n.toLocaleString("ko-KR");
 }
 
 function formatDateTimeLines(dateStr: string) {
-	if (!dateStr) return { dateLine: "-", timeLine: "" };
+    if (!dateStr) return { dateLine: "-", timeLine: "" };
 
-	const d = new Date(dateStr);
-	if (!Number.isFinite(d.getTime())) return { dateLine: "-", timeLine: "" };
+    const d = new Date(dateStr);
+    if (!Number.isFinite(d.getTime())) return { dateLine: "-", timeLine: "" };
 
-	const dateLine = d.toLocaleDateString("ko-KR", {
-		year: "numeric",
-		month: "2-digit",
-		day: "2-digit",
-	});
+    const dateLine = d.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    });
 
-	const timeLine = d.toLocaleTimeString("ko-KR", {
-		hour: "2-digit",
-		minute: "2-digit",
-		hour12: true,
-	});
+    const timeLine = d.toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true, // 오전/오후
+    });
 
-	return { dateLine, timeLine };
+    return { dateLine, timeLine };
 }
-
 function formatDateTimeOneLine(dateStr: string) {
-	if (!dateStr) return "-";
+    if (!dateStr) return "-";
 
-	const d = new Date(dateStr);
-	if (!Number.isFinite(d.getTime())) return "-";
+    const d = new Date(dateStr);
+    if (!Number.isFinite(d.getTime())) return "-";
 
-	const date = d
-		.toLocaleDateString("ko-KR", {
-			year: "numeric",
-			month: "2-digit",
-			day: "2-digit",
-		})
-		.replace(/\.\s*/g, ".");
+    const date = d.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).replace(/\.\s*/g, ".");
 
-	const time = d.toLocaleTimeString("ko-KR", {
-		hour: "2-digit",
-		minute: "2-digit",
-		hour12: false,
-	});
+    const time = d.toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false, // 24시간제 → 오전/오후 제거
+    });
 
-	return `${date} ${time}`;
+    return `${date} ${time}`;
 }
 
 function stage_label(stage: BidStage): string {
 	const found = BID_STAGE_OPTIONS.find((o) => o.value === stage);
 	return found ? found.label : stage;
+}
+
+function get_user_id(): number | null {
+	const raw = localStorage.getItem("userId");
+	if (!raw) return null;
+	const n = Number(raw);
+	if (!Number.isFinite(n)) return null;
+	return n;
 }
 
 export function CartPage({
@@ -86,10 +95,9 @@ export function CartPage({
 	const [activeStage, setActiveStage] = useState<BidStage | "ALL">("ALL");
 	const [sortKey, setSortKey] = useState<SortKey>("DEADLINE_ASC");
 
-	const userId = Number(localStorage.getItem("userId"));
-
 	const loadWishlist = async () => {
-		if (!Number.isFinite(userId)) {
+		const userId = get_user_id();
+		if (userId === null) {
 			showToast("userId가 없습니다. 다시 로그인 해주세요.", "error");
 			return;
 		}
@@ -125,8 +133,7 @@ export function CartPage({
 		}
 
 		items.sort((a, b) => {
-			if (sortKey === "TITLE_ASC")
-				return String(a.title).localeCompare(String(b.title));
+			if (sortKey === "TITLE_ASC") return String(a.title).localeCompare(String(b.title));
 			const ta = parse_time(String(a.bidEnd));
 			const tb = parse_time(String(b.bidEnd));
 			if (sortKey === "DEADLINE_DESC") return tb - ta;
@@ -138,7 +145,8 @@ export function CartPage({
 
 	const onDelete = async (bidId: number) => {
 		try {
-			if (!Number.isFinite(userId)) {
+			const userId = get_user_id();
+			if (userId === null) {
 				showToast("userId가 없습니다. 다시 로그인 해주세요.", "error");
 				return;
 			}
@@ -155,7 +163,8 @@ export function CartPage({
 
 	const onChangeStage = async (item: WishlistItem, stage: BidStage) => {
 		try {
-			if (!Number.isFinite(userId)) {
+			const userId = get_user_id();
+			if (userId === null) {
 				showToast("userId가 없습니다. 다시 로그인 해주세요.", "error");
 				return;
 			}
@@ -168,9 +177,8 @@ export function CartPage({
 				stage,
 			});
 
-			setWishlist((prev) =>
-				prev.map((it) => (it.bidId === item.bidId ? { ...it, stage } : it)),
-			);
+			// 낙/탈/제출/결정 등 timestamp는 보통 백엔드가 처리하므로, 우선 stage만 프론트 반영
+			setWishlist((prev) => prev.map((it) => (it.bidId === item.bidId ? { ...it, stage } : it)));
 			showToast(res.message || "단계가 변경되었습니다.", "success");
 		} catch (e: any) {
 			showToast(e?.message || "단계 변경 실패", "error");
@@ -193,15 +201,13 @@ export function CartPage({
 						const label = stage_label(st);
 						const count = stageCounts[st] ?? 0;
 						const active = activeStage === st;
-
 						return (
 							<button
 								key={st}
 								type="button"
 								onClick={() => setActiveStage(active ? "ALL" : st)}
 								className={[
-									"rounded-xl px-3 py-3 border hover:bg-slate-50 transition",
-									"flex flex-col items-center justify-center text-center gap-1",
+									"rounded-xl px-3 py-2 border text-left hover:bg-slate-50",
 									active ? "border-slate-900 bg-slate-50" : "border-slate-200",
 								].join(" ")}
 							>
@@ -211,7 +217,6 @@ export function CartPage({
 						);
 					})}
 				</div>
-
 				{activeStage !== "ALL" && (
 					<div className="mt-3 text-sm text-slate-600">
 						필터 적용됨: <span className="font-semibold">{stage_label(activeStage)}</span>
@@ -257,34 +262,30 @@ export function CartPage({
 							>
 								<div className="min-w-0">
 									<div className="font-semibold text-slate-900 truncate">{w.title}</div>
-									<div className="mt-1 text-sm text-slate-500">
-										{(() => {
-											const amountText = w.baseAmount
-												? `${formatAmount(w.baseAmount)}원`
-												: "";
-											const { dateLine, timeLine } = w.bidEnd
-												? formatDateTimeLines(String(w.bidEnd))
-												: { dateLine: "", timeLine: "" };
+                                    <div className="mt-1 text-sm text-slate-500">
+                                        {(() => {
+                                            const amountText = w.baseAmount ? `${formatAmount(w.baseAmount)}원` : "";
+                                            const { dateLine, timeLine } = w.bidEnd ? formatDateTimeLines(String(w.bidEnd)) : { dateLine: "", timeLine: "" };
 
-											return (
-												<>
-													<span>{w.agency}</span>
+                                            return (
+                                                <>
+                                                    <span>{w.agency}</span>
 
-													{w.baseAmount ? (
-														<>
-															<span>{` · `}</span>
-															<span>{amountText}</span>
-														</>
-													) : null}
+                                                    {w.baseAmount ? (
+                                                        <>
+                                                            <span>{` · `}</span>
+                                                            <span>{amountText}</span>
+                                                        </>
+                                                    ) : null}
 
-													{w.bidEnd
-														? ` · 마감 ${formatDateTimeOneLine(String(w.bidEnd))}`
-														: ""}
-												</>
-											);
-										})()}
-									</div>
-								</div>
+                                                    {w.bidEnd ? ` · 마감 ${formatDateTimeOneLine(String(w.bidEnd))}` : ""}
+
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
+
+                                </div>
 
 								<div className="flex items-center gap-2 shrink-0">
 									<select
