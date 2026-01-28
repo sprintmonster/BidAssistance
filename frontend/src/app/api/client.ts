@@ -1,50 +1,39 @@
-// const DOMAIN = import.meta.env.VITE_API_URL || "";
-// const BASE_URL = `${DOMAIN}/api`;
+const DOMAIN = import.meta.env.VITE_API_URL || "";
+const BASE_URL = `${DOMAIN}/api`;
 
-const RAW = import.meta.env.VITE_API_URL || "";
-const DOMAIN = RAW.replace(/\/+$/g, ""); // trailing slash 제거
+type Auth401Mode = "logout" | "ignore";
 
-// VITE_API_URL이 이미 /api를 포함하면 중복 방지
-const BASE_URL = DOMAIN
-    ? (DOMAIN.endsWith("/api") ? DOMAIN : `${DOMAIN}/api`)
-    : "/api";
+type ApiConfig = {
+	on401?: Auth401Mode;
+};
 
-function is_form_data(body: unknown): body is FormData {
+function isFormData(body: unknown): body is FormData {
 	return typeof FormData !== "undefined" && body instanceof FormData;
 }
 
-function build_headers(options: RequestInit) {
+function attach_auth_header(headers: Record<string, string>) {
+	const token = localStorage.getItem("accessToken");
+	if (!token) return;
+	if (headers.Authorization) return;
+	headers.Authorization = `Bearer ${token}`;
+}
+
+export async function api<T>(
+	url: string,
+	options: RequestInit = {},
+	config: ApiConfig = {},
+): Promise<T> {
 	const headers: Record<string, string> = {
 		...((options.headers as Record<string, string>) ?? {}),
 	};
 
-	const token = localStorage.getItem("accessToken");
-	if (token && !headers.Authorization) headers.Authorization = `Bearer ${token}`;
+	attach_auth_header(headers);
 
-	if (!(options.body && is_form_data(options.body))) {
+	if (options.body && isFormData(options.body)) {
+		// do nothing
+	} else {
 		if (!headers["Content-Type"]) headers["Content-Type"] = "application/json";
 	}
-
-	return headers;
-}
-
-async function read_error_message(res: Response) {
-	const txt = await res.text().catch(() => "");
-	return txt || `API 오류 (HTTP ${res.status})`;
-}
-
-function clear_auth_storage() {
-	localStorage.removeItem("userId");
-	localStorage.removeItem("userName");
-	localStorage.removeItem("name");
-	localStorage.removeItem("email");
-	localStorage.removeItem("role");
-	localStorage.removeItem("accessToken");
-	localStorage.removeItem("refreshToken");
-}
-
-export async function api<T>(url: string, options: RequestInit = {}): Promise<T> {
-	const headers = build_headers(options);
 
 	const res = await fetch(`${BASE_URL}${url}`, {
 		...options,
@@ -53,12 +42,21 @@ export async function api<T>(url: string, options: RequestInit = {}): Promise<T>
 	});
 
 	if (res.status === 401) {
-		// clear_auth_storage();
+		if ((config.on401 ?? "logout") === "logout") {
+			localStorage.removeItem("userId");
+			localStorage.removeItem("userName");
+			localStorage.removeItem("name");
+			localStorage.removeItem("email");
+			localStorage.removeItem("role");
+			localStorage.removeItem("accessToken");
+			localStorage.removeItem("refreshToken");
+		}
 		throw new Error("인증이 필요합니다.");
 	}
 
 	if (!res.ok) {
-		throw new Error(await read_error_message(res));
+		const msg = await res.text().catch(() => "");
+		throw new Error(msg || "API 오류");
 	}
 
 	return (await res.json()) as T;

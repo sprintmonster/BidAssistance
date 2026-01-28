@@ -6,8 +6,11 @@ export type LoginSuccessData = {
 	userId: number | string;
 	name: string;
 	email?: string;
+
+	// 백엔드가 내려줘도 세션 기반이면 프론트 인증에 사용하지 않음
 	accessToken?: string;
 	refreshToken?: string;
+
 	role?: number;
 };
 
@@ -17,12 +20,41 @@ export interface LoginApiResponse {
 	data?: LoginSuccessData;
 }
 
+type CheckLoginData = {
+	userId?: number | string;
+	id?: number | string;
+	name?: string;
+	email?: string;
+	role?: number;
+	accessToken?: string;
+	refreshToken?: string;
+};
+
+type CheckLoginApiResponse = {
+	status: ApiStatus;
+	message: string;
+	data?: CheckLoginData;
+};
+
+function normalize_check_login_data(data: CheckLoginData): LoginSuccessData | null {
+	const uid = data.userId ?? data.id;
+	const name = data.name;
+
+	if (uid == null || !name) return null;
+
+	return {
+		userId: uid,
+		name,
+		email: data.email,
+		role: data.role,
+		accessToken: data.accessToken,
+		refreshToken: data.refreshToken,
+	};
+}
+
 export function persistLogin(data: LoginSuccessData) {
 	localStorage.setItem("userId", String(data.userId));
-	if (data.name != null) {
-		localStorage.setItem("userName", String(data.name));
-		localStorage.setItem("name", String(data.name));
-	}
+	if (data.name != null) localStorage.setItem("userName", String(data.name));
 	if (data.email != null) localStorage.setItem("email", String(data.email));
 	if (typeof data.role === "number") localStorage.setItem("role", String(data.role));
 	if (data.accessToken) localStorage.setItem("accessToken", String(data.accessToken));
@@ -48,9 +80,14 @@ export function login(email: string, password: string) {
 
 export async function checkLogin(): Promise<LoginSuccessData | null> {
 	try {
-		const res = await api<LoginApiResponse>("/users/checkLogin", { method: "GET" });
-		if (res.status === "success" && res.data) return res.data;
-		return null;
+		const res = await api<CheckLoginApiResponse>(
+			"/checkLogin",
+			{ method: "GET" },
+			{ on401: "ignore" },
+		);
+
+		if (res.status !== "success" || !res.data) return null;
+		return normalize_check_login_data(res.data);
 	} catch {
 		return null;
 	}

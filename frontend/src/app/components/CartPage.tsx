@@ -19,35 +19,15 @@ function parse_time(v: string): number {
 function formatAmount(value: unknown): string {
 	if (value == null || value === "") return "-";
 	const n =
-		typeof value === "number" ? value : Number(String(value).replace(/[^\d.-]/g, ""));
+		typeof value === "number"
+			? value
+			: Number(String(value).replace(/[^\d.-]/g, ""));
 	if (!Number.isFinite(n)) return "-";
 	return n.toLocaleString("ko-KR");
 }
 
-function formatDateTimeLines(dateStr: string) {
-	if (!dateStr) return { dateLine: "-", timeLine: "" };
-
-	const d = new Date(dateStr);
-	if (!Number.isFinite(d.getTime())) return { dateLine: "-", timeLine: "" };
-
-	const dateLine = d.toLocaleDateString("ko-KR", {
-		year: "numeric",
-		month: "2-digit",
-		day: "2-digit",
-	});
-
-	const timeLine = d.toLocaleTimeString("ko-KR", {
-		hour: "2-digit",
-		minute: "2-digit",
-		hour12: true,
-	});
-
-	return { dateLine, timeLine };
-}
-
 function formatDateTimeOneLine(dateStr: string) {
 	if (!dateStr) return "-";
-
 	const d = new Date(dateStr);
 	if (!Number.isFinite(d.getTime())) return "-";
 
@@ -73,6 +53,30 @@ function stage_label(stage: BidStage): string {
 	return found ? found.label : stage;
 }
 
+function get_user_id(): number | null {
+	const raw = localStorage.getItem("userId");
+	if (!raw) return null;
+	const n = Number(raw);
+	if (!Number.isFinite(n)) return null;
+	return n;
+}
+
+function days_until(dateStr: string): number | null {
+	if (!dateStr) return null;
+	const end = new Date(dateStr);
+	if (!Number.isFinite(end.getTime())) return null;
+	const now = new Date();
+	const diff = end.getTime() - now.getTime();
+	return Math.ceil(diff / 86400000);
+}
+
+function dday_label(daysLeft: number): string | null {
+	if (!Number.isFinite(daysLeft)) return null;
+	if (daysLeft < 0) return null;
+	if (daysLeft === 0) return "D-DAY";
+	return `D-${daysLeft}`;
+}
+
 export function CartPage({
 	setGlobalLoading,
 	showToast,
@@ -86,10 +90,9 @@ export function CartPage({
 	const [activeStage, setActiveStage] = useState<BidStage | "ALL">("ALL");
 	const [sortKey, setSortKey] = useState<SortKey>("DEADLINE_ASC");
 
-	const userId = Number(localStorage.getItem("userId"));
-
 	const loadWishlist = async () => {
-		if (!Number.isFinite(userId)) {
+		const userId = get_user_id();
+		if (userId === null) {
 			showToast("userId가 없습니다. 다시 로그인 해주세요.", "error");
 			return;
 		}
@@ -138,7 +141,8 @@ export function CartPage({
 
 	const onDelete = async (bidId: number) => {
 		try {
-			if (!Number.isFinite(userId)) {
+			const userId = get_user_id();
+			if (userId === null) {
 				showToast("userId가 없습니다. 다시 로그인 해주세요.", "error");
 				return;
 			}
@@ -155,7 +159,8 @@ export function CartPage({
 
 	const onChangeStage = async (item: WishlistItem, stage: BidStage) => {
 		try {
-			if (!Number.isFinite(userId)) {
+			const userId = get_user_id();
+			if (userId === null) {
 				showToast("userId가 없습니다. 다시 로그인 해주세요.", "error");
 				return;
 			}
@@ -180,146 +185,191 @@ export function CartPage({
 	};
 
 	return (
-		<div className="space-y-5">
-			<div>
-				<h2 className="text-2xl font-bold">장바구니</h2>
-				<div className="text-sm text-slate-500">장바구니에 담은 공고를 관리하세요</div>
-			</div>
-
-			{/* 파이프라인 요약 */}
-			<div className="bg-white border rounded-2xl p-4">
-				<div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-					{BID_STAGES.map((st) => {
-						const label = stage_label(st);
-						const count = stageCounts[st] ?? 0;
-						const active = activeStage === st;
-
-						return (
-							<button
-								key={st}
-								type="button"
-								onClick={() => setActiveStage(active ? "ALL" : st)}
-								className={[
-									"rounded-xl px-3 py-3 border hover:bg-slate-50 transition",
-									"flex flex-col items-center justify-center text-center gap-1",
-									active ? "border-slate-900 bg-slate-50" : "border-slate-200",
-								].join(" ")}
-							>
-								<div className="text-xs text-slate-500">{label}</div>
-								<div className="text-lg font-semibold text-slate-900">{count}건</div>
-							</button>
-						);
-					})}
-				</div>
-
-				{activeStage !== "ALL" && (
-					<div className="mt-3 text-sm text-slate-600">
-						필터 적용됨: <span className="font-semibold">{stage_label(activeStage)}</span>
-						<button
-							type="button"
-							onClick={() => setActiveStage("ALL")}
-							className="ml-2 text-blue-600 hover:underline"
-						>
-							해제
-						</button>
+		<div className="w-full">
+			<div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 space-y-5">
+				<div>
+					<h2 className="text-2xl font-bold">장바구니</h2>
+					<div className="text-sm text-slate-500">
+						장바구니에 담은 공고를 관리하세요
 					</div>
-				)}
-			</div>
-
-			{/* 목록 */}
-			<div className="bg-white border rounded-2xl overflow-hidden">
-				<div className="flex items-center justify-between px-4 py-3 border-b">
-					<div className="font-semibold text-slate-900">장바구니 공고 목록</div>
-					<select
-						className="h-9 rounded-lg border bg-white px-3 text-sm"
-						value={sortKey}
-						onChange={(e) => setSortKey(e.target.value as SortKey)}
-					>
-						<option value="DEADLINE_ASC">마감 빠른순</option>
-						<option value="DEADLINE_DESC">마감 늦은순</option>
-						<option value="TITLE_ASC">제목순</option>
-					</select>
 				</div>
 
-				{wishlist.length === 0 ? (
-					<div className="p-4 text-slate-500">찜한 공고가 없습니다.</div>
-				) : visibleItems.length === 0 ? (
-					<div className="p-4 text-slate-500">해당 단계에 공고가 없습니다.</div>
-				) : (
-					<div className="divide-y">
-						{visibleItems.map((w) => (
-							<div
-								key={`${w.id}:${w.bidId}`}
-								className="px-4 py-4 flex items-start justify-between gap-4 hover:bg-slate-50 cursor-pointer"
-								onClick={() => navigate(`/bids/${w.bidId}`)}
-								role="button"
-								tabIndex={0}
+				<div className="bg-white border rounded-2xl p-4 sm:p-5">
+					<div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+						{BID_STAGES.map((st) => {
+							const label = stage_label(st);
+							const count = stageCounts[st] ?? 0;
+							const active = activeStage === st;
+							return (
+								<button
+									key={st}
+									type="button"
+									onClick={() => setActiveStage(active ? "ALL" : st)}
+									className={[
+										"rounded-xl px-3 py-2 border text-left hover:bg-slate-50 transition-colors",
+										active
+											? "border-slate-900 bg-slate-50"
+											: "border-slate-200 bg-white",
+									].join(" ")}
+								>
+									<div className="text-xs text-slate-500">{label}</div>
+									<div className="text-lg font-semibold text-slate-900">
+										{count}건
+									</div>
+								</button>
+							);
+						})}
+					</div>
+
+					{activeStage !== "ALL" && (
+						<div className="mt-3 text-sm text-slate-600 flex items-center gap-2">
+							<span>
+								필터 적용됨:{" "}
+								<span className="font-semibold">{stage_label(activeStage)}</span>
+							</span>
+							<button
+								type="button"
+								onClick={() => setActiveStage("ALL")}
+								className="text-blue-600 hover:underline"
 							>
-								<div className="min-w-0">
-									<div className="font-semibold text-slate-900 truncate">{w.title}</div>
-									<div className="mt-1 text-sm text-slate-500">
-										{(() => {
-											const amountText = w.baseAmount
-												? `${formatAmount(w.baseAmount)}원`
-												: "";
-											const { dateLine, timeLine } = w.bidEnd
-												? formatDateTimeLines(String(w.bidEnd))
-												: { dateLine: "", timeLine: "" };
+								해제
+							</button>
+						</div>
+					)}
+				</div>
 
-											return (
-												<>
+				<div className="bg-white border rounded-2xl overflow-hidden">
+					<div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b">
+						<div className="font-semibold text-slate-900">장바구니 공고 목록</div>
+
+						<div className="flex items-center gap-2">
+							<span className="hidden sm:inline text-sm text-slate-500">
+								정렬
+							</span>
+							<select
+								className="h-9 rounded-lg border bg-white px-3 text-sm shadow-sm"
+								value={sortKey}
+								onChange={(e) => setSortKey(e.target.value as SortKey)}
+							>
+								<option value="DEADLINE_ASC">마감 빠른순</option>
+								<option value="DEADLINE_DESC">마감 늦은순</option>
+								<option value="TITLE_ASC">제목순</option>
+							</select>
+						</div>
+					</div>
+
+					{wishlist.length === 0 ? (
+						<div className="p-5 text-slate-500">찜한 공고가 없습니다.</div>
+					) : visibleItems.length === 0 ? (
+						<div className="p-5 text-slate-500">
+							해당 단계에 공고가 없습니다.
+						</div>
+					) : (
+						<div className="divide-y">
+							{visibleItems.map((w) => {
+								const amountText = w.baseAmount
+									? `${formatAmount(w.baseAmount)}원`
+									: "";
+								const endText = w.bidEnd
+									? `마감 ${formatDateTimeOneLine(String(w.bidEnd))}`
+									: "";
+
+								const daysLeft = w.bidEnd ? days_until(String(w.bidEnd)) : null;
+								const label = daysLeft == null ? null : dday_label(daysLeft);
+								const showBadge = label != null && daysLeft != null && daysLeft <= 7;
+
+								return (
+									<div
+										key={`${w.id}:${w.bidId}`}
+										className="px-4 sm:px-5 py-4 hover:bg-slate-50 transition-colors"
+									>
+										<div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 sm:gap-4 items-start">
+											<button
+												type="button"
+												className="text-left min-w-0"
+												onClick={() => navigate(`/bids/${w.bidId}`)}
+											>
+												<div className="flex items-center gap-2 min-w-0">
+													<div className="font-semibold text-slate-900 truncate">
+														{w.title}
+													</div>
+													{showBadge ? (
+														<span
+															className={[
+																"shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
+																daysLeft === 0
+																	? "bg-rose-100 text-rose-700"
+																	: daysLeft <= 3
+																		? "bg-amber-100 text-amber-800"
+																		: "bg-slate-100 text-slate-700",
+															].join(" ")}
+														>
+															{label}
+														</span>
+													) : null}
+												</div>
+
+												<div className="mt-1 text-sm text-slate-500 flex flex-wrap gap-x-2 gap-y-1">
 													<span>{w.agency}</span>
-
 													{w.baseAmount ? (
 														<>
-															<span>{` · `}</span>
+															<span className="text-slate-300">·</span>
 															<span>{amountText}</span>
 														</>
 													) : null}
+													{w.bidEnd ? (
+														<>
+															<span className="text-slate-300">·</span>
+															<span>{endText}</span>
+														</>
+													) : null}
+												</div>
+											</button>
 
-													{w.bidEnd
-														? ` · 마감 ${formatDateTimeOneLine(String(w.bidEnd))}`
-														: ""}
-												</>
-											);
-										})()}
+											<div className="flex items-center justify-end">
+												<div className="inline-flex items-center gap-2 rounded-full border bg-slate-50 px-2 py-1 shadow-sm">
+													<div className="w-[128px] sm:w-[140px]">
+														<select
+															className="h-9 w-full rounded-full border bg-white px-3 text-sm"
+															value={w.stage}
+															onClick={(e) => e.stopPropagation()}
+															onChange={(e) => {
+																e.stopPropagation();
+																void onChangeStage(
+																	w,
+																	e.target.value as BidStage,
+																);
+															}}
+														>
+															{BID_STAGE_OPTIONS.map((opt) => (
+																<option key={opt.value} value={opt.value}>
+																	{opt.label}
+																</option>
+															))}
+														</select>
+													</div>
+
+													<button
+														type="button"
+														className="h-9 w-9 inline-flex items-center justify-center rounded-full border bg-white hover:bg-red-50 hover:border-red-200 transition-colors"
+														onClick={(e) => {
+															e.stopPropagation();
+															void onDelete(w.bidId);
+														}}
+														aria-label="삭제"
+														title="삭제"
+													>
+														<Trash2 className="h-4 w-4 text-red-500" />
+													</button>
+												</div>
+											</div>
+										</div>
 									</div>
-								</div>
-
-								<div className="flex items-center gap-2 shrink-0">
-									<select
-										className="h-9 rounded-lg border bg-slate-50 px-3 text-sm"
-										value={w.stage}
-										onClick={(e) => e.stopPropagation()}
-										onChange={(e) => {
-											e.stopPropagation();
-											void onChangeStage(w, e.target.value as BidStage);
-										}}
-									>
-										{BID_STAGE_OPTIONS.map((opt) => (
-											<option key={opt.value} value={opt.value}>
-												{opt.label}
-											</option>
-										))}
-									</select>
-
-									<button
-										type="button"
-										className="h-9 w-9 inline-flex items-center justify-center rounded-lg border hover:bg-red-50 hover:border-red-200"
-										onClick={(e) => {
-											e.stopPropagation();
-											void onDelete(w.bidId);
-										}}
-										aria-label="삭제"
-										title="삭제"
-									>
-										<Trash2 className="h-4 w-4 text-red-500" />
-									</button>
-								</div>
-							</div>
-						))}
-					</div>
-				)}
+								);
+							})}
+						</div>
+					)}
+				</div>
 			</div>
 		</div>
 	);
