@@ -40,8 +40,7 @@ function days_left(endDate: string): number | null {
 
 	const now = new Date();
 	const diff = d.getTime() - now.getTime();
-	const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-	return days;
+	return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
 function format_krw_eok(raw: unknown): string {
@@ -65,8 +64,7 @@ function format_krw_eok(raw: unknown): string {
 
 function pick_bid_id(b: Bid): number {
 	if (typeof b.id === "number" && Number.isFinite(b.id)) return b.id;
-	if (typeof (b as any).bidId === "number" && Number.isFinite((b as any).bidId))
-		return (b as any).bidId;
+	if (typeof (b as any).bidId === "number" && Number.isFinite((b as any).bidId)) return (b as any).bidId;
 	return 0;
 }
 
@@ -152,23 +150,18 @@ export function RecommendedBidsModal({
 
 	const recommended = useMemo(() => {
 		const now = Date.now();
-		const items = [...bids]
+		return [...bids]
 			.filter((b) => {
 				const end = parse_deadline_date(String((b as any).endDate ?? ""));
 				if (!end) return true;
 				return end.getTime() > now;
 			})
 			.sort((a, b) => {
-				const ad =
-					parse_deadline_date(String((a as any).endDate ?? ""))?.getTime() ??
-					Number.MAX_SAFE_INTEGER;
-				const bd =
-					parse_deadline_date(String((b as any).endDate ?? ""))?.getTime() ??
-					Number.MAX_SAFE_INTEGER;
+				const ad = parse_deadline_date(String((a as any).endDate ?? ""))?.getTime() ?? Number.MAX_SAFE_INTEGER;
+				const bd = parse_deadline_date(String((b as any).endDate ?? ""))?.getTime() ?? Number.MAX_SAFE_INTEGER;
 				return ad - bd;
-			});
-
-		return items.slice(0, 10);
+			})
+			.slice(0, 10);
 	}, [bids]);
 
 	const on_close = () => {
@@ -212,148 +205,150 @@ export function RecommendedBidsModal({
 			<DialogContent
 				hideClose
 				overlayClassName="bg-black/40 backdrop-blur-sm"
-				className="p-0 sm:max-w-3xl rounded-3xl overflow-hidden border-0 shadow-2xl ring-1 ring-black/5"
+				className="p-0 sm:max-w-3xl rounded-3xl border-0 shadow-2xl ring-1 ring-black/5 overflow-visible bg-transparent"
 			>
-				<div className="relative px-7 pt-7 pb-5 border-b border-white/40 bg-[radial-gradient(1200px_400px_at_20%_-20%,rgba(59,130,246,0.18),transparent),radial-gradient(900px_380px_at_90%_0%,rgba(99,102,241,0.16),transparent)]">
-					<div className="flex items-start justify-between gap-4">
-						<div className="min-w-0">
-							<div className="flex items-center gap-2">
-								<div className="w-9 h-9 rounded-2xl bg-white/70 border flex items-center justify-center">
-									<Star className="w-5 h-5 text-slate-900" />
+				<div className="rounded-3xl overflow-hidden bg-white">
+					<div className="relative px-7 pt-7 pb-5 border-b border-white/40 bg-[radial-gradient(1200px_400px_at_20%_-20%,rgba(59,130,246,0.18),transparent),radial-gradient(900px_380px_at_90%_0%,rgba(99,102,241,0.16),transparent)]">
+						<div className="flex items-start justify-between gap-4">
+							<div className="min-w-0">
+								<div className="flex items-center gap-2">
+									<div className="w-9 h-9 rounded-2xl bg-white/70 border flex items-center justify-center">
+										<Star className="w-5 h-5 text-slate-900" />
+									</div>
+									<div className="text-lg font-semibold text-slate-900">추천 공고</div>
 								</div>
-								<div className="text-lg font-semibold text-slate-900">추천 공고</div>
+								<div className="mt-2 text-sm text-slate-600 flex items-center gap-2">
+									<Sparkles className="w-4 h-4" />
+									관심 조건/활동 흐름 기반으로 공고를 추천합니다. (현재는 데모 데이터)
+								</div>
 							</div>
-							<div className="mt-2 text-sm text-slate-600 flex items-center gap-2">
-								<Sparkles className="w-4 h-4" />
-								관심 조건/활동 흐름 기반으로 공고를 추천합니다. (현재는 데모 데이터)
-							</div>
+
+							<button
+								type="button"
+								onClick={on_close}
+								className="w-10 h-10 rounded-2xl bg-white/70 backdrop-blur border-white/40 shadow-sm hover:bg-white/90 transition flex items-center justify-center shrink-0"
+								aria-label="닫기"
+							>
+								<X className="w-5 h-5 text-slate-700" />
+							</button>
 						</div>
 
-						<button
-							type="button"
-							onClick={on_close}
-							className="w-10 h-10 rounded-2xl bg-white/60 backdrop-blur border-white/40 shadow-sm hover:bg-white/80 transition flex items-center justify-center"
-							aria-label="닫기"
-						>
-							<X className="w-5 h-5 text-slate-700" />
-						</button>
+						{notice ? (
+							<div className="mt-4 text-sm text-slate-700 bg-white/70 border rounded-2xl px-4 py-3">
+								{notice}
+							</div>
+						) : null}
 					</div>
 
-					{notice ? (
-						<div className="mt-4 text-sm text-slate-700 bg-white/70 border rounded-2xl px-4 py-3">
-							{notice}
-						</div>
-					) : null}
-				</div>
+					<div className="px-7 py-6 bg-slate-50">
+						<div className="max-h-[440px] overflow-y-auto pr-1">
+							{loading ? (
+								<div className="space-y-3">
+									{Array.from({ length: 5 }).map((_, idx) => (
+										<div key={idx} className="border rounded-2xl p-5 bg-white">
+											<div className="h-4 w-64 bg-slate-100 rounded animate-pulse" />
+											<div className="mt-2 h-3 w-40 bg-slate-100 rounded animate-pulse" />
+											<div className="mt-4 h-10 w-56 bg-slate-100 rounded-xl animate-pulse" />
+										</div>
+									))}
+								</div>
+							) : error ? (
+								<div className="border rounded-2xl p-4 bg-red-50 text-red-700 text-sm">{error}</div>
+							) : recommended.length === 0 ? (
+								<div className="border rounded-2xl p-6 bg-white text-sm text-slate-500">
+									표시할 추천 공고가 없습니다.
+								</div>
+							) : (
+								<div className="space-y-3">
+									{recommended.map((b) => {
+										const bidId = pick_bid_id(b);
+										const dleft = days_left(String((b as any).endDate ?? ""));
+										const dText = dleft === null ? "-" : dleft <= 0 ? "마감" : `D-${dleft}`;
 
-				<div className="px-7 py-6 bg-slate-50">
-					<div className="max-h-[440px] overflow-y-auto pr-1">
-						{loading ? (
-							<div className="space-y-3">
-								{Array.from({ length: 5 }).map((_, idx) => (
-									<div key={idx} className="border rounded-2xl p-5 bg-white">
-										<div className="h-4 w-64 bg-slate-100 rounded animate-pulse" />
-										<div className="mt-2 h-3 w-40 bg-slate-100 rounded animate-pulse" />
-										<div className="mt-4 h-10 w-56 bg-slate-100 rounded-xl animate-pulse" />
-									</div>
-								))}
-							</div>
-						) : error ? (
-							<div className="border rounded-2xl p-4 bg-red-50 text-red-700 text-sm">{error}</div>
-						) : recommended.length === 0 ? (
-							<div className="border rounded-2xl p-6 bg-white text-sm text-slate-500">
-								표시할 추천 공고가 없습니다.
-							</div>
-						) : (
-							<div className="space-y-3">
-								{recommended.map((b) => {
-									const bidId = pick_bid_id(b);
-									const dleft = days_left(String((b as any).endDate ?? ""));
-									const dText = dleft === null ? "-" : dleft <= 0 ? "마감" : `D-${dleft}`;
+										const badgeCls =
+											dleft !== null && dleft > 0
+												? dleft <= 3
+													? "bg-orange-600 text-white"
+													: "bg-blue-600 text-white"
+												: "bg-slate-100 text-slate-600";
 
-									const badgeCls =
-										dleft !== null && dleft > 0
-											? dleft <= 3
-												? "bg-orange-600 text-white"
-												: "bg-blue-600 text-white"
-											: "bg-slate-100 text-slate-600";
+										return (
+											<div
+												key={String(bidId || (b as any).realId || (b as any).RealId || b.name)}
+												className="group border border-slate-200/80 rounded-2xl p-5 bg-white hover:border-slate-300 hover:shadow-sm transition"
+											>
+												<div className="flex items-start justify-between gap-3">
+													<div className="min-w-0">
+														<div className="font-semibold text-slate-900 truncate">{b.name}</div>
+														<div className="text-sm text-slate-500 truncate">
+															{(b as any).organization ?? "-"}
+														</div>
+													</div>
 
-									return (
-										<div
-											key={String(bidId || (b as any).realId || (b as any).RealId || b.name)}
-											className="group border border-slate-200/80 rounded-2xl p-5 bg-white hover:border-slate-300 hover:shadow-sm hover:bg-white transition"
-										>
-											<div className="flex items-start justify-between gap-3">
-												<div className="min-w-0">
-													<div className="font-semibold text-slate-900 truncate">{b.name}</div>
-													<div className="text-sm text-slate-500 truncate">
-														{(b as any).organization ?? "-"}
+													<div className="flex items-center gap-2 shrink-0">
+														<span className="px-2.5 py-1 rounded-full text-xs border border-slate-200 bg-white/80">
+															{(b as any).region || "-"}
+														</span>
+														<span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${badgeCls}`}>
+															{dText}
+														</span>
 													</div>
 												</div>
 
-												<div className="flex items-center gap-2 shrink-0">
-													<span className="px-2.5 py-1 rounded-full text-xs border border-slate-200 bg-white/80">
-														{(b as any).region || "-"}
+												<div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-700">
+													<span className="px-2.5 py-1 rounded-full bg-slate-50 border">
+														{format_krw_eok((b as any).estimatePrice)}
 													</span>
-													<span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${badgeCls}`}>
-														{dText}
+													<span className="px-2.5 py-1 rounded-full bg-slate-50 border">
+														마감: {format_date_ymd(String((b as any).endDate ?? ""))}
 													</span>
 												</div>
+
+												<div className="mt-4 flex items-center gap-2">
+													<button
+														type="button"
+														onClick={() => on_detail(b)}
+														className="h-10 px-4 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm inline-flex items-center gap-2"
+													>
+														상세 보기
+														<ArrowRight className="w-4 h-4" />
+													</button>
+
+													<button
+														type="button"
+														onClick={() => void on_toggle_wishlist(b)}
+														disabled={togglingId === bidId && bidId !== 0}
+														className="h-10 px-4 rounded-xl border hover:bg-slate-50 text-sm disabled:opacity-60"
+													>
+														장바구니 담기
+													</button>
+												</div>
 											</div>
+										);
+									})}
+								</div>
+							)}
+						</div>
 
-											<div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-700">
-												<span className="px-2.5 py-1 rounded-full bg-slate-50 border">
-													{format_krw_eok((b as any).estimatePrice)}
-												</span>
-												<span className="px-2.5 py-1 rounded-full bg-slate-50 border">
-													마감: {format_date_ymd(String((b as any).endDate ?? ""))}
-												</span>
-											</div>
+						<div className="mt-5 flex items-center justify-between border-t pt-4">
+							<label className="flex items-center gap-2 text-sm text-slate-600 select-none">
+								<input
+									type="checkbox"
+									checked={dontShowToday}
+									onChange={(e) => setDontShowToday(e.target.checked)}
+									className="accent-slate-900"
+								/>
+								오늘 다시 보지 않기
+							</label>
 
-											<div className="mt-4 flex items-center gap-2">
-												<button
-													type="button"
-													onClick={() => on_detail(b)}
-													className="h-10 px-4 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm inline-flex items-center gap-2"
-												>
-													상세 보기
-													<ArrowRight className="w-4 h-4" />
-												</button>
-
-												<button
-													type="button"
-													onClick={() => void on_toggle_wishlist(b)}
-													disabled={togglingId === bidId && bidId !== 0}
-													className="h-10 px-4 rounded-xl border hover:bg-slate-50 text-sm disabled:opacity-60"
-												>
-													장바구니 담기
-												</button>
-											</div>
-										</div>
-									);
-								})}
-							</div>
-						)}
-					</div>
-
-					<div className="mt-5 flex items-center justify-between border-t pt-4">
-						<label className="flex items-center gap-2 text-sm text-slate-600 select-none">
-							<input
-								type="checkbox"
-								checked={dontShowToday}
-								onChange={(e) => setDontShowToday(e.target.checked)}
-								className="accent-slate-900"
-							/>
-							오늘 다시 보지 않기
-						</label>
-
-						<button
-							type="button"
-							onClick={on_close}
-							className="h-10 px-4 rounded-xl border hover:bg-slate-50 text-sm"
-						>
-							닫기
-						</button>
+							<button
+								type="button"
+								onClick={on_close}
+								className="h-10 px-4 rounded-xl border bg-white hover:bg-slate-50 text-sm shadow-sm"
+							>
+								닫기
+							</button>
+						</div>
 					</div>
 				</div>
 			</DialogContent>
