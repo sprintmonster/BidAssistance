@@ -166,6 +166,53 @@ export function CommunityPage() {
         return all_posts.filter((p) => p.category === category);
     }, [all_posts, category]);
 
+    const fill_comment_counts = useCallback(
+        async (items: Post[]) => {
+            // id가 유효한 것만
+            const targets = items
+                .map((p: any) => ({ ...p, id: p.id ?? p.postId }))   // ✅ postId -> id
+                .filter((p: any) => to_valid_id(p.id) != null);
+
+            // 너무 많이 동시에 치지 않게 10개씩 끊기
+            const chunkSize = 10;
+            const countMap = new Map<number, number>();
+
+            for (let i = 0; i < targets.length; i += chunkSize) {
+                const chunk = targets.slice(i, i + chunkSize);
+
+                const results = await Promise.all(
+                    chunk.map(async (p: any) => {
+                        const pid = to_valid_id(p.id);
+                        if (!pid) return null;
+
+                        try {
+                            const comments = await fetchCommunityComments(pid);
+                            return [pid, comments.length] as const;
+                        } catch {
+                            return [pid, 0] as const;
+                        }
+                    })
+                );
+
+                results.forEach((r) => {
+                    if (!r) return;
+                    countMap.set(r[0], r[1]);
+                });
+            }
+
+            // posts에 commentCount 주입
+            set_all_posts((prev: any[]) =>
+                prev.map((p: any) => {
+                    const pid = to_valid_id(p.id ?? p.postId);
+                    if (!pid) return p;
+                    const c = countMap.get(pid);
+                    return c == null ? p : { ...p, commentCount: c };
+                })
+            );
+        },
+        [set_all_posts]
+    );
+
     const load_list = useCallback(
         async (opts?: { q?: string; s?: SortKey }) => {
             set_list_loading(true);
@@ -182,18 +229,26 @@ export function CommunityPage() {
                     size: 200,
                 });
 
-                //  서버가 likedByMe를 안 주더라도 로컬 좋아요 상태로 덮어씌움(안정적)
                 const likedSet = loadLikedSet(current_user_id);
+
                 const fixedItems = data.items.map((p: any) => {
-                    const pid = to_valid_id(p?.id);
-                    if (!pid) return p;
+                    // ✅ postId -> id 정규화 (이거 안 하면 open_detail/load_detail 다 꼬일 수 있음)
+                    const pid = to_valid_id(p?.id ?? p?.postId);
+
+                    const base = { ...p, id: p.id ?? p.postId }; // id 보장
+                    const withLikes = setLikes(base, getLikes(base));
+
+                    if (!pid) return withLikes;
 
                     const liked = likedSet.has(pid);
-                    const withLikes = setLikes(p, getLikes(p));     // 먼저 likes 정리
-                    return { ...withLikes, likedByMe: liked };      // likedByMe를 마지막에 덮어쓰기
+                    return { ...withLikes, likedByMe: liked };
                 });
 
                 set_all_posts(fixedItems);
+
+// ✅ 목록 화면 댓글수 채우기(프론트 계산)
+                void fill_comment_counts(fixedItems);
+
             } catch (e: any) {
                 set_list_error(e?.message || "게시글 목록을 불러오지 못했습니다.");
             } finally {
