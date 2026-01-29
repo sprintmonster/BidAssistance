@@ -170,7 +170,7 @@ export function CommunityPage() {
         async (items: Post[]) => {
             // id가 유효한 것만
             const targets = items
-                .map((p: any) => ({ ...p, id: p.id ?? p.postId }))   // ✅ postId -> id
+                .map((p: any) => ({ ...p, id: p.id ?? p.postId }))   //  postId -> id
                 .filter((p: any) => to_valid_id(p.id) != null);
 
             // 너무 많이 동시에 치지 않게 10개씩 끊기
@@ -232,7 +232,7 @@ export function CommunityPage() {
                 const likedSet = loadLikedSet(current_user_id);
 
                 const fixedItems = data.items.map((p: any) => {
-                    // ✅ postId -> id 정규화 (이거 안 하면 open_detail/load_detail 다 꼬일 수 있음)
+                    //  postId -> id 정규화 (이거 안 하면 open_detail/load_detail 다 꼬일 수 있음)
                     const pid = to_valid_id(p?.id ?? p?.postId);
 
                     const base = { ...p, id: p.id ?? p.postId }; // id 보장
@@ -246,7 +246,7 @@ export function CommunityPage() {
 
                 set_all_posts(fixedItems);
 
-// ✅ 목록 화면 댓글수 채우기(프론트 계산)
+//  목록 화면 댓글수 채우기(프론트 계산)
                 void fill_comment_counts(fixedItems);
 
             } catch (e: any) {
