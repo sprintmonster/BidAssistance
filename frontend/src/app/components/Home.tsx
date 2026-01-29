@@ -237,6 +237,8 @@ export function Home() {
 		localStorage.removeItem("name");
 		localStorage.removeItem("email");
 
+        window.dispatchEvent(new Event("auth:changed"));
+
 		window.location.href = "/";
 	};
 

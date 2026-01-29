@@ -67,14 +67,21 @@ export function ResetPasswordPage() {
             type RecoveryQuestionRes = {
                 status: "success" | "error";
                 message?: string;
-                data?: { recoverySessionId: string; questionId: number };
+                data?: {
+                    requestId: number;
+                    questionIndex: number;
+                };
             };
 
+            const params = new URLSearchParams({
+                email: payload.email,
+                name: payload.name,
+                birth: payload.birth, // 예: "2001-06-29"
+            });
             let json: RecoveryQuestionRes;
             try {
-                json = await api<RecoveryQuestionRes>("/users/recovery_question", {
+                json = await api<RecoveryQuestionRes>(`/users/recovery_question?${params.toString()}`, {
                     method: "GET",
-                    body: JSON.stringify(payload),
                 });
             } catch (e) {
                 setMessage({ type: "error", text: e instanceof Error ? e.message : "요청에 실패했습니다." });
@@ -106,15 +113,15 @@ export function ResetPasswordPage() {
 			// 	return;
 			// }
 
-			const sid = json?.data?.recoverySessionId;
-			const qid = json?.data?.questionId;
+            const sid = json?.data?.requestId;
+            const qid = json?.data?.questionIndex;
 
-			if (typeof sid !== "string" || typeof qid !== "number") {
-				setMessage({ type: "error", text: "서버 응답 형식이 올바르지 않아요." });
-				return;
-			}
+            if (typeof sid !== "number" || typeof qid !== "number") {
+                setMessage({ type: "error", text: "서버 응답 형식이 올바르지 않아요." });
+                return;
+            }
 
-			setRecoverySessionId(sid);
+            setRecoverySessionId(String(sid));
 			setQuestionIndex(qid);
 			setIdentifiedEmail(formData.email.trim()); // 화면 표시용
 			setStep("challenge");
