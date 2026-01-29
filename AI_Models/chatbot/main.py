@@ -15,6 +15,8 @@ import PyPDF2
 from datetime import datetime
 import logging
 import uuid
+import json
+from langchain_core.messages import ToolMessage
 
 # 분리된 그래프 앱 import
 from graph import graph_app
@@ -146,7 +148,7 @@ async def chat_endpoint(req: ChatRequest):
         
         # 마지막 메시지(AI 답변) 추출
         last_message = final_state["messages"][-1]
-        
+
         return {
             "query": req.query,
             "response": last_message.content,
