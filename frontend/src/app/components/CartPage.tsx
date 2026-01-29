@@ -61,13 +61,14 @@ function get_user_id(): number | null {
 	return n;
 }
 
-function days_until(dateStr: string): number | null {
+function days_until(dateStr: string, nowMs: number): number | null {
 	if (!dateStr) return null;
 	const end = new Date(dateStr);
 	if (!Number.isFinite(end.getTime())) return null;
-	const now = new Date();
-	const diff = end.getTime() - now.getTime();
-	return Math.ceil(diff / 86400000);
+	const diff = end.getTime() - nowMs;
+	if (!Number.isFinite(diff)) return null;
+	if (diff < 0) return -1;
+	return Math.floor(diff / 86400000);
 }
 
 function dday_label(daysLeft: number): string | null {
@@ -89,6 +90,12 @@ export function CartPage({
 	const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
 	const [activeStage, setActiveStage] = useState<BidStage | "ALL">("ALL");
 	const [sortKey, setSortKey] = useState<SortKey>("DEADLINE_ASC");
+	const [nowMs, setNowMs] = useState(() => Date.now());
+
+	useEffect(() => {
+		const t = window.setInterval(() => setNowMs(Date.now()), 30000);
+		return () => window.clearInterval(t);
+	}, []);
 
 	const loadWishlist = async () => {
 		const userId = get_user_id();
@@ -123,9 +130,7 @@ export function CartPage({
 
 	const visibleItems = useMemo(() => {
 		let items = wishlist.slice();
-		if (activeStage !== "ALL") {
-			items = items.filter((it) => it.stage === activeStage);
-		}
+		if (activeStage !== "ALL") items = items.filter((it) => it.stage === activeStage);
 
 		items.sort((a, b) => {
 			if (sortKey === "TITLE_ASC")
@@ -150,8 +155,8 @@ export function CartPage({
 			const res = await toggleWishlist(userId, bidId);
 			await loadWishlist();
 			showToast(res.message || "삭제되었습니다.", "success");
-		} catch {
-			showToast("삭제 실패", "error");
+		} catch (e: any) {
+			showToast(e?.message || "삭제 실패", "error");
 		} finally {
 			setGlobalLoading(false);
 		}
@@ -176,6 +181,7 @@ export function CartPage({
 			setWishlist((prev) =>
 				prev.map((it) => (it.bidId === item.bidId ? { ...it, stage } : it)),
 			);
+
 			showToast(res.message || "단계가 변경되었습니다.", "success");
 		} catch (e: any) {
 			showToast(e?.message || "단계 변경 실패", "error");
@@ -243,9 +249,7 @@ export function CartPage({
 						<div className="font-semibold text-slate-900">장바구니 공고 목록</div>
 
 						<div className="flex items-center gap-2">
-							<span className="hidden sm:inline text-sm text-slate-500">
-								정렬
-							</span>
+							<span className="hidden sm:inline text-sm text-slate-500">정렬</span>
 							<select
 								className="h-9 rounded-lg border bg-white px-3 text-sm shadow-sm"
 								value={sortKey}
@@ -261,20 +265,14 @@ export function CartPage({
 					{wishlist.length === 0 ? (
 						<div className="p-5 text-slate-500">찜한 공고가 없습니다.</div>
 					) : visibleItems.length === 0 ? (
-						<div className="p-5 text-slate-500">
-							해당 단계에 공고가 없습니다.
-						</div>
+						<div className="p-5 text-slate-500">해당 단계에 공고가 없습니다.</div>
 					) : (
 						<div className="divide-y">
 							{visibleItems.map((w) => {
-								const amountText = w.baseAmount
-									? `${formatAmount(w.baseAmount)}원`
-									: "";
-								const endText = w.bidEnd
-									? `마감 ${formatDateTimeOneLine(String(w.bidEnd))}`
-									: "";
+								const amountText = w.baseAmount ? `${formatAmount(w.baseAmount)}원` : "";
+								const endText = w.bidEnd ? `마감 ${formatDateTimeOneLine(String(w.bidEnd))}` : "";
 
-								const daysLeft = w.bidEnd ? days_until(String(w.bidEnd)) : null;
+								const daysLeft = w.bidEnd ? days_until(String(w.bidEnd), nowMs) : null;
 								const label = daysLeft == null ? null : dday_label(daysLeft);
 								const showBadge = label != null && daysLeft != null && daysLeft <= 7;
 
@@ -335,10 +333,7 @@ export function CartPage({
 															onClick={(e) => e.stopPropagation()}
 															onChange={(e) => {
 																e.stopPropagation();
-																void onChangeStage(
-																	w,
-																	e.target.value as BidStage,
-																);
+																void onChangeStage(w, e.target.value as BidStage);
 															}}
 														>
 															{BID_STAGE_OPTIONS.map((opt) => (
