@@ -56,6 +56,8 @@ export function FindAccountPage() {
 		setMessage(null);
 	};
 
+const BASE_URL = import.meta.env.VITE_API_URL || "";
+
 	const handleIdentify = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setMessage(null);
@@ -69,7 +71,7 @@ export function FindAccountPage() {
             const qs = new URLSearchParams({ name, birth }).toString();
 
 
-            const res = await fetch(`/api/users/find-email/identify?${qs}`, { method: "GET" });
+            const res = await fetch(`${BASE_URL}/api/users/find-email/identify?${qs}`, { method: "GET" });
 			const json = await res.json().catch(() => null);
 
 			if (!res.ok || json?.status === "error") {
@@ -112,7 +114,7 @@ export function FindAccountPage() {
                 userId: String(requestId),
                 answer,
             }).toString();
-			const res = await fetch(`/api/users/find-email/verify?${qs}`, { method: "GET" });
+			const res = await fetch(`${BASE_URL}/api/users/find-email/verify?${qs}`, { method: "GET" });
 			const json = await res.json().catch(() => null);
 
 			if (!res.ok || json?.status === "error") {
