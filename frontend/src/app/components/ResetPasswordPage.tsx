@@ -73,7 +73,7 @@ export function ResetPasswordPage() {
             let json: RecoveryQuestionRes;
             try {
                 json = await api<RecoveryQuestionRes>("/users/recovery_question", {
-                    method: "POST",
+                    method: "GET",
                     body: JSON.stringify(payload),
                 });
             } catch (e) {
