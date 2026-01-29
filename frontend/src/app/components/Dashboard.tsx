@@ -5,11 +5,7 @@ import { fetchWishlist } from "../api/wishlist";
 import type { WishlistItem } from "../types/wishlist";
 
 import { SummaryCards } from "./dashboard/SummaryCard";
-import {
-	MonthlyTrendChart,
-	type MonthlyWeeklyTrend,
-	type WeeklyTrendPoint,
-} from "./dashboard/MonthlyTrendChart";
+import { MonthlyTrendChart, type MonthlyTrendPoint } from "./dashboard/MonthlyTrendChart";
 import { RegionPieChart, type RegionDistPoint } from "./dashboard/RegionPieChart";
 
 type Kpi = {
@@ -59,8 +55,8 @@ export function Dashboard() {
 		void load();
 	}, []);
 
-	const monthlyTrend = useMemo<MonthlyWeeklyTrend[]>(
-		() => build_weekly_trend_forward(bids, 3),
+	const monthlyTrend = useMemo<MonthlyTrendPoint[]>(
+		() => build_monthly_trend_forward(bids, 3),
 		[bids],
 	);
 
@@ -135,100 +131,23 @@ function build_month_scaffold_forward(
 	return out;
 }
 
-function start_of_week(d: Date, weekStart: 0 | 1): Date {
-	const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-	const day = x.getDay();
-	const delta = (day - weekStart + 7) % 7;
-	x.setDate(x.getDate() - delta);
-	x.setHours(0, 0, 0, 0);
-	return x;
-}
-
-function add_days(d: Date, days: number): Date {
-	const x = new Date(d);
-	x.setDate(x.getDate() + days);
-	return x;
-}
-
-function fmt_mmdd(d: Date): string {
-	const mm = String(d.getMonth() + 1).padStart(2, "0");
-	const dd = String(d.getDate()).padStart(2, "0");
-	return `${mm}.${dd}`;
-}
-
-function week_ranges_in_month(monthStart: Date): Array<{ label: string; start: Date; end: Date }> {
-	const weekStart: 0 | 1 = 0;
-
-	const mStart = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1);
-	const mEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
-
-	const first = start_of_week(mStart, weekStart);
-	const lastStart = start_of_week(mEnd, weekStart);
-
-	const ranges: Array<{ label: string; start: Date; end: Date }> = [];
-
-	let cur = first;
-	let idx = 1;
-
-	while (cur.getTime() <= lastStart.getTime()) {
-		const s = new Date(cur);
-		const e = add_days(s, 6);
-		ranges.push({ label: `${idx}주`, start: s, end: e });
-		cur = add_days(cur, 7);
-		idx += 1;
-	}
-
-	return ranges;
-}
-
-function range_label(start: Date, end: Date): string {
-	return `${fmt_mmdd(start)}~${fmt_mmdd(end)}`;
-}
-
-export function build_weekly_trend_forward(bids: Bid[], n: number): MonthlyWeeklyTrend[] {
+export function build_monthly_trend_forward(bids: Bid[], n: number): MonthlyTrendPoint[] {
 	const scaffold = build_month_scaffold_forward(n);
-	const perMonth = new Map<string, Map<string, number>>();
-
-	for (const m of scaffold) {
-		const ranges = week_ranges_in_month(m.start);
-		const weekMap = new Map<string, number>();
-		ranges.forEach((r) => weekMap.set(r.label, 0));
-		perMonth.set(m.key, weekMap);
-	}
+	const counts = new Map<string, number>();
 
 	bids.forEach((b) => {
 		const d = to_date(String((b as any).endDate ?? (b as any).bidEnd ?? ""));
 		if (!d) return;
 
 		for (const m of scaffold) {
-			if (d.getTime() < m.start.getTime() || d.getTime() >= m.end.getTime()) continue;
-
-			const ranges = week_ranges_in_month(m.start);
-			for (const r of ranges) {
-				const start = r.start.getTime();
-				const endExclusive = add_days(r.end, 1).getTime();
-				const t = d.getTime();
-				if (t >= start && t < endExclusive) {
-					const wm = perMonth.get(m.key);
-					if (!wm) return;
-					wm.set(r.label, (wm.get(r.label) ?? 0) + 1);
-					return;
-				}
+			if (d.getTime() >= m.start.getTime() && d.getTime() < m.end.getTime()) {
+				counts.set(m.key, (counts.get(m.key) ?? 0) + 1);
+				break;
 			}
-			return;
 		}
 	});
 
-	return scaffold.map((m) => {
-		const ranges = week_ranges_in_month(m.start);
-		const wm = perMonth.get(m.key) ?? new Map<string, number>();
-		const points: WeeklyTrendPoint[] = ranges.map((r) => ({
-			week: r.label,
-			value: wm.get(r.label) ?? 0,
-			range: range_label(r.start, r.end),
-		}));
-		return { month: m.label, points };
-	});
+	return scaffold.map((m) => ({ month: m.label, value: counts.get(m.key) ?? 0 }));
 }
 
 function normalize_region(raw: string): string {
@@ -281,44 +200,92 @@ export function build_region_dist(bids: Bid[]): RegionDistPoint[] {
 		.sort((a, b) => b.value - a.value);
 }
 
-function parse_amount(v: unknown): number {
+function add_days(d: Date, days: number): Date {
+	const x = new Date(d);
+	x.setDate(x.getDate() + days);
+	return x;
+}
+
+function start_of_today(d: Date): Date {
+	const x = new Date(d);
+	x.setHours(0, 0, 0, 0);
+	return x;
+}
+
+function end_of_today(d: Date): Date {
+	const x = new Date(d);
+	x.setHours(23, 59, 59, 999);
+	return x;
+}
+
+function parse_amount_to_won(v: unknown): number {
 	if (typeof v === "number") return Number.isFinite(v) ? v : 0;
 	if (typeof v !== "string") return 0;
-	const digits = v.replace(/[^0-9]/g, "");
-	if (!digits) return 0;
-	const n = Number(digits);
+
+	const s = v.trim();
+	if (!s) return 0;
+
+	if (s.includes("억")) {
+		const m = s.match(/(\d+(?:\.\d+)?)/);
+		if (!m) return 0;
+		const n = Number(m[1]);
+		if (!Number.isFinite(n)) return 0;
+		return Math.round(n * 100_000_000);
+	}
+
+	if (s.includes("만원")) {
+		const m = s.match(/(\d+(?:\.\d+)?)/);
+		if (!m) return 0;
+		const n = Number(m[1]);
+		if (!Number.isFinite(n)) return 0;
+		return Math.round(n * 10_000);
+	}
+
+	const first = s.match(/-?\d[\d,]*/);
+	if (!first) return 0;
+	const n = Number(first[0].replace(/,/g, ""));
 	return Number.isFinite(n) ? n : 0;
+}
+
+function format_eok_from_won(valueWon: number): string {
+	if (!Number.isFinite(valueWon) || valueWon <= 0) return "0";
+	const eok = valueWon / 100_000_000;
+	const fmt = new Intl.NumberFormat("ko-KR", {
+		maximumFractionDigits: 1,
+		minimumFractionDigits: 0,
+	});
+	return fmt.format(eok);
 }
 
 function build_kpi(bids: Bid[], wishlist: WishlistItem[]): Kpi {
 	const now = new Date();
-	const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-	const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+	const threeDaysLater = add_days(now, 3);
+
+	const todayStart = start_of_today(now);
+	const todayEnd = end_of_today(now);
 
 	let newBidsThisMonth = 0;
 	let closingSoon3Days = 0;
-	let totalAmount = 0;
 
 	bids.forEach((b) => {
+		const start = to_date(String((b as any).startDate ?? (b as any).bidStart ?? ""));
 		const end = to_date(String((b as any).endDate ?? (b as any).bidEnd ?? ""));
-		if (end) {
-			if (end.getTime() >= monthStart.getTime() && end.getTime() < nextMonthStart.getTime()) {
-				newBidsThisMonth += 1;
-			}
 
-			const diff = end.getTime() - now.getTime();
-			if (diff >= 0 && diff <= 3 * 86400000) closingSoon3Days += 1;
+		if (start && start.getTime() >= todayStart.getTime() && start.getTime() <= todayEnd.getTime()) {
+			newBidsThisMonth += 1;
 		}
 
-		totalAmount += parse_amount((b as any).estimatePrice ?? (b as any).baseAmount ?? 0);
+		if (end && end.getTime() >= now.getTime() && end.getTime() <= threeDaysLater.getTime()) {
+			closingSoon3Days += 1;
+		}
 	});
 
-	const totalExpectedAmountEok = (totalAmount / 100000000).toFixed(1);
+	const sumWon = wishlist.reduce((acc, it) => acc + parse_amount_to_won(it.baseAmount), 0);
 
 	return {
 		newBidsThisMonth,
 		wishlistCount: wishlist.length,
 		closingSoon3Days,
-		totalExpectedAmountEok: `${totalExpectedAmountEok}억`,
+		totalExpectedAmountEok: format_eok_from_won(sumWon),
 	};
 }
