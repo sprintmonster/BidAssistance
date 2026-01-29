@@ -71,7 +71,7 @@ function compute_counts(items: Post[]) {
     return base;
 }
 
-/** ✅ 좋아요 localStorage (유저별) */
+/**  좋아요 localStorage (유저별) */
 function likeStorageKey(userId?: string) {
     return `community_likes_v1:${userId ?? "guest"}`;
 }
@@ -104,7 +104,7 @@ function isLikedLocal(userId: string | undefined, postId: number) {
     return loadLikedSet(userId).has(postId);
 }
 
-/** ✅ likes 필드가 likes / likeCount 혼재일 수 있어서 안전 처리 */
+/**  likes 필드가 likes / likeCount 혼재일 수 있어서 안전 처리 */
 function getLikes(p: any): number {
     const v = p?.likes ?? p?.likeCount ?? 0;
     const n = Number(v);
@@ -123,7 +123,7 @@ export function CommunityPage() {
     const [category, set_category] = useState<CategoryFilter>("all");
     const [sort_key, set_sort_key] = useState<SortKey>("latest");
 
-    /** ✅ 목록 원본(필터 전) */
+    /**  목록 원본(필터 전) */
     const [all_posts, set_all_posts] = useState<Post[]>([]);
 
     const [list_loading, set_list_loading] = useState(false);
@@ -136,7 +136,7 @@ export function CommunityPage() {
     const [authed, set_authed] = useState(() => is_authed_now());
     const [current_user_id, set_current_user_id] = useState(() => safe_user_id());
 
-    /** ✅ 게시글별 좋아요 연타 방지 */
+    /**  게시글별 좋아요 연타 방지 */
     const [likeBusyByPost, setLikeBusyByPost] = useState<Record<number, boolean>>({});
 
     useEffect(() => {
@@ -182,12 +182,15 @@ export function CommunityPage() {
                     size: 200,
                 });
 
-                // ✅ 서버가 likedByMe를 안 주더라도 로컬 좋아요 상태로 덮어씌움(안정적)
+                //  서버가 likedByMe를 안 주더라도 로컬 좋아요 상태로 덮어씌움(안정적)
                 const likedSet = loadLikedSet(current_user_id);
                 const fixedItems = data.items.map((p: any) => {
                     const pid = to_valid_id(p?.id);
                     if (!pid) return p;
-                    return { ...p, likedByMe: likedSet.has(pid), ...setLikes(p, getLikes(p)) };
+
+                    const liked = likedSet.has(pid);
+                    const withLikes = setLikes(p, getLikes(p));     // 먼저 likes 정리
+                    return { ...withLikes, likedByMe: liked };      // likedByMe를 마지막에 덮어쓰기
                 });
 
                 set_all_posts(fixedItems);
@@ -214,15 +217,14 @@ export function CommunityPage() {
                 const pid = to_valid_id(post_id);
                 const localLiked = pid ? isLikedLocal(current_user_id, pid) : false;
 
+                const withLikes = setLikes(post as any, getLikes(post));
                 const fixed: Post = {
-                    ...(post as any),
-                    likedByMe: localLiked,
-                    ...setLikes(post as any, getLikes(post)),
+                    ...(withLikes as any),
+                    likedByMe: localLiked,          // likedByMe를 마지막에
                     comments,
                     commentCount: comments.length,
                     attachments: (post as any).attachments ?? [],
                 };
-
                 set_selected_post(fixed);
             } catch (e: any) {
                 set_detail_error(e?.message || "게시글을 불러오지 못했습니다.");
@@ -371,7 +373,7 @@ export function CommunityPage() {
         try {
             await deleteCommunityPost(pid);
 
-            // ✅ 로컬 좋아요 기록에서도 제거(옵션이지만 깔끔)
+            //  로컬 좋아요 기록에서도 제거(옵션이지만 깔끔)
             const set = loadLikedSet(current_user_id);
             set.delete(pid);
             saveLikedSet(current_user_id, set);
@@ -384,7 +386,7 @@ export function CommunityPage() {
     };
 
     /**
-     * ✅ 좋아요 토글:
+     *  좋아요 토글:
      * - 연타 방지(게시글별)
      * - 서버 응답 data를 신뢰 못하는 상황에서도(local liked 저장) 안정적으로 동작
      * - 느린 load_detail 재호출 제거
@@ -430,7 +432,7 @@ export function CommunityPage() {
                 return { ...setLikes(prev, nextLikes), likedByMe: !likedNow };
             });
 
-            // ✅ 느려지는 원인: 여기서 load_detail(pid) 재호출하지 않음
+            //  느려지는 원인: 여기서 load_detail(pid) 재호출하지 않음
         } catch (e: any) {
             alert(e?.message || "좋아요 처리에 실패했습니다.");
         } finally {
