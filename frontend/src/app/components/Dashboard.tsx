@@ -5,7 +5,11 @@ import { fetchWishlist } from "../api/wishlist";
 import type { WishlistItem } from "../types/wishlist";
 
 import { SummaryCards } from "./dashboard/SummaryCard";
-import { MonthlyTrendChart, type MonthlyTrendPoint } from "./dashboard/MonthlyTrendChart";
+import {
+	MonthlyTrendChart,
+	type MonthlyWeeklyTrend,
+	type WeeklyTrendPoint,
+} from "./dashboard/MonthlyTrendChart";
 import { RegionPieChart, type RegionDistPoint } from "./dashboard/RegionPieChart";
 
 type Kpi = {
@@ -55,8 +59,8 @@ export function Dashboard() {
 		void load();
 	}, []);
 
-	const monthlyTrend = useMemo<MonthlyTrendPoint[]>(
-		() => build_monthly_trend_forward(bids, 3),
+	const monthlyTrend = useMemo<MonthlyWeeklyTrend[]>(
+		() => build_weekly_trend_forward(bids, 3),
 		[bids],
 	);
 
@@ -111,9 +115,7 @@ function add_months(d: Date, months: number): Date {
 	return new Date(d.getFullYear(), d.getMonth() + months, 1);
 }
 
-function build_month_scaffold_forward(
-	n: number,
-): Array<{ key: string; label: string; start: Date; end: Date }> {
+function build_month_scaffold_forward(n: number): Array<{ key: string; label: string; start: Date; end: Date }> {
 	const now = new Date();
 	const base = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -121,33 +123,106 @@ function build_month_scaffold_forward(
 	for (let i = 0; i < n; i += 1) {
 		const start = add_months(base, i);
 		const end = add_months(base, i + 1);
-		out.push({
-			key: month_key(start),
-			label: month_label(start),
-			start,
-			end,
-		});
+		out.push({ key: month_key(start), label: month_label(start), start, end });
 	}
 	return out;
 }
 
-export function build_monthly_trend_forward(bids: Bid[], n: number): MonthlyTrendPoint[] {
+function start_of_week(d: Date, weekStart: 0 | 1): Date {
+	const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+	const day = x.getDay();
+	const delta = (day - weekStart + 7) % 7;
+	x.setDate(x.getDate() - delta);
+	x.setHours(0, 0, 0, 0);
+	return x;
+}
+
+function add_days(d: Date, days: number): Date {
+	const x = new Date(d);
+	x.setDate(x.getDate() + days);
+	return x;
+}
+
+function fmt_mmdd(d: Date): string {
+	const mm = String(d.getMonth() + 1).padStart(2, "0");
+	const dd = String(d.getDate()).padStart(2, "0");
+	return `${mm}.${dd}`;
+}
+
+function week_ranges_in_month(monthStart: Date): Array<{ label: string; start: Date; end: Date }> {
+	const weekStart: 0 | 1 = 0;
+
+	const mStart = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1);
+	const mEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
+
+	const first = start_of_week(mStart, weekStart);
+	const lastStart = start_of_week(mEnd, weekStart);
+
+	const ranges: Array<{ label: string; start: Date; end: Date }> = [];
+
+	let cur = first;
+	let idx = 1;
+
+	while (cur.getTime() <= lastStart.getTime()) {
+		const s = new Date(cur);
+		const e = add_days(s, 6);
+		ranges.push({ label: `${idx}주`, start: s, end: e });
+		cur = add_days(cur, 7);
+		idx += 1;
+	}
+
+	return ranges;
+}
+
+function range_label(start: Date, end: Date): string {
+	return `${fmt_mmdd(start)}~${fmt_mmdd(end)}`;
+}
+
+export function build_weekly_trend_forward(bids: Bid[], n: number): MonthlyWeeklyTrend[] {
 	const scaffold = build_month_scaffold_forward(n);
-	const counts = new Map<string, number>();
+	const perMonth = new Map<string, Map<string, number>>();
+
+	for (const m of scaffold) {
+		const ranges = week_ranges_in_month(m.start);
+		const weekMap = new Map<string, number>();
+		ranges.forEach((r) => weekMap.set(r.label, 0));
+		perMonth.set(m.key, weekMap);
+	}
 
 	bids.forEach((b) => {
 		const d = to_date(String((b as any).endDate ?? (b as any).bidEnd ?? ""));
 		if (!d) return;
 
 		for (const m of scaffold) {
-			if (d.getTime() >= m.start.getTime() && d.getTime() < m.end.getTime()) {
-				counts.set(m.key, (counts.get(m.key) ?? 0) + 1);
-				break;
+			if (d.getTime() < m.start.getTime() || d.getTime() >= m.end.getTime()) continue;
+
+			const ranges = week_ranges_in_month(m.start);
+			for (const r of ranges) {
+				const start = r.start.getTime();
+				const endExclusive = add_days(r.end, 1).getTime();
+				const t = d.getTime();
+
+				if (t >= start && t < endExclusive) {
+					const wm = perMonth.get(m.key);
+					if (!wm) return;
+					wm.set(r.label, (wm.get(r.label) ?? 0) + 1);
+					return;
+				}
 			}
+			return;
 		}
 	});
 
-	return scaffold.map((m) => ({ month: m.label, value: counts.get(m.key) ?? 0 }));
+	return scaffold.map((m) => {
+		const ranges = week_ranges_in_month(m.start);
+		const wm = perMonth.get(m.key) ?? new Map<string, number>();
+		const points: WeeklyTrendPoint[] = ranges.map((r) => ({
+			week: r.label,
+			value: wm.get(r.label) ?? 0,
+			range: range_label(r.start, r.end),
+		}));
+		return { month: m.label, points };
+	});
 }
 
 function normalize_region(raw: string): string {
@@ -156,7 +231,6 @@ function normalize_region(raw: string): string {
 
 	const rules: Array<[string[], string]> = [
 		[["전국"], "전국"],
-
 		[["서울", "서울특별시"], "서울특별시"],
 		[["부산", "부산광역시"], "부산광역시"],
 		[["대구", "대구광역시"], "대구광역시"],
@@ -165,7 +239,6 @@ function normalize_region(raw: string): string {
 		[["대전", "대전광역시"], "대전광역시"],
 		[["울산", "울산광역시"], "울산광역시"],
 		[["세종", "세종특별자치시"], "세종특별자치시"],
-
 		[["경기", "경기도"], "경기도"],
 		[["강원", "강원도", "강원특별자치도"], "강원특별자치도"],
 		[["충북", "충청북도"], "충청북도"],
@@ -198,12 +271,6 @@ export function build_region_dist(bids: Bid[]): RegionDistPoint[] {
 		.map(([name, value]) => ({ name, value }))
 		.filter((x) => x.value > 0)
 		.sort((a, b) => b.value - a.value);
-}
-
-function add_days(d: Date, days: number): Date {
-	const x = new Date(d);
-	x.setDate(x.getDate() + days);
-	return x;
 }
 
 function start_of_today(d: Date): Date {
@@ -250,10 +317,7 @@ function parse_amount_to_won(v: unknown): number {
 function format_eok_from_won(valueWon: number): string {
 	if (!Number.isFinite(valueWon) || valueWon <= 0) return "0";
 	const eok = valueWon / 100_000_000;
-	const fmt = new Intl.NumberFormat("ko-KR", {
-		maximumFractionDigits: 1,
-		minimumFractionDigits: 0,
-	});
+	const fmt = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1, minimumFractionDigits: 0 });
 	return fmt.format(eok);
 }
 

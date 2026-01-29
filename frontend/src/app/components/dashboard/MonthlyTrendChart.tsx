@@ -27,18 +27,19 @@ function clamp(n: number, min: number, max: number): number {
 }
 
 export function MonthlyTrendChart({
-	data,
-	loading,
+	data = [],
+	loading = false,
 }: {
-	data: MonthlyWeeklyTrend[];
-	loading: boolean;
+	data?: MonthlyWeeklyTrend[];
+	loading?: boolean;
 }) {
 	const monthCount = Math.max(1, data.length);
 	const [idx, setIdx] = useState(0);
 	const safeIdx = clamp(idx, 0, monthCount - 1);
 
 	const current = useMemo(() => {
-		if (data.length === 0) return { month: "-", points: [] as WeeklyTrendPoint[] };
+		if (!Array.isArray(data) || data.length === 0)
+			return { month: "-", points: [] as WeeklyTrendPoint[] };
 		return data[safeIdx] ?? { month: "-", points: [] as WeeklyTrendPoint[] };
 	}, [data, safeIdx]);
 
@@ -50,7 +51,9 @@ export function MonthlyTrendChart({
 			<div className="mb-4 flex items-start justify-between gap-3">
 				<div>
 					<div className="font-semibold">월별 공고 추이</div>
-					<div className="text-sm text-gray-400">끝나는 날(endDate) 기준 · 달력 주(일~토)</div>
+					<div className="text-sm text-gray-400">
+						끝나는 날(endDate) 기준 · 달력 주(일~토)
+					</div>
 				</div>
 
 				<div className="flex items-center gap-2">
@@ -90,7 +93,7 @@ export function MonthlyTrendChart({
 			<div className="h-64">
 				{loading ? (
 					<div className="h-full w-full rounded-xl bg-gray-100 animate-pulse" />
-				) : current.points.length === 0 ? (
+				) : !current.points || current.points.length === 0 ? (
 					<div className="h-full w-full rounded-xl bg-gray-50 flex items-center justify-center text-sm text-gray-400">
 						데이터가 없습니다.
 					</div>
