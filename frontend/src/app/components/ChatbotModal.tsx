@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { Bot, Send, Sparkles, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ChangeEvent } from "react";
+import { Bot, Send, Sparkles, Loader2, Paperclip, X } from "lucide-react";
 
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -7,7 +7,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Textarea } from "./ui/textarea";
 import { Separator } from "./ui/separator";
 import { Avatar, AvatarFallback } from "./ui/avatar";
-import {fetchChatResponse, ChatRequest} from "../api/chatbot";
+import {fetchChatResponse, fetchChatWithFile} from "../api/chatbot";
 
 type Sender = "user" | "bot";
 
@@ -28,40 +28,6 @@ const QUICK_PROMPTS = [
 function nowTime() {
 	return new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
 }
-
-// function generateBotResponse(userInput: string): { text: string; suggestions: string[] } {
-// 	const input = userInput.toLowerCase();
-//
-// 	if (input.includes("서울") || input.includes("지역")) {
-// 		return {
-// 			text:
-// 				"서울 지역의 현재 진행 중인 공고는 총 23건입니다.\n\n주요 공고:\n• 서울시 강남구 도로 보수공사 (35억원, D-2)\n• 서울시 송파구 공공건물 신축 (52억원, D-7)\n• 서울시 마포구 학교시설 개선 (18억원, D-5)\n\n자세한 내용은 ‘공고 찾기’에서 조건 필터로 확인하시면 정확합니다.",
-// 			suggestions: ["강남구 공고만 보기", "30억 이하로 제한", "마감 빠른 순으로 정렬"],
-// 		};
-// 	}
-//
-// 	if (input.includes("30억") || input.includes("금액") || input.includes("예산")) {
-// 		return {
-// 			text:
-// 				"30억원 이하 공고는 현재 45건입니다.\n\n추천 공고:\n• 인천 연수구 학교시설 개선 (12억원)\n• 경기 수원시 주차장 건설 (23억원)\n• 부산 해운대구 복지센터 (18억원)\n\n원하시면 ‘지역 + 업종 + 마감’ 조합으로 우선순위를 같이 잡아드릴까요?",
-// 			suggestions: ["지역별로 분해", "마감 임박만 보기", "경쟁률 기준 추천"],
-// 		};
-// 	}
-//
-// 	if (input.includes("마감") || input.includes("임박")) {
-// 		return {
-// 			text:
-// 				"마감 3일 이내 공고는 8건입니다. ⚠️\n\n긴급:\n• 서울 강남구 도로공사 (D-2, 35억원)\n• 인천 연수구 학교시설 (D-4, 12억원)\n• 경기 성남시 건축공사 (D-5, 87억원)\n\n서류 체크리스트가 필요하시면 항목별로 정리해드릴게요.",
-// 			suggestions: ["서류 체크리스트 만들어줘", "투찰가 체크 포인트", "장바구니에 담는 기준"],
-// 		};
-// 	}
-//
-// 	return {
-// 		text:
-// 			"원하시는 질문을 조금만 더 구체적으로 적어주세요.\n\n예시:\n• “서울/경기 10~50억 시설공사, 마감 3일 이내”\n• “최근 6개월 낙찰률과 경쟁률 추이”\n• “마감 임박 공고 우선순위 기준”",
-// 		suggestions: ["서울 지역 공고 알려줘", "30억 이하 공사 찾아줘", "마감 임박 공고는?"],
-// 	};
-// }
 
 function Bubble({ message }: { message: Message }) {
 	const isUser = message.sender === "user";
@@ -116,54 +82,87 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
 
 	const [input, setInput] = useState("");
 	const [isTyping, setIsTyping] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null); // 파일
 
 	const bottomRef = useRef<HTMLDivElement | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
 		bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
 	}, [messages, isTyping]);
 
-	const send = async (text: string) => {
-        const trimmed = text.trim();
-        if (!trimmed || isTyping) return; // 중복 전송 방지
+    const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setSelectedFile(e.target.files[0]);
+        }
+    };
 
+    const clearFile = () => {
+        setSelectedFile(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    };
+
+    const send = async (text: string) => {
+        const trimmed = text.trim();
+        if ((!trimmed && !selectedFile) || isTyping) return;
+
+        // 1. 사용자 메시지 UI 표시
         const userMessage: Message = {
             id: Date.now(),
-            text: trimmed,
+            text: trimmed + (selectedFile ? `\n[첨부파일: ${selectedFile.name}]` : ""),
             sender: "user",
             timestamp: nowTime(),
         };
-
         setMessages((prev) => [...prev, userMessage]);
         setInput("");
         setIsTyping(true);
 
-        try { // API 호출
-            const requestData: ChatRequest = {
-                query: trimmed,
-                thread_id: "user_session_1",
-            };
-            const result = await fetchChatResponse(requestData);
+        try {
+            let result;
 
-            const botMessage:Message = { // 화면에 응답 표시
+            // 2. 파일이 있으면 '파일 전송 함수', 없으면 '일반 함수' 호출
+            if (selectedFile) {
+                const formData = new FormData();
+                formData.append("query", trimmed);
+                formData.append("thread_id", "user_session_1");
+                formData.append("file", selectedFile);
+
+                // ★ 여기서 API 함수 사용!
+                result = await fetchChatWithFile(formData);
+                clearFile(); // 전송 후 파일 비우기
+            } else {
+                // 일반 텍스트 전송
+                result = await fetchChatResponse({
+                    query: trimmed,
+                    thread_id: "user_session_1"
+                });
+            }
+
+            // 3. 봇 응답 처리
+            const botMessage: Message = {
                 id: Date.now() + 1,
+                // ChatResponse 인터페이스에 맞게 데이터 꺼내기
                 text: result.data.message,
                 sender: "bot",
-                timestamp: new Date().toLocaleTimeString("ko-KR", {hour: "2-digit", minute: "2-digit"}),
+                timestamp: nowTime(),
                 suggestions: [],
-            }
+            };
             setMessages((prev) => [...prev, botMessage]);
+
         } catch (error) {
             const errorMessage: Message = {
                 id: Date.now() + 1,
                 text: "죄송합니다. 서버 연결에 실패했습니다.",
                 sender: "bot",
                 timestamp: nowTime(),
-            }
+            };
+            setMessages((prev) => [...prev, errorMessage]);
         } finally {
             setIsTyping(false);
         }
-	};
+    };
 
 	const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
 		if (e.key === "Enter" && !e.shiftKey) {
@@ -223,25 +222,54 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
 					</div>
 				</ScrollArea>
 
-				{/* Input */}
-				<div className="border-t bg-white p-4 shrink-0">
-					<div className="flex gap-2 items-end">
-						<div className="flex-1">
-							<Textarea
-								value={input}
-								onChange={(e) => setInput(e.target.value)}
-								onKeyDown={onKeyDown}
-								placeholder="예: 서울/경기 10~50억 시설공사, 마감 3일 이내만"
-								className="min-h-[44px] max-h-[140px] resize-none"
-							/>
-						</div>
+                {/* Input */}
+                <div className="border-t bg-white p-4 shrink-0">
+                    {/* 파일 미리보기*/}
+                    {selectedFile && (
+                        <div className="flex items-center gap-2 mb-2 p-2 bg-slate-100 rounded-lg w-fit text-xs border">
+                            <Paperclip className="h-3 w-3 text-slate-500" />
+                            <span className="max-w-[200px] truncate">{selectedFile.name}</span>
+                            <button onClick={clearFile} className="hover:bg-slate-200 rounded-full p-0.5">
+                                <X className="h-3 w-3 text-slate-500" />
+                            </button>
+                        </div>
+                    )}
 
-						<Button onClick={() => send(input)} className="h-11 px-4">
-							<Send className="h-4 w-4 mr-2" />
-							전송
-						</Button>
-					</div>
-				</div>
+                    <div className="flex gap-2 items-end">
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            className="hidden"
+                        />
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-11 w-11 shrink-0"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isTyping}
+                        >
+                            <Paperclip className="h-5 w-5 text-slate-500" />
+                        </Button>
+
+                        <div className="flex-1">
+                            <Textarea
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={onKeyDown}
+                                placeholder="메시지를 입력하거나 파일을 첨부하세요..."
+                                className="min-h-[44px] max-h-[140px] resize-none"
+                                disabled={isTyping}
+                            />
+                        </div>
+
+                        {/* 전송 버튼 */}
+                        <Button onClick={() => send(input)} className="h-11 px-4" disabled={isTyping || (!input.trim() && !selectedFile)}>
+                            <Send className="h-4 w-4 mr-2" />
+                            전송
+                        </Button>
+                    </div>
+                </div>
 			</div>
 
 			{/* Right: Quick Panel */}

@@ -29,3 +29,19 @@ export const fetchChatResponse = async (request: ChatRequest): Promise<ChatRespo
         throw error;
     }
 }
+
+export const fetchChatWithFile = async (formData: FormData): Promise<ChatResponse> => {
+    try {
+        // 파일 업로드는 헤더에 Content-Type을 쓰면 안 됩니다! (브라우저가 자동 설정)
+        const response = await fetch("/api/chatbots/upload", {
+            method: "POST",
+            body: formData,
+        });
+
+        if (!response.ok) throw new Error(`Server Error: ${response.status}`);
+        return await response.json();
+    } catch (error) {
+        console.error("Chatbot File Upload Error:", error);
+        throw error;
+    }
+};
