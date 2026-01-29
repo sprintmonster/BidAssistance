@@ -5,151 +5,230 @@ import { fetchWishlist } from "../api/wishlist";
 import type { WishlistItem } from "../types/wishlist";
 
 import { SummaryCards } from "./dashboard/SummaryCard";
-import { MonthlyTrendChart, type MonthlyTrendPoint } from "./dashboard/MonthlyTrendChart";
+import {
+	MonthlyTrendChart,
+	type MonthlyWeeklyTrend,
+	type WeeklyTrendPoint,
+} from "./dashboard/MonthlyTrendChart";
 import { RegionPieChart, type RegionDistPoint } from "./dashboard/RegionPieChart";
 
 type Kpi = {
-
-  newBidsThisMonth: number;
-
-  wishlistCount: number;
-  closingSoon3Days: number;
-  totalExpectedAmountEok: string;
+	newBidsThisMonth: number;
+	wishlistCount: number;
+	closingSoon3Days: number;
+	totalExpectedAmountEok: string;
 };
 
 export function Dashboard() {
-  const [bids, setBids] = useState<Bid[]>([]);
-  const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+	const [bids, setBids] = useState<Bid[]>([]);
+	const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
+	const [loading, setLoading] = useState<boolean>(true);
+	const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      setError(null);
+	useEffect(() => {
+		const load = async () => {
+			setLoading(true);
+			setError(null);
 
-      try {
-        const res = await fetchBids();
-        const items = pick_list(res);
-        setBids(items as Bid[]);
-      } catch (e) {
-        setBids([]);
-        setError(e instanceof Error ? e.message : "공고 데이터를 불러오지 못했습니다.");
-      } finally {
-        setLoading(false);
-      }
+			try {
+				const res = await fetchBids();
+				const items = pick_list(res);
+				setBids(items as Bid[]);
+			} catch (e) {
+				setBids([]);
+				setError(e instanceof Error ? e.message : "공고 데이터를 불러오지 못했습니다.");
+			} finally {
+				setLoading(false);
+			}
 
-      const userIdStr = localStorage.getItem("userId");
-      const userId = Number(userIdStr);
-      if (!userIdStr || !Number.isFinite(userId)) {
-        setWishlist([]);
-        return;
-      }
+			const userIdStr = localStorage.getItem("userId");
+			const userId = Number(userIdStr);
+			if (!userIdStr || !Number.isFinite(userId)) {
+				setWishlist([]);
+				return;
+			}
 
-      try {
-        const w = await fetchWishlist(userId);
-        setWishlist(w);
-      } catch {
-        setWishlist([]);
-      }
-    };
+			try {
+				const w = await fetchWishlist(userId);
+				setWishlist(w);
+			} catch {
+				setWishlist([]);
+			}
+		};
 
-    void load();
-  }, []);
+		void load();
+	}, []);
 
-  const monthlyTrend = useMemo<MonthlyTrendPoint[]>(
-    () => build_monthly_trend_forward(bids, 6),
-    [bids],
-  );
+	const monthlyTrend = useMemo<MonthlyWeeklyTrend[]>(
+		() => build_weekly_trend_forward(bids, 3),
+		[bids],
+	);
 
-  const regionDist = useMemo<RegionDistPoint[]>(() => build_region_dist(bids), [bids]);
-  const kpi = useMemo<Kpi>(() => build_kpi(bids, wishlist), [bids, wishlist]);
+	const regionDist = useMemo<RegionDistPoint[]>(() => build_region_dist(bids), [bids]);
+	const kpi = useMemo<Kpi>(() => build_kpi(bids, wishlist), [bids, wishlist]);
 
-  return (
-    <div className="space-y-8">
-      {error ? (
-        <div className="border rounded-2xl p-4 bg-red-50 text-red-700 text-sm">
-          {error}
-        </div>
-      ) : null}
+	return (
+		<div className="space-y-8">
+			{error ? (
+				<div className="border rounded-2xl p-4 bg-red-50 text-red-700 text-sm">{error}</div>
+			) : null}
 
-      <SummaryCards loading={loading} kpi={kpi} />
+			<SummaryCards loading={loading} kpi={kpi} />
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <MonthlyTrendChart loading={loading} data={monthlyTrend} />
-        <RegionPieChart loading={loading} data={regionDist} />
-      </div>
-    </div>
-  );
+			<div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+				<MonthlyTrendChart loading={loading} data={monthlyTrend} />
+				<RegionPieChart loading={loading} data={regionDist} />
+			</div>
+		</div>
+	);
 }
 
 function pick_list(res: unknown): unknown[] {
-  if (Array.isArray(res)) return res;
-  const anyRes = res as any;
-  if (Array.isArray(anyRes?.data)) return anyRes.data;
-  if (Array.isArray(anyRes?.data?.items)) return anyRes.data.items;
-  if (Array.isArray(anyRes?.data?.content)) return anyRes.data.content;
-  return [];
+	if (Array.isArray(res)) return res;
+	const anyRes = res as any;
+	if (Array.isArray(anyRes?.data)) return anyRes.data;
+	if (Array.isArray(anyRes?.data?.items)) return anyRes.data.items;
+	if (Array.isArray(anyRes?.data?.content)) return anyRes.data.content;
+	return [];
 }
 
 function to_date(s: string): Date | null {
-  if (!s) return null;
-  const d = new Date(s);
-  if (!Number.isFinite(d.getTime())) return null;
-  return d;
+	if (!s) return null;
+	const d = new Date(s);
+	if (!Number.isFinite(d.getTime())) return null;
+	return d;
 }
 
 function month_key(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  return `${y}-${m}`;
+	const y = d.getFullYear();
+	const m = String(d.getMonth() + 1).padStart(2, "0");
+	return `${y}-${m}`;
 }
 
 function month_label(d: Date): string {
-  const yy = String(d.getFullYear()).slice(2);
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  return `${yy}.${mm}`;
+	const yy = String(d.getFullYear()).slice(2);
+	const mm = String(d.getMonth() + 1).padStart(2, "0");
+	return `${yy}.${mm}`;
 }
 
 function add_months(d: Date, months: number): Date {
-  return new Date(d.getFullYear(), d.getMonth() + months, 1);
+	return new Date(d.getFullYear(), d.getMonth() + months, 1);
 }
 
-function build_month_scaffold_forward(n: number): Array<{ key: string; label: string; start: Date; end: Date }> {
-  const now = new Date();
-  const base = new Date(now.getFullYear(), now.getMonth(), 1);
+function build_month_scaffold_forward(
+	n: number,
+): Array<{ key: string; label: string; start: Date; end: Date }> {
+	const now = new Date();
+	const base = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const out: Array<{ key: string; label: string; start: Date; end: Date }> = [];
-  for (let i = 0; i < n; i += 1) {
-    const start = add_months(base, i);
-    const end = add_months(base, i + 1);
-    out.push({
-      key: month_key(start),
-      label: month_label(start),
-      start,
-      end,
-    });
-  }
-  return out;
+	const out: Array<{ key: string; label: string; start: Date; end: Date }> = [];
+	for (let i = 0; i < n; i += 1) {
+		const start = add_months(base, i);
+		const end = add_months(base, i + 1);
+		out.push({
+			key: month_key(start),
+			label: month_label(start),
+			start,
+			end,
+		});
+	}
+	return out;
 }
 
-export function build_monthly_trend_forward(bids: Bid[], n: number): MonthlyTrendPoint[] {
-  const scaffold = build_month_scaffold_forward(n);
-  const counts = new Map<string, number>();
+function start_of_week(d: Date, weekStart: 0 | 1): Date {
+	const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+	const day = x.getDay();
+	const delta = (day - weekStart + 7) % 7;
+	x.setDate(x.getDate() - delta);
+	x.setHours(0, 0, 0, 0);
+	return x;
+}
 
-  bids.forEach((b) => {
-    const d = to_date(String((b as any).endDate ?? (b as any).bidEnd ?? ""));
-    if (!d) return;
+function add_days(d: Date, days: number): Date {
+	const x = new Date(d);
+	x.setDate(x.getDate() + days);
+	return x;
+}
 
-    for (const m of scaffold) {
-      if (d.getTime() >= m.start.getTime() && d.getTime() < m.end.getTime()) {
-        counts.set(m.key, (counts.get(m.key) ?? 0) + 1);
-        break;
-      }
-    }
-  });
+function fmt_mmdd(d: Date): string {
+	const mm = String(d.getMonth() + 1).padStart(2, "0");
+	const dd = String(d.getDate()).padStart(2, "0");
+	return `${mm}.${dd}`;
+}
 
-  return scaffold.map((m) => ({ month: m.label, value: counts.get(m.key) ?? 0 }));
+function week_ranges_in_month(monthStart: Date): Array<{ label: string; start: Date; end: Date }> {
+	const weekStart: 0 | 1 = 0;
+
+	const mStart = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1);
+	const mEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
+
+	const first = start_of_week(mStart, weekStart);
+	const lastStart = start_of_week(mEnd, weekStart);
+
+	const ranges: Array<{ label: string; start: Date; end: Date }> = [];
+
+	let cur = first;
+	let idx = 1;
+
+	while (cur.getTime() <= lastStart.getTime()) {
+		const s = new Date(cur);
+		const e = add_days(s, 6);
+		ranges.push({ label: `${idx}주`, start: s, end: e });
+		cur = add_days(cur, 7);
+		idx += 1;
+	}
+
+	return ranges;
+}
+
+function range_label(start: Date, end: Date): string {
+	return `${fmt_mmdd(start)}~${fmt_mmdd(end)}`;
+}
+
+export function build_weekly_trend_forward(bids: Bid[], n: number): MonthlyWeeklyTrend[] {
+	const scaffold = build_month_scaffold_forward(n);
+	const perMonth = new Map<string, Map<string, number>>();
+
+	for (const m of scaffold) {
+		const ranges = week_ranges_in_month(m.start);
+		const weekMap = new Map<string, number>();
+		ranges.forEach((r) => weekMap.set(r.label, 0));
+		perMonth.set(m.key, weekMap);
+	}
+
+	bids.forEach((b) => {
+		const d = to_date(String((b as any).endDate ?? (b as any).bidEnd ?? ""));
+		if (!d) return;
+
+		for (const m of scaffold) {
+			if (d.getTime() < m.start.getTime() || d.getTime() >= m.end.getTime()) continue;
+
+			const ranges = week_ranges_in_month(m.start);
+			for (const r of ranges) {
+				const start = r.start.getTime();
+				const endExclusive = add_days(r.end, 1).getTime();
+				const t = d.getTime();
+				if (t >= start && t < endExclusive) {
+					const wm = perMonth.get(m.key);
+					if (!wm) return;
+					wm.set(r.label, (wm.get(r.label) ?? 0) + 1);
+					return;
+				}
+			}
+			return;
+		}
+	});
+
+	return scaffold.map((m) => {
+		const ranges = week_ranges_in_month(m.start);
+		const wm = perMonth.get(m.key) ?? new Map<string, number>();
+		const points: WeeklyTrendPoint[] = ranges.map((r) => ({
+			week: r.label,
+			value: wm.get(r.label) ?? 0,
+			range: range_label(r.start, r.end),
+		}));
+		return { month: m.label, points };
+	});
 }
 
 function normalize_region(raw: string): string {
@@ -202,76 +281,44 @@ export function build_region_dist(bids: Bid[]): RegionDistPoint[] {
 		.sort((a, b) => b.value - a.value);
 }
 
-
-function is_same_month(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
-}
-
-function add_days(d: Date, days: number): Date {
-  const x = new Date(d);
-  x.setDate(x.getDate() + days);
-  return x;
-}
-
 function parse_amount(v: unknown): number {
-  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
-  if (typeof v !== "string") return 0;
-  const digits = v.replace(/[^0-9]/g, "");
-  if (!digits) return 0;
-  const n = Number(digits);
-  return Number.isFinite(n) ? n : 0;
+	if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+	if (typeof v !== "string") return 0;
+	const digits = v.replace(/[^0-9]/g, "");
+	if (!digits) return 0;
+	const n = Number(digits);
+	return Number.isFinite(n) ? n : 0;
 }
-
-function format_eok(value: number): string {
-  if (!Number.isFinite(value) || value <= 0) return "0";
-  const eok = value / 100_000_000;
-  const rounded = Math.round(eok * 10) / 10;
-  const s = String(rounded);
-  return s.endsWith(".0") ? s.slice(0, -2) : s;
-}
-function start_of_today(d: Date): Date {
-    const x = new Date(d);
-    x.setHours(0, 0, 0, 0);
-    return x;
-}
-
-function end_of_today(d: Date): Date {
-    const x = new Date(d);
-    x.setHours(23, 59, 59, 999);
-    return x;
-}
-
 
 function build_kpi(bids: Bid[], wishlist: WishlistItem[]): Kpi {
-    const now = new Date();
-    const threeDaysLater = add_days(now, 3);
+	const now = new Date();
+	const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+	const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-    const todayStart = start_of_today(now);
-    const todayEnd = end_of_today(now);
+	let newBidsThisMonth = 0;
+	let closingSoon3Days = 0;
+	let totalAmount = 0;
 
-    let newBidsThisMonth = 0;   // (이름 유지할 거면 그대로)
-    let closingSoon3Days = 0;
+	bids.forEach((b) => {
+		const end = to_date(String((b as any).endDate ?? (b as any).bidEnd ?? ""));
+		if (end) {
+			if (end.getTime() >= monthStart.getTime() && end.getTime() < nextMonthStart.getTime()) {
+				newBidsThisMonth += 1;
+			}
 
-    bids.forEach((b) => {
-        const start = to_date(String((b as any).startDate ?? (b as any).bidStart ?? ""));
-        const end = to_date(String((b as any).endDate ?? (b as any).bidEnd ?? ""));
+			const diff = end.getTime() - now.getTime();
+			if (diff >= 0 && diff <= 3 * 86400000) closingSoon3Days += 1;
+		}
 
-        // 오늘 시작한 공고로 변경
-        if (start && start.getTime() >= todayStart.getTime() && start.getTime() <= todayEnd.getTime()) {
-            newBidsThisMonth += 1;
-        }
+		totalAmount += parse_amount((b as any).estimatePrice ?? (b as any).baseAmount ?? 0);
+	});
 
-        if (end && end.getTime() >= now.getTime() && end.getTime() <= threeDaysLater.getTime()) {
-            closingSoon3Days += 1;
-        }
-    });
+	const totalExpectedAmountEok = (totalAmount / 100000000).toFixed(1);
 
-    const sumAmount = wishlist.reduce((acc, it) => acc + parse_amount(it.baseAmount), 0);
-
-    return {
-        newBidsThisMonth, // (혹은 newBidsToday로 이름 바꾸면 newBidsToday)
-        wishlistCount: wishlist.length,
-        closingSoon3Days,
-        totalExpectedAmountEok: format_eok(sumAmount),
-    };
+	return {
+		newBidsThisMonth,
+		wishlistCount: wishlist.length,
+		closingSoon3Days,
+		totalExpectedAmountEok: `${totalExpectedAmountEok}억`,
+	};
 }
