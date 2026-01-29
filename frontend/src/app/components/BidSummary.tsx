@@ -40,6 +40,12 @@ type Bid = {
     documentUrl?: string;
     documentFileName?: string;
 
+    attachments? : Array<{
+        id : number;
+        fileName: string;
+        url : string;
+    }>;
+
     requirements: {
         license: string[];
         location: string;
@@ -272,7 +278,20 @@ export function BidSummary() {
 
                 const reportUrl = item.bidReportURL ? String(item.bidReportURL) : "";
                 const bidUrl = item.bidURL ? String(item.bidURL) : "";
-                // ✅ 서버 필드 -> 프론트 Bid 타입 매핑
+                //  attachments 파싱 (서버가 내려주는 첨부파일 배열 대응)
+                const attachmentsRaw = Array.isArray(item.attachments) ? item.attachments : [];
+
+                const attachments = attachmentsRaw
+                    .map((a: any) => ({
+                        id: Number(a.id),
+                        fileName: String(a.fileName ?? a.filename ?? a.name ?? "첨부파일"),
+                        url: String(a.url ?? a.downloadUrl ?? ""),
+                    }))
+                    .filter((a: any) => Number.isFinite(a.id) && a.id > 0 && !!a.url);
+
+                const firstAttachment = attachments[0];
+
+                //  서버 필드 -> 프론트 Bid 타입 매핑
                 const mapped: Bid = {
                     id: Number(item.id ?? item.bid_id ?? item.bidId ?? numericBidId),
                     title: String(item.name ?? item.title ?? ""),
@@ -286,10 +305,18 @@ export function BidSummary() {
                     description: String(item.analysisResult ?? ""),
                     // description: String(item.analysisResult ?? item.name ?? item.title ?? ""),
 
+                    attachments,
 
-                    bidUrl : bidUrl || undefined,
-                    documentUrl: reportUrl || bidUrl || undefined,
-                    documentFileName: reportUrl ? "첨부파일" : bidUrl ? "공고 링크" : undefined,
+                    bidUrl: bidUrl || undefined,
+                    documentUrl: firstAttachment?.url || reportUrl || bidUrl || undefined,
+                    documentFileName: firstAttachment
+                        ? firstAttachment.fileName
+                        : reportUrl
+                            ? "첨부파일"
+                            : bidUrl
+                                ? "공고 링크"
+                                : undefined,
+
 
 
                     requirements: { license: [], location: "", experience: "", technicalStaff: "" },
@@ -355,7 +382,7 @@ export function BidSummary() {
     if (loading) return <div className="p-6">불러오는 중...</div>;
     if (error) return <div className="p-6 text-red-600">{error}</div>;
     if (!bid) return null;
-    const hasDoc = !!bid.documentUrl;
+    const hasAttachments = (bid.attachments?.length ?? 0) > 0;
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-4">
@@ -447,20 +474,29 @@ export function BidSummary() {
                         </div>
 
                         <div className="flex items-center gap-3">
-                            <div>
+                            <div className="min-w-0">
                                 <p className="text-sm text-muted-foreground">첨부파일</p>
-                                <p
-                                    className={
-                                        hasDoc
-                                            ? "mt-1 text-blue-600 cursor-pointer hover:underline"
-                                            : "mt-1 text-muted-foreground"
-                                    }
-                                    onClick={hasDoc ? handleDownloadNotice : undefined}
-                                >
-                                    {bid.documentFileName ?? "없음"}
-                                </p>
+
+                                {hasAttachments ? (
+                                    <div className="mt-1 space-y-1">
+                                        {bid.attachments!.map((a) => (
+                                            <button
+                                                key={a.id}
+                                                type="button"
+                                                className="block text-left text-blue-600 hover:underline truncate"
+                                                onClick={() => openDownload(a.url)}
+                                                title={a.fileName}
+                                            >
+                                                {a.fileName}
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="mt-1 text-muted-foreground">없음</p>
+                                )}
                             </div>
                         </div>
+
                     </div>
                 </CardContent>
             </Card>

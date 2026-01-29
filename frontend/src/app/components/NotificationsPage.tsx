@@ -122,6 +122,66 @@ function to_notification_items(alarms: AlarmItem[], read_map: Record<string, boo
 		});
 }
 
+function to_iso_like(v: string): string {
+    const s = String(v ?? "").trim();
+    if (!s) return "";
+    return s.includes(" ") && !s.includes("T") ? s.replace(" ", "T") : s;
+}
+
+function ms_until(iso: string): number | null {
+    const t = new Date(iso).getTime();
+    if (!Number.isFinite(t)) return null;
+    return t - Date.now();
+}
+
+/**
+ * wishlist 기반으로 프론트에서 마감 알림 생성
+ * - D-7 이내: "마감 임박" (긴급)
+ * - 마감 지남: "마감됨" (긴급)
+ */
+function build_deadline_notifications_from_wishlist(
+    wishlist: any[],
+    read_map: Record<string, boolean>,
+): NotificationItem[] {
+    const out: NotificationItem[] = [];
+
+    for (const w of wishlist) {
+        const bidId = Number(w?.bidId);
+        if (!Number.isFinite(bidId) || bidId <= 0) continue;
+
+        const endRaw = w?.bidEnd;
+        const endIso = to_iso_like(String(endRaw ?? ""));
+        if (!endIso) continue;
+
+        const remain = ms_until(endIso);
+        if (remain == null) continue;
+
+        const isExpired = remain <= 0;
+        const isImminent = remain > 0 && remain <= 7 * 24 * 60 * 60 * 1000; //  7일 이내
+
+        if (!isExpired && !isImminent) continue;
+
+        // 로컬 알림 고유 ID(서버 alarmId랑 충돌 안 나게 큰 값으로)
+        // bidId + 타입(1=임박, 2=마감됨)
+        const localId = Number(`9${bidId}${isExpired ? 2 : 1}`);
+
+        out.push({
+            id: localId,
+            bidId,
+            type: "deadline",
+            title: isExpired ? "마감됨" : "마감 임박",
+            message: isExpired
+                ? `[장바구니] "${w?.title ?? "공고"}" 공고가 마감되었습니다. (마감: ${new Date(endIso).toLocaleString("ko-KR")})`
+                : `[장바구니] "${w?.title ?? "공고"}" 공고가 곧 마감됩니다. (마감: ${new Date(endIso).toLocaleString("ko-KR")})`,
+            time: isExpired ? "방금/최근" : "곧",
+            read: !!read_map[String(localId)],   //  기존 markRead 로직 그대로 사용 가능
+            urgent: true,
+        });
+    }
+
+    return out;
+}
+
 export function NotificationsPage() {
 	const [items, setItems] = useState<NotificationItem[]>([]);
 	const [loading, setLoading] = useState(false);
@@ -148,9 +208,20 @@ export function NotificationsPage() {
 			const cart_scoped = alarms.filter((a) => bid_ids.has(Number(a.bidId)));
 
 			// 3) 읽음 상태 merge
-			const read_map = load_read_map();
-			setItems(to_notification_items(cart_scoped, read_map));
-		} catch (e) {
+            const read_map = load_read_map();
+
+            const serverItems = to_notification_items(cart_scoped, read_map);
+            const localDeadlineItems = build_deadline_notifications_from_wishlist(wishlist as any[], read_map);
+
+            const merged = [...localDeadlineItems, ...serverItems].sort((a, b) => {
+                if (a.urgent !== b.urgent) return a.urgent ? -1 : 1;
+                // 시간 정렬이 어려우니 id 기준이라도 정렬(로컬은 큰 값이라 위로 올 수도 있음)
+                return b.id - a.id;
+            });
+
+            setItems(merged);
+
+        } catch (e) {
 			const msg = e instanceof Error ? e.message : "알림을 불러오지 못했습니다.";
 			setError(msg);
 			setItems([]);

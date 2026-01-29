@@ -172,7 +172,7 @@ export function PostDetail({
         onDeletePost(postId);
     };
 
-    /** ✅ 좋아요: 토글 + 연타방지(요청 중만 잠금) */
+    /** 좋아요: 토글 + 연타방지(요청 중만 잠금) */
     const [like_busy, set_like_busy] = useState(false);
 
     const likedByMe = !!(post as any).likedByMe;

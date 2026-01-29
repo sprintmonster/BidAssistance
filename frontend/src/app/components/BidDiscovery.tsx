@@ -13,13 +13,6 @@ import {
 	CardHeader,
 	CardTitle,
 } from "./ui/card";
-// import {
-// 	Dialog,
-// 	DialogContent,
-// 	DialogDescription,
-// 	DialogHeader,
-// 	DialogTitle,
-// } from "./ui/dialog";
 import { Input } from "./ui/input";
 import {
 	Pagination,
@@ -65,24 +58,26 @@ function parseDate(value: string) {
 	return d;
 }
 
-function diffDays(from: Date, to: Date) {
-	const ms = to.getTime() - from.getTime();
-	return Math.ceil(ms / (1000 * 60 * 60 * 24));
+function diffDays(nowMs: number, to: Date) {
+	const ms = to.getTime() - nowMs;
+	if (!Number.isFinite(ms)) return 0;
+	if (ms >= 0) return Math.floor(ms / 86400000);
+	return -Math.ceil((-ms) / 86400000);
 }
 
-function formatDday(deadline: string) {
+function formatDday(deadline: string, nowMs: number) {
 	const d = parseDate(deadline);
 	if (!d) return null;
-	const days = diffDays(new Date(), d);
-	if (days === 0) return "D-DAY";
+	const days = diffDays(nowMs, d);
+	if (days === 0 && d.getTime() >= nowMs) return "D-DAY";
 	if (days > 0) return `D-${days}`;
 	return `D+${Math.abs(days)}`;
 }
 
-function isEnded(deadline: string) {
+function isEnded(deadline: string, nowMs: number) {
 	const d = parseDate(deadline);
 	if (!d) return false;
-	return d.getTime() < Date.now();
+	return d.getTime() < nowMs;
 }
 
 export function BidDiscovery({
@@ -105,12 +100,18 @@ export function BidDiscovery({
 	const [sortKey, setSortKey] = useState<SortKey>("deadline_asc");
 	const [page, setPage] = useState<number>(1);
 	const [pageSize, setPageSize] = useState<number>(10);
-	// const [selected, setSelected] = useState<UiBid | null>(null);
 
 	const [addingId, setAddingId] = useState<number | null>(null);
 	const [addedIds, setAddedIds] = useState<Set<number>>(() => new Set());
 
+	const [nowMs, setNowMs] = useState(() => Date.now());
+
 	const navigate = useNavigate();
+
+	useEffect(() => {
+		const t = window.setInterval(() => setNowMs(Date.now()), 30000);
+		return () => window.clearInterval(t);
+	}, []);
 
 	useEffect(() => {
 		setKeyword(urlQuery);
@@ -118,12 +119,9 @@ export function BidDiscovery({
 	}, [urlQuery]);
 
 	const load = async () => {
-		console.log("load() start");
 		try {
 			setGlobalLoading(true);
 			const res = await fetchBids();
-			console.log("after fetchBids()");
-			console.log("fetchBids res:", res);
 			const items = Array.isArray(res)
 				? res
 				: Array.isArray((res as any)?.data)
@@ -134,7 +132,7 @@ export function BidDiscovery({
 
 			const mapped: UiBid[] = items
 				.map((it: any) => {
-					const bidId = Number(it.bidId ?? it.id); // ✅ int
+					const bidId = Number(it.bidId ?? it.id);
 					const realId = String(it.realId ?? it.bidNo ?? "");
 					if (!Number.isFinite(bidId)) return null;
 
@@ -144,17 +142,18 @@ export function BidDiscovery({
 						title: String(it.title ?? it.name ?? ""),
 						agency: String(it.agency ?? it.organization ?? ""),
 						budget:
-							it.baseAmount != null ? String(it.baseAmount) :
-							it.estimatePrice != null ? String(it.estimatePrice) :
-							"",
+							it.baseAmount != null
+								? String(it.baseAmount)
+								: it.estimatePrice != null
+									? String(it.estimatePrice)
+									: "",
 						deadline: String(it.bidEnd ?? it.endDate ?? ""),
 					} as UiBid;
 				})
 				.filter(Boolean) as UiBid[];
 
 			setBids(mapped);
-		} catch (e) {
-			console.error("load() failed:", e);
+		} catch {
 			showToast("공고 목록을 불러오지 못했습니다.", "error");
 			setBids([]);
 		} finally {
@@ -206,7 +205,7 @@ export function BidDiscovery({
 		const q = keyword.trim().toLowerCase();
 		let list = bids.slice();
 
-		list = list.filter((b) => !isEnded(b.deadline));
+		list = list.filter((b) => !isEnded(b.deadline, nowMs));
 
 		if (agency !== "all") {
 			list = list.filter((b) => (b.agency || "").trim() === agency);
@@ -228,7 +227,7 @@ export function BidDiscovery({
 		});
 
 		return list;
-	}, [bids, agency, keyword, sortKey]);
+	}, [bids, agency, keyword, sortKey, nowMs]);
 
 	const total = filtered.length;
 	const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -281,8 +280,8 @@ export function BidDiscovery({
 			setAddedIds(new Set(items.map((it) => it.bidId)));
 
 			showToast("장바구니에 추가됨", "success");
-		} catch (e) {
-			showToast("추가 실패", "error");
+		} catch (e: any) {
+			showToast(e?.message || "추가 실패", "error");
 		} finally {
 			setGlobalLoading(false);
 			setAddingId(null);
@@ -315,7 +314,7 @@ export function BidDiscovery({
 		const timeLine = d.toLocaleTimeString("ko-KR", {
 			hour: "2-digit",
 			minute: "2-digit",
-			hour12: true, // "오전/오후" 나오게
+			hour12: true,
 		});
 
 		return { dateLine, timeLine };
@@ -342,7 +341,9 @@ export function BidDiscovery({
 										setKeyword(e.target.value);
 										setPage(1);
 									}}
-									placeholder={urlQuery ? `검색어: ${urlQuery}` : "키워드 검색 (공고명/기관/예산/마감)"}
+									placeholder={
+										urlQuery ? `검색어: ${urlQuery}` : "키워드 검색 (공고명/기관/예산/마감)"
+									}
 									className="pl-8"
 								/>
 							</div>
@@ -414,7 +415,6 @@ export function BidDiscovery({
 						</div>
 					</div>
 
-					{/* ✅ Table wrapper에 배경/그림자 추가 + 헤더 배경 */}
 					<div className="rounded-lg border bg-white shadow-sm">
 						<Table>
 							<TableHeader className="bg-slate-50/60">
@@ -422,14 +422,8 @@ export function BidDiscovery({
 									<TableHead className="w-[120px] pl-6">마감</TableHead>
 									<TableHead>공고명</TableHead>
 									<TableHead className="w-[220px]">발주기관</TableHead>
-
-									{/* ✅ 숫자 컬럼: 오른쪽 정렬 + 우측 패딩 */}
 									<TableHead className="w-[160px] pr-6 text-center">예산</TableHead>
-
-									{/* ✅ 상태: 중앙 정렬 */}
 									<TableHead className="w-[140px] text-center">상태</TableHead>
-
-									{/* ✅ 액션: 오른쪽 정렬 + 우측 패딩 */}
 									<TableHead className="w-[180px] pr-6 text-center">액션</TableHead>
 								</TableRow>
 							</TableHeader>
@@ -443,11 +437,12 @@ export function BidDiscovery({
 									</TableRow>
 								) : (
 									paged.map((b) => {
-										const dday = formatDday(b.deadline);
+										const dday = formatDday(b.deadline, nowMs);
 										const alreadyAdded = addedIds.has(b.bidId);
 
 										const statusVariant = dday === "D-DAY" ? "destructive" : "secondary";
-										const statusLabel = dday === "D-DAY" ? "오늘 마감" : dday ? "진행중" : "확인 필요";
+										const statusLabel =
+											dday === "D-DAY" ? "오늘 마감" : dday ? "진행중" : "확인 필요";
 
 										return (
 											<TableRow
@@ -462,9 +457,7 @@ export function BidDiscovery({
 
 															return (
 																<div className="flex flex-col">
-																	<span className="text-sm font-medium">
-																		{dday || dateLine}
-																	</span>
+																	<span className="text-sm font-medium">{dday || dateLine}</span>
 
 																	{dday ? (
 																		<span className="text-xs text-muted-foreground">
@@ -472,9 +465,7 @@ export function BidDiscovery({
 																		</span>
 																	) : (
 																		timeLine && (
-																			<span className="text-xs text-muted-foreground">
-																				{timeLine}
-																			</span>
+																			<span className="text-xs text-muted-foreground">{timeLine}</span>
 																		)
 																	)}
 																</div>
@@ -492,19 +483,16 @@ export function BidDiscovery({
 													<div className="line-clamp-2">{b.agency}</div>
 												</TableCell>
 
-												{/* ✅ 숫자 가독성: tabular-nums + 우측 패딩 */}
 												<TableCell className="pr-6 text-right tabular-nums">
 													{Number(b.budget).toLocaleString()}
 												</TableCell>
 
-												{/* ✅ 상태: 중앙 정렬 + 뱃지 padding 통일 */}
 												<TableCell className="text-center">
 													<Badge variant={statusVariant} className="px-2.5">
 														{statusLabel}
 													</Badge>
 												</TableCell>
 
-												{/* ✅ 액션: 우측 패딩 + 버튼 높이/라운드 통일 */}
 												<TableCell className="pr-6">
 													<div className="flex justify-end gap-2">
 														<Button
@@ -528,7 +516,10 @@ export function BidDiscovery({
 																e.stopPropagation();
 
 																if (!wishlistSynced) {
-																	showToast("장바구니 상태를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.", "error");
+																	showToast(
+																		"장바구니 상태를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.",
+																		"error",
+																	);
 																	return;
 																}
 
