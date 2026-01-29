@@ -50,7 +50,10 @@ export function ResetPasswordPage() {
 		return Boolean(questionIndex !== null && formData.answer.trim());
 	}, [questionIndex, formData.answer]);
 
-	const handleIdentify = async (e: React.FormEvent) => {
+    const BASE_URL = import.meta.env.VITE_API_URL || "";
+
+
+    const handleIdentify = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setMessage(null);
 		if (!canIdentify) return;
@@ -147,45 +150,33 @@ export function ResetPasswordPage() {
 
 		try {
 			setIsSubmitting(true);
+            type ResetPasswordRes = {
+                status: "success" | "error";
+                message?: string;
+                data?: any;
+            };
 
-			const payload = {
-				recoverySessionId,
-				answer: formData.answer.trim(),
-			};
+            const payload = {
+                email: formData.email.trim(),
+                name: formData.name.trim(),
+                birth: formData.birthDate,          // 서버가 birth로 받는다고 했으니 birth
+                answer: formData.answer.trim(),
+            };
 
-			const res = await fetch("/api/users/reset_password", {
-				method: "GET",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(payload),
-			});
+            const json = await api<ResetPasswordRes>(`/users/reset_password`, {
+                method: "POST",
+                body: JSON.stringify(payload),
+            });
 
-			const json = await res.json().catch(() => null);
 
-			if (!res.ok || json?.status === "error") {
-				const msg =
-					json?.message ??
-					(res.status === 401
-						? "답변이 일치하지 않습니다."
-						: res.status === 410
-							? "요청이 만료되었습니다. 다시 시도해 주세요."
-							: res.status === 429
-								? "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."
-								: "요청에 실패했습니다. 다시 시도해 주세요.");
-				setMessage({ type: "error", text: msg });
+            if (json.status === "error") {
+                setMessage({ type: "error", text: json.message ?? "요청에 실패했습니다." });
+                return;
+            }
 
-				if (res.status === 410) {
-					setStep("identify");
-					setRecoverySessionId("");
-					setQuestionIndex(null);
-					setFormData((prev) => ({ ...prev, answer: "" }));
-				}
-				return;
-			}
+            setMessage({ type: "success", text: json.data?.message ?? "임시 비밀번호가 발급되었습니다. 이메일을 확인해 주세요." });
 
-			const serverMsg =
-				json?.data?.message ?? "임시 비밀번호가 발급되었습니다. 이메일을 확인해 주세요.";
-			setMessage({ type: "success", text: serverMsg });
-		} catch {
+        } catch {
 			setMessage({ type: "error", text: "서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요." });
 		} finally {
 			setIsSubmitting(false);
