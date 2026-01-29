@@ -147,19 +147,18 @@ export function ResetPasswordPage() {
 			setStep("identify");
 			return;
 		}
-
-		try {
-			setIsSubmitting(true);
-            type ResetPasswordRes = {
-                status: "success" | "error";
-                message?: string;
-                data?: any;
-            };
+        type ResetPasswordRes = {
+            status: "success" | "error";
+            message?: string;
+            data?: any;
+        };
+        try {
+            setIsSubmitting(true);
 
             const payload = {
                 email: formData.email.trim(),
                 name: formData.name.trim(),
-                birth: formData.birthDate,          // 서버가 birth로 받는다고 했으니 birth
+                birth: formData.birthDate,
                 answer: formData.answer.trim(),
             };
 
@@ -168,21 +167,23 @@ export function ResetPasswordPage() {
                 body: JSON.stringify(payload),
             });
 
-
             if (json.status === "error") {
                 setMessage({ type: "error", text: json.message ?? "요청에 실패했습니다." });
                 return;
             }
 
-            setMessage({ type: "success", text: json.data?.message ?? "임시 비밀번호가 발급되었습니다. 이메일을 확인해 주세요." });
+            setMessage({ type: "success", text: json.message ?? "임시 비밀번호가 발급되었습니다. 이메일을 확인해 주세요." });
+        } catch (e) {
+            // ✅ 핵심: 진짜 에러 보여주기
+            setMessage({
+                type: "error",
+                text: e instanceof Error ? e.message : "요청 중 오류가 발생했습니다.",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
 
-        } catch {
-			setMessage({ type: "error", text: "서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요." });
-		} finally {
-			setIsSubmitting(false);
-		}
-	};
-
+    };
 	return (
 		<div className="min-h-screen flex items-center justify-center p-4 bg-slate-950 bg-[radial-gradient(1200px_500px_at_50%_-20%,rgba(59,130,246,0.18),transparent),radial-gradient(900px_420px_at_15%_110%,rgba(99,102,241,0.12),transparent)]">
 			<Card className="w-full max-w-[420px] rounded-2xl border-slate-200/60 shadow-xl">

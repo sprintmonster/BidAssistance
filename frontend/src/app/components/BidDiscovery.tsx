@@ -48,6 +48,7 @@ type UiBid = {
 	agency: string;
 	budget: string;
 	deadline: string;
+    start: string;
 };
 
 function parseDate(value: string) {
@@ -92,6 +93,10 @@ export function BidDiscovery({
 		const q = new URLSearchParams(location.search).get("q");
 		return (q || "").trim();
 	}, [location.search]);
+    const urlMode = useMemo(() => {
+        const m = new URLSearchParams(location.search).get("mode");
+        return (m || "").trim(); // "new" | "closing" | ""
+    }, [location.search]);
 	const [wishlistSynced, setWishlistSynced] = useState(false);
 
 	const [bids, setBids] = useState<UiBid[]>([]);
@@ -107,6 +112,12 @@ export function BidDiscovery({
 	const [nowMs, setNowMs] = useState(() => Date.now());
 
 	const navigate = useNavigate();
+    type Mode = "" | "new" | "closing";
+    const [mode, setMode] = useState<Mode>((urlMode as Mode) || "");
+    useEffect(() => {
+        setMode((urlMode as Mode) || "");
+        setPage(1);
+    }, [urlMode]);
 
 	useEffect(() => {
 		const t = window.setInterval(() => setNowMs(Date.now()), 30000);
@@ -148,7 +159,9 @@ export function BidDiscovery({
 									? String(it.estimatePrice)
 									: "",
 						deadline: String(it.bidEnd ?? it.endDate ?? ""),
-					} as UiBid;
+                        start: String(it.bidStart ?? it.startDate ?? ""),
+
+                    } as UiBid;
 				})
 				.filter(Boolean) as UiBid[];
 
@@ -203,11 +216,20 @@ export function BidDiscovery({
 
 	const filtered = useMemo(() => {
 		const q = keyword.trim().toLowerCase();
-		let list = bids.slice();
+        let list = bids.slice();
 
-		list = list.filter((b) => !isEnded(b.deadline, nowMs));
+        list = list.filter((b) => !isEnded(b.deadline, nowMs));
 
-		if (agency !== "all") {
+        if (mode === "new") {
+            list = list.filter((b) => isTodayStart(b.start, nowMs));
+        }
+
+        if (mode === "closing") {
+            list = list.filter((b) => isClosingSoon(b.deadline, nowMs));
+        }
+
+
+        if (agency !== "all") {
 			list = list.filter((b) => (b.agency || "").trim() === agency);
 		}
 
@@ -248,7 +270,8 @@ export function BidDiscovery({
 		setAgency("all");
 		setSortKey("deadline_asc");
 		setPage(1);
-	};
+        navigate("/bids");
+    };
 
 	const addToCart = async (bidId: number) => {
 		try {
@@ -319,6 +342,37 @@ export function BidDiscovery({
 
 		return { dateLine, timeLine };
 	}
+    function startOfTodayMs(nowMs: number) {
+        const d = new Date(nowMs);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime();
+    }
+
+    function endOfTodayMs(nowMs: number) {
+        const d = new Date(nowMs);
+        d.setHours(23, 59, 59, 999);
+        return d.getTime();
+    }
+
+    function addDaysMs(nowMs: number, days: number) {
+        return nowMs + days * 86400000;
+    }
+
+    function isTodayStart(start: string, nowMs: number) {
+        const d = parseDate(start);
+        if (!d) return false;
+        const s = startOfTodayMs(nowMs);
+        const e = endOfTodayMs(nowMs);
+        const t = d.getTime();
+        return t >= s && t <= e;
+    }
+
+    function isClosingSoon(deadline: string, nowMs: number) {
+        const d = parseDate(deadline);
+        if (!d) return false;
+        const t = d.getTime();
+        return t >= nowMs && t <= addDaysMs(nowMs, 3);
+    }
 
 	return (
 		<div className="space-y-4">
