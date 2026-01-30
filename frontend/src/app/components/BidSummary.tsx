@@ -23,6 +23,7 @@ import {
 import { Progress } from "./ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { toast } from "sonner";
+import { fetchWishlist, toggleWishlist } from "../api/wishlist";
 
 type Bid = {
     id: number;
@@ -240,6 +241,10 @@ export function BidSummary() {
     const [analysis, setAnalysis] = useState<AnalysisDto | null>(null);
     const [analyzing, setAnalyzing] = useState(false);
 
+    const [wishlistSynced, setWishlistSynced] = useState(false);
+    const [adding, setAdding] = useState(false);
+    const [alreadyAdded, setAlreadyAdded] = useState(false);
+
     useEffect(() => {
         if (!Number.isFinite(numericBidId)) {
             setError("잘못된 공고 ID 입니다.");
@@ -352,6 +357,32 @@ export function BidSummary() {
         setChecklist(bid.checklist ?? []);
     }, [bid?.id]);
 
+    useEffect(() => {
+        const sync = async () => {
+            setWishlistSynced(false);
+
+            const userIdStr = localStorage.getItem("userId");
+            const userId = Number(userIdStr);
+
+            if (!userIdStr || !Number.isFinite(userId) || !bid) {
+                setAlreadyAdded(false);
+                setWishlistSynced(true);
+                return;
+            }
+
+            try {
+                const items = await fetchWishlist(userId);
+                setAlreadyAdded(items.some((it) => it.bidId === bid.id));
+            } catch {
+                setAlreadyAdded(false);
+            } finally {
+                setWishlistSynced(true);
+            }
+        };
+
+        void sync();
+    }, [bid?.id]);
+
     const completedItems = checklist.filter((item) => item.checked).length;
     const completionRate = checklist.length ? (completedItems / checklist.length) * 100 : 0;
 
@@ -372,6 +403,44 @@ export function BidSummary() {
             toast.error(e?.message || "AI 분석 요청에 실패했습니다.");
         } finally {
             setAnalyzing(false);
+        }
+    };
+
+    const handleAddToCart = async () => {
+        if (!bid) return;
+
+        const userIdStr = localStorage.getItem("userId");
+        const userId = Number(userIdStr);
+
+        if (!userIdStr || !Number.isFinite(userId)) {
+            toast.error("로그인이 필요합니다. 다시 로그인 해주세요.");
+            return;
+        }
+
+        if (alreadyAdded) {
+            toast.success("이미 장바구니에 담긴 공고입니다.");
+            return;
+        }
+
+        try {
+            setAdding(true);
+
+            const res = await toggleWishlist(userId, bid.id);
+
+            if ((res as any)?.status !== "success") {
+                toast.error((res as any)?.message || "장바구니 담기에 실패했습니다.");
+                return;
+            }
+
+            // 다시 동기화
+            const items = await fetchWishlist(userId);
+            setAlreadyAdded(items.some((it) => it.bidId === bid.id));
+
+            toast.success("장바구니에 추가됨");
+        } catch (e: any) {
+            toast.error(e?.message || "장바구니 담기에 실패했습니다.");
+        } finally {
+            setAdding(false);
         }
     };
 
@@ -434,6 +503,16 @@ export function BidSummary() {
                 <Button variant="ghost" size="sm" onClick={() => navigate("/bids")}>
                     목록으로
                 </Button>
+
+                <Button
+                    size="sm"
+                    className="gap-4 ml-auto"
+                    onClick={handleAddToCart}
+                    disabled={adding || !wishlistSynced || alreadyAdded}
+                    >
+                    {alreadyAdded ? "장바구니 담김" : adding ? "담는 중..." : "장바구니 담기"}
+                </Button>
+
 
             </div>
 
