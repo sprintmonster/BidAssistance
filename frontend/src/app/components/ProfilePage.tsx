@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { getUserProfile, updateUserProfile } from "../api/users";
+import { getCompany, upsertCompany } from "../api/company";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { Switch } from "./ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Separator } from "./ui/separator";
 import { Badge } from "./ui/badge";
 
@@ -67,8 +67,7 @@ function days_until_expiry(user_id: string) {
 
 	const max_ms = ACCESS_CONTROL.PASSWORD_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
 	const remain = ts + max_ms - Date.now();
-	const days = Math.ceil(remain / (24 * 60 * 60 * 1000));
-	return days;
+	return Math.ceil(remain / (24 * 60 * 60 * 1000));
 }
 
 export function ProfilePage({ userEmail }: ProfilePageProps) {
@@ -92,7 +91,14 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 	const [newPassword, setNewPassword] = useState("");
 	const [confirmPassword, setConfirmPassword] = useState("");
 
-	// 비밀번호 만료/만료 임박 UI 표시
+	const [companyLoading, setCompanyLoading] = useState(false);
+	const [companySaving, setCompanySaving] = useState(false);
+	const [companyError, setCompanyError] = useState<string | null>(null);
+	const [companyNotice, setCompanyNotice] = useState<string | null>(null);
+	const [companyId, setCompanyId] = useState<number | undefined>(undefined);
+	const [companyName, setCompanyName] = useState("");
+	const [companyPosition, setCompanyPosition] = useState("");
+
 	const isExpired = useMemo(() => {
 		if (!userId) return false;
 		return is_password_expired(userId);
@@ -117,9 +123,9 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 		getUserProfile(userId)
 			.then((res) => {
 				if (ignore) return;
-				setName(res.data.name || ""); // API: name
-				setEmail(res.data.email || ""); // API: email
-				setRole(typeof res.data.role === "number" ? res.data.role : 0); // API: role
+				setName(res.data.name || "");
+				setEmail(res.data.email || "");
+				setRole(typeof res.data.role === "number" ? res.data.role : 0);
 				localStorage.setItem("email", res.data.email || "");
 				localStorage.setItem("name", res.data.name || "");
 				setLoading(false);
@@ -135,6 +141,39 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 		};
 	}, [userId]);
 
+	useEffect(() => {
+		if (!userId) return;
+		if (activeTab !== "company") return;
+
+		let ignore = false;
+		setCompanyLoading(true);
+		setCompanyError(null);
+		setCompanyNotice(null);
+
+		getCompany(userId)
+			.then((c) => {
+				if (ignore) return;
+				setCompanyId(c.companyId);
+				setCompanyName(c.name || "");
+				setCompanyPosition(c.performanceHistory || "");
+			})
+			.catch((e: any) => {
+				if (ignore) return;
+				setCompanyError(e?.message || "회사 정보를 불러오지 못했습니다.");
+				setCompanyId(undefined);
+				setCompanyName("");
+				setCompanyPosition("");
+			})
+			.finally(() => {
+				if (ignore) return;
+				setCompanyLoading(false);
+			});
+
+		return () => {
+			ignore = true;
+		};
+	}, [activeTab, userId]);
+
 	const tabTriggerClass = useMemo(() => {
 		return [
 			"px-4 py-2 rounded-md",
@@ -145,56 +184,89 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 		].join(" ");
 	}, []);
 
-    const onSaveProfile = async () => {
-        setError(null);
+	const onSaveProfile = async () => {
+		setError(null);
 
-        if (!userId) {
-            setError("로그인이 필요합니다.");
-            return;
-        }
+		if (!userId) {
+			setError("로그인이 필요합니다.");
+			return;
+		}
 
-        // 비밀번호 변경만 허용
-        if (!newPassword && !confirmPassword) {
-            setError("변경할 비밀번호를 입력해 주세요.");
-            return;
-        }
+		if (!newPassword && !confirmPassword) {
+			setError("변경할 비밀번호를 입력해 주세요.");
+			return;
+		}
 
-        if (newPassword !== confirmPassword) {
-            setError("새 비밀번호와 확인이 일치하지 않습니다.");
-            return;
-        }
+		if (newPassword !== confirmPassword) {
+			setError("새 비밀번호와 확인이 일치하지 않습니다.");
+			return;
+		}
 
-        const payload: { email: string; password: string; name: string; role: number } = {
-            email: email.trim(),
-            name: name.trim(),
-            role,
-            password: newPassword,
-        };
+		const payload: { email: string; password: string; name: string; role: number } = {
+			email: email.trim(),
+			name: name.trim(),
+			role,
+			password: newPassword,
+		};
 
+		try {
+			setSaving(true);
+			await updateUserProfile(userId, payload);
+			set_password_changed_now_for_user(userId);
 
-        try {
-            setSaving(true);
-            await updateUserProfile(userId, payload);
+			if (passwordExpiredFromRoute && fromAfterChange) {
+				navigate(fromAfterChange, { replace: true });
+			}
 
-            // 비밀번호 변경 감지: 접근통제(유효기간) 갱신
-            set_password_changed_now_for_user(userId);
+			setCurrentPassword("");
+			setNewPassword("");
+			setConfirmPassword("");
+		} catch (e: any) {
+			setError(e?.message || "저장에 실패했습니다.");
+		} finally {
+			setSaving(false);
+		}
+	};
 
-            // 만료로 인해 강제 이동된 케이스면, 변경 후 원래 위치로 복귀
-            if (passwordExpiredFromRoute && fromAfterChange) {
-                navigate(fromAfterChange, { replace: true });
-            }
+	const onSaveCompany = async () => {
+		setCompanyError(null);
+		setCompanyNotice(null);
 
-            setCurrentPassword("");
-            setNewPassword("");
-            setConfirmPassword("");
-        } catch (e: any) {
-            setError(e?.message || "저장에 실패했습니다.");
-        } finally {
-            setSaving(false);
-        }
-    };
+		if (!userId) {
+			setCompanyError("로그인이 필요합니다.");
+			return;
+		}
 
-    return (
+		if (!companyName.trim()) {
+			setCompanyError("회사명을 입력해 주세요.");
+			return;
+		}
+
+		try {
+			setCompanySaving(true);
+
+			const payload = {
+				id: companyId,
+				name: companyName.trim(),
+				license: "",
+				performanceHistory: companyPosition.trim(),
+			};
+
+			const res = await upsertCompany(payload);
+
+			if (res.status === "success") {
+				setCompanyNotice("회사 정보가 저장되었습니다.");
+			} else {
+				setCompanyError(res.message || "회사 정보 저장에 실패했습니다.");
+			}
+		} catch (e: any) {
+			setCompanyError(e?.message || "회사 정보 저장에 실패했습니다.");
+		} finally {
+			setCompanySaving(false);
+		}
+	};
+
+	return (
 		<div className="space-y-6">
 			<div>
 				<h2 className="text-3xl mb-2">마이페이지</h2>
@@ -215,20 +287,13 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 							<p className="text-muted-foreground mb-2">{email || "이메일 정보 없음"}</p>
 							<div className="flex gap-2 flex-wrap">
 								<Badge variant="outline">{loading ? "불러오는 중..." : "계정"}</Badge>
-
-								{userId && (
-									<Badge variant="outline">
-										비밀번호 정책: {ACCESS_CONTROL.PASSWORD_MAX_AGE_DAYS}일
-									</Badge>
-								)}
-
-								{userId && expiryDays !== null && !isExpired && (
+								{userId ? (
+									<Badge variant="outline">비밀번호 정책: {ACCESS_CONTROL.PASSWORD_MAX_AGE_DAYS}일</Badge>
+								) : null}
+								{userId && expiryDays !== null && !isExpired ? (
 									<Badge variant="outline">만료까지 {expiryDays}일</Badge>
-								)}
-
-								{userId && isExpired && (
-									<Badge variant="destructive">비밀번호 만료</Badge>
-								)}
+								) : null}
+								{userId && isExpired ? <Badge variant="destructive">비밀번호 만료</Badge> : null}
 							</div>
 						</div>
 					</div>
@@ -258,60 +323,41 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 							<CardDescription>계정의 기본 정보를 관리합니다</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-4">
-							{/* 비밀번호 만료 강제 유도 메시지 */}
-							{(passwordExpiredFromRoute || isExpired) && (
+							{(passwordExpiredFromRoute || isExpired) ? (
 								<div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
 									비밀번호 유효기간이 만료되었습니다. 안전을 위해 비밀번호를 변경해 주세요.
 								</div>
-							)}
+							) : null}
 
-							{/* 만료 임박(예: 7일 이내) 안내 */}
-							{!isExpired && expiryDays !== null && expiryDays <= 7 && (
+							{(!isExpired && expiryDays !== null && expiryDays <= 7) ? (
 								<div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
 									비밀번호 유효기간이 곧 만료됩니다. ({expiryDays}일 남음) 미리 변경을 권장합니다.
 								</div>
-							)}
+							) : null}
 
-							{error && (
+							{error ? (
 								<div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
 									{error}
 								</div>
-							)}
+							) : null}
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>이름</Label>
-                                    <div className="h-10 rounded-md border px-3 flex items-center text-sm">
-                                        {name || "—"}
-                                    </div>
-                                </div>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="space-y-2">
+									<Label>이름</Label>
+									<div className="h-10 rounded-md border px-3 flex items-center text-sm">{name || "—"}</div>
+								</div>
 
-                                <div className="space-y-2">
-                                    <Label>이메일</Label>
-                                    <div className="h-10 rounded-md border px-3 flex items-center text-sm">
-                                        {email || "—"}
-                                    </div>
-                                </div>
-                            </div>
-
-
-                            {/*/!* 아래 phone/position은 정의서에 필드가 없어 “UI only” *!/*/}
-								{/*<div className="space-y-2">*/}
-								{/*	<Label htmlFor="phone">연락처</Label>*/}
-								{/*	<Input id="phone" defaultValue="010-1234-5678" />*/}
-								{/*</div>*/}
-								{/*<div className="space-y-2">*/}
-								{/*	<Label htmlFor="position">직위</Label>*/}
-								{/*	<Input id="position" defaultValue="입찰 담당자" />*/}
-								{/*</div>*/}
-							{/*</div>*/}
+								<div className="space-y-2">
+									<Label>이메일</Label>
+									<div className="h-10 rounded-md border px-3 flex items-center text-sm">{email || "—"}</div>
+								</div>
+							</div>
 
 							<Separator />
 
 							<div className="space-y-4">
 								<h4 className="font-semibold">비밀번호 변경</h4>
 
-								{/* 현재 비밀번호 검증 API가 정의서에 없어서 일단 UI만 유지 */}
 								<div className="space-y-2">
 									<Label htmlFor="currentPassword">현재 비밀번호</Label>
 									<Input
@@ -353,16 +399,76 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 					</Card>
 				</TabsContent>
 
-				{/* company/notifications/subscription 탭은 기존 UI 그대로 두되,
-				    현재 정의서엔 저장용 API가 없으니(추후 연동) */}
 				<TabsContent value="company" className="space-y-4">
-					{/* 기존 코드 유지 */}
+					<Card>
+						<CardHeader>
+							<CardTitle>회사 정보</CardTitle>
+							<CardDescription>회사명과 직위를 저장합니다</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							{companyError ? (
+								<div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+									{companyError}
+								</div>
+							) : null}
+
+							{companyNotice ? (
+								<div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+									{companyNotice}
+								</div>
+							) : null}
+
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="space-y-2">
+									<Label htmlFor="companyName">회사명</Label>
+									<Input
+										id="companyName"
+										value={companyName}
+										onChange={(e) => setCompanyName(e.target.value)}
+										placeholder={companyLoading ? "불러오는 중..." : "회사명을 입력하세요"}
+										disabled={companyLoading}
+									/>
+								</div>
+
+								<div className="space-y-2">
+									<Label htmlFor="companyPosition">직위</Label>
+									<Input
+										id="companyPosition"
+										value={companyPosition}
+										onChange={(e) => setCompanyPosition(e.target.value)}
+										placeholder={companyLoading ? "불러오는 중..." : "예: 입찰 담당자"}
+										disabled={companyLoading}
+									/>
+								</div>
+							</div>
+
+							<div className="flex justify-end">
+								<Button onClick={onSaveCompany} disabled={companySaving || companyLoading}>
+									{companySaving ? "저장 중..." : "회사 정보 저장"}
+								</Button>
+							</div>
+						</CardContent>
+					</Card>
 				</TabsContent>
+
 				<TabsContent value="notifications" className="space-y-4">
-					{/* 기존 코드 유지 */}
+					<Card>
+						<CardHeader>
+							<CardTitle>알림 설정</CardTitle>
+							<CardDescription>준비 중입니다</CardDescription>
+						</CardHeader>
+						<CardContent className="text-sm text-muted-foreground">곧 제공됩니다.</CardContent>
+					</Card>
 				</TabsContent>
+
 				<TabsContent value="subscription" className="space-y-4">
-					{/* 기존 코드 유지 */}
+					<Card>
+						<CardHeader>
+							<CardTitle>구독 관리</CardTitle>
+							<CardDescription>준비 중입니다</CardDescription>
+						</CardHeader>
+						<CardContent className="text-sm text-muted-foreground">곧 제공됩니다.</CardContent>
+					</Card>
 				</TabsContent>
 			</Tabs>
 		</div>
