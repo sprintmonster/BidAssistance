@@ -511,8 +511,8 @@ export function Home() {
 					<div className="hidden md:flex gap-2"></div>
 				</div>
 
-				<div className="grid grid-cols-12 gap-6 items-stretch">
-					<section className="col-span-12 lg:col-span-8 bg-white border rounded-2xl p-5 shadow-sm h-full">
+				<div className="grid grid-cols-12 gap-6 items-start">
+					<section className="col-span-12 lg:col-span-8 bg-white border rounded-2xl p-5 shadow-sm h-[320px] flex flex-col">
 						<div className="flex items-center justify-between mb-4">
 							<h2 className="font-semibold text-slate-900">바로가기</h2>
 						</div>
@@ -546,9 +546,9 @@ export function Home() {
 						</div>
 					</section>
 
-					<div className="col-span-12 lg:col-span-4 h-full">
+					<div className="col-span-12 lg:col-span-4">
 						{!isAuthed ? (
-							<aside className="bg-white border rounded-2xl p-5 shadow-sm h-full flex flex-col">
+							<aside className="bg-white border rounded-2xl p-5 shadow-sm flex flex-col">
 								<div className="mb-4">
 									<h3 className="text-lg font-semibold text-slate-900 mb-2">로그인</h3>
 									<p className="text-sm text-slate-500">
@@ -639,11 +639,9 @@ export function Home() {
 										</button>
 									</div>
 								</form>
-
-								<div className="flex-1" />
 							</aside>
 						) : (
-							<aside className="bg-white border rounded-2xl p-5 shadow-sm h-full flex flex-col">
+							<aside className="bg-white border rounded-2xl p-5 shadow-sm flex flex-col">
 								<div className="flex items-center justify-between mb-4">
 									<div>
 										<div className="text-sm text-slate-500">환영합니다</div>
@@ -675,8 +673,6 @@ export function Home() {
 										로그아웃
 									</button>
 								</div>
-
-								<div className="flex-1" />
 							</aside>
 						)}
 					</div>
