@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { getUserProfile, updateUserProfile } from "../api/users";
-import { getCompany, upsertCompany } from "../api/company";
+import { getCompanyForUser, upsertCompany } from "../api/company";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -150,10 +150,19 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 		setCompanyError(null);
 		setCompanyNotice(null);
 
-		getCompany(userId)
+		getCompanyForUser(userId)
 			.then((c) => {
 				if (ignore) return;
-				setCompanyId(c.companyId);
+
+				if (!c) {
+					setCompanyId(undefined);
+					setCompanyName("");
+					setCompanyPosition("");
+					return;
+				}
+
+				const id = typeof c.companyId === "number" ? c.companyId : typeof c.id === "number" ? c.id : undefined;
+				setCompanyId(id);
 				setCompanyName(c.name || "");
 				setCompanyPosition(c.performanceHistory || "");
 			})
@@ -300,7 +309,7 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 				</CardContent>
 			</Card>
 
-			<Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ProfileTab)} className="space-y-4">
+			<Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-4">
 				<TabsList className="bg-transparent p-0 gap-2">
 					<TabsTrigger value="info" className={tabTriggerClass}>
 						계정 정보
