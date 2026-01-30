@@ -617,17 +617,21 @@ export function Home() {
 					<section className="col-span-12 lg:col-span-8 bg-white border rounded-2xl p-5 shadow-sm">
 						<div className="flex items-center justify-between mb-3">
 							<h3 className="font-semibold text-slate-900">오늘의 추천</h3>
-							<button
-								className="text-sm text-blue-600 hover:underline"
-								onClick={() => navigate("/bids")}
-							>
-								더 보기
-							</button>
 						</div>
 
 						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<MiniStat label="신규 공고" value={String(newBidsToday)} sub="오늘 시작" />
-							<MiniStat label="마감 임박" value={String(closingSoon3Days)} sub="3일 이내" />
+							<MiniStat
+								label="신규 공고"
+								value={String(newBidsToday)}
+								sub="오늘 시작"
+								onClick={() => navigate("/dashboard?focus=new")}
+							/>
+							<MiniStat
+								label="마감 임박"
+								value={String(closingSoon3Days)}
+								sub="3일 이내"
+								onClick={() => navigate("/dashboard?focus=closingSoon")}
+							/>
 						</div>
 					</section>
 
@@ -682,7 +686,38 @@ function QuickBox({
 	);
 }
 
-function MiniStat({ label, value, sub }: { label: string; value: string; sub: string }) {
+function MiniStat({
+	label,
+	value,
+	sub,
+	onClick,
+}: {
+	label: string;
+	value: string;
+	sub: string;
+	onClick?: () => void;
+}) {
+	if (onClick) {
+		return (
+			<button
+				type="button"
+				onClick={onClick}
+				className="group text-left border rounded-2xl p-4 bg-slate-50 hover:bg-blue-50/40 hover:border-blue-200 transition focus:outline-none focus:ring-2 focus:ring-blue-200"
+			>
+				<div className="flex items-start justify-between gap-3">
+					<div>
+						<div className="text-sm text-slate-500">{label}</div>
+						<div className="text-2xl font-bold text-slate-900">{value}</div>
+						<div className="text-sm text-slate-500">{sub}</div>
+					</div>
+					<div className="text-blue-600 text-sm mt-1 opacity-0 group-hover:opacity-100 transition">
+						이동 →
+					</div>
+				</div>
+			</button>
+		);
+	}
+
 	return (
 		<div className="border rounded-2xl p-4 bg-slate-50">
 			<div className="text-sm text-slate-500">{label}</div>
