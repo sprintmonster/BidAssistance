@@ -1,3 +1,5 @@
+import { api } from "./client";
+
 export interface ChatRequest {
     query: string;
     thread_id?: string; // 세션 스레드 ID
@@ -13,18 +15,13 @@ export interface ChatResponse {
 }
 export const fetchChatResponse = async (request: ChatRequest): Promise<ChatResponse> => {
     try {
-        const response = await fetch("/api/chatbots", {
+        const response = await api<ChatResponse>("/chatbots", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
             body: JSON.stringify(request),
         });
-        if (!response.ok) {
-            throw new Error(`Server Error: ${response.status}`);
-        }
 
-        return await response.json();
+
+        return response;
     } catch (error) {
         console.error("Chatbot API Error:", error);
         throw error;
