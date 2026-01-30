@@ -60,6 +60,12 @@ type Bid = {
         competitors: string;
     };
 };
+type AnalysisDto = {
+    analysisContent?: string | null; // 마크다운 리포트
+    pdfUrl?: string | null;          // Azure PDF 링크
+    predictedPrice?: number | null;  // 있으면(필드명은 실제 응답 확인 필요)
+    analysisDate?: string | null;    // 있으면
+};
 
 function safeFileName(name: string) {
     return name.replace(/[\\/:*?"<>|]/g, "_");
@@ -231,6 +237,9 @@ export function BidSummary() {
 
     const [checklist, setChecklist] = useState<Array<{ item: string; checked: boolean }>>([]);
 
+    const [analysis, setAnalysis] = useState<AnalysisDto | null>(null);
+    const [analyzing, setAnalyzing] = useState(false);
+
     useEffect(() => {
         if (!Number.isFinite(numericBidId)) {
             setError("잘못된 공고 ID 입니다.");
@@ -346,6 +355,26 @@ export function BidSummary() {
     const completedItems = checklist.filter((item) => item.checked).length;
     const completionRate = checklist.length ? (completedItems / checklist.length) * 100 : 0;
 
+    const handleAnalyze = async () => {
+        if (!bid) return;
+
+        try {
+            setAnalyzing(true);
+
+            //  POST /api/analysis/predict/{bidId}
+            const res = await api(`/analysis/predict/${bid.id}`, { method: "POST" });
+
+            const dto = (res as any)?.data ?? (res as any);
+
+            setAnalysis(dto as AnalysisDto);
+            toast.success("AI 분석이 완료되었습니다.");
+        } catch (e: any) {
+            toast.error(e?.message || "AI 분석 요청에 실패했습니다.");
+        } finally {
+            setAnalyzing(false);
+        }
+    };
+
     const handleDownloadNotice = async () => {
         if (!bid) return;
 
@@ -373,11 +402,22 @@ export function BidSummary() {
 
     const handleDownloadAiReport = () => {
         if (!bid) return;
+
+        // 1) PDF 링크 있으면 그걸 우선
+        const pdfUrl = analysis?.pdfUrl ?? null;
+        if (pdfUrl) {
+            openDownload(pdfUrl);
+            toast.success("AI 분석 PDF 리포트를 열었습니다.");
+            return;
+        }
+
+        // 2) 없으면 TXT로 폴백 (기존 로직)
         const baseName = safeFileName(`AI_분석_리포트_${bid.id}_${bid.title}`);
         const report = buildAiAnalysisReport({ ...bid, checklist }, completionRate);
         downloadText(report, `${baseName}.txt`);
-        toast.success("AI 분석 리포트 다운로드가 시작되었습니다.");
+        toast.success("AI 분석 리포트(TXT) 다운로드가 시작되었습니다.");
     };
+
 
     if (loading) return <div className="p-6">불러오는 중...</div>;
     if (error) return <div className="p-6 text-red-600">{error}</div>;
@@ -412,18 +452,32 @@ export function BidSummary() {
                             <CardDescription>{bid.description || "상세 설명(analysisResult) 준비 중"}</CardDescription>
                         </div>
 
-                        {/* ✅ 추가: 공고 링크 버튼(우측 상단) */}
+                        {/* 공고 링크 버튼(우측 상단) */}
                         {bid.bidUrl && (
-                            <div className="shrink-0">
+                            <div className="shrink-0 flex gap-2">
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => openDownload(bid.bidUrl!)}
+                                    onClick={handleAnalyze}
+                                    disabled={analyzing}
                                     className="gap-2"
                                 >
-                                    공고 링크
+                                    <Sparkles className="h-4 w-4" />
+                                    {analyzing ? "분석 중..." : "AI 분석하기"}
                                 </Button>
+
+                                {bid.bidUrl && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => openDownload(bid.bidUrl!)}
+                                        className="gap-2"
+                                    >
+                                        공고 링크
+                                    </Button>
+                                )}
                             </div>
+
                         )}
                     </div>
                 </CardHeader>
@@ -491,11 +545,26 @@ export function BidSummary() {
                                             </button>
                                         ))}
                                     </div>
+                                ) : bid.bidUrl ? (
+                                    <div className="mt-2 space-y-2">
+                                        <p className="text-xs text-muted-foreground">
+                                            첨부파일을 불러오지 못했을 수 있어요. <br/>공고 링크에서 직접 확인해 주세요.
+                                        </p>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="gap-2"
+                                            onClick={() => openDownload(bid.bidUrl!)}
+                                        >
+                                            공고 링크에서 확인
+                                        </Button>
+                                    </div>
                                 ) : (
                                     <p className="mt-1 text-muted-foreground">없음</p>
                                 )}
                             </div>
                         </div>
+
 
                     </div>
                 </CardContent>

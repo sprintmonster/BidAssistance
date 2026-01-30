@@ -13,6 +13,11 @@ export interface Bid {
     bidURL: string;
     bidReportURL: string;
     estimatePrice : bigint;
+
+    minimumBidRate?: number | null;
+    analysisResult?: string | null;
+    bidDetail?: any | null;
+    attachments?: any[];
 }
 
 function pickBidList(res: any): any[] {
