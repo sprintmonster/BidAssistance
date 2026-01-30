@@ -20,6 +20,185 @@ import { SimpleCaptcha } from "./SimpleCaptcha";
 import { ENABLE_TEST_LOGIN, TEST_LOGIN } from "../utils/testLogin";
 import { mark_reco_popup_trigger } from "./RecommendedBidsModal";
 
+function DashboardIcon() {
+	return (
+		<svg
+			width="100%"
+			height="100%"
+			viewBox="0 0 64 64"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+			className="w-full h-full"
+			aria-hidden="true"
+		>
+			<style>{`
+				.dash-bar { animation: grow 2s ease-in-out infinite alternate; transform-origin: bottom; }
+				.dash-line { stroke-dasharray: 100; stroke-dashoffset: 100; animation: draw 3s ease-in-out infinite; }
+				@keyframes grow { 0% { transform: scaleY(0.6); } 100% { transform: scaleY(1); } }
+				@keyframes draw { 0% { stroke-dashoffset: 100; } 50% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 0; } }
+				@media (prefers-reduced-motion: reduce) {
+					.dash-bar, .dash-line { animation: none !important; }
+				}
+			`}</style>
+			<circle cx="32" cy="32" r="30" fill="#E8F0FE" />
+			<path d="M16 48H48" stroke="#1A73E8" strokeWidth="2" strokeLinecap="round" />
+			<path d="M16 48V20" stroke="#1A73E8" strokeWidth="2" strokeLinecap="round" />
+			<rect
+				x="20"
+				y="30"
+				width="6"
+				height="18"
+				rx="1"
+				fill="#8AB4F8"
+				className="dash-bar"
+				style={{ animationDelay: "0s" }}
+			/>
+			<rect
+				x="29"
+				y="24"
+				width="6"
+				height="24"
+				rx="1"
+				fill="#4285F4"
+				className="dash-bar"
+				style={{ animationDelay: "0.2s" }}
+			/>
+			<rect
+				x="38"
+				y="18"
+				width="6"
+				height="30"
+				rx="1"
+				fill="#1967D2"
+				className="dash-bar"
+				style={{ animationDelay: "0.4s" }}
+			/>
+			<path
+				d="M46 22L52 16M52 16H46M52 16V22"
+				stroke="#1A73E8"
+				strokeWidth="2"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+			/>
+		</svg>
+	);
+}
+
+function BidSearchIcon() {
+	return (
+		<svg
+			width="100%"
+			height="100%"
+			viewBox="0 0 64 64"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+			className="w-full h-full"
+			aria-hidden="true"
+		>
+			<style>{`
+				.search-glass { animation: searchMove 3s ease-in-out infinite; transform-origin: center; }
+				.doc-lines { opacity: 0.5; }
+				@keyframes searchMove { 0% { transform: translate(-2px, -2px) rotate(0deg); } 50% { transform: translate(2px, 2px) rotate(5deg); } 100% { transform: translate(-2px, -2px) rotate(0deg); } }
+				@media (prefers-reduced-motion: reduce) {
+					.search-glass { animation: none !important; }
+				}
+			`}</style>
+			<circle cx="32" cy="32" r="30" fill="#E8F0FE" />
+			<rect x="20" y="16" width="24" height="32" rx="2" fill="white" stroke="#1A73E8" strokeWidth="2" />
+			<path
+				d="M24 24H36M24 30H40M24 36H36"
+				stroke="#1A73E8"
+				strokeWidth="2"
+				strokeLinecap="round"
+				className="doc-lines"
+			/>
+			<g className="search-glass">
+				<circle cx="38" cy="38" r="9" fill="#E8F0FE" stroke="#1967D2" strokeWidth="2.5" />
+				<path d="M44 44L50 50" stroke="#1967D2" strokeWidth="2.5" strokeLinecap="round" />
+				<path d="M35 34C35 34 36 32 39 32" stroke="#8AB4F8" strokeWidth="2" strokeLinecap="round" />
+			</g>
+		</svg>
+	);
+}
+
+function CartIcon() {
+	return (
+		<svg
+			width="100%"
+			height="100%"
+			viewBox="0 0 64 64"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+			className="w-full h-full"
+			aria-hidden="true"
+		>
+			<style>{`
+				.cart-item { animation: dropIn 2.5s ease-out infinite; }
+				@keyframes dropIn { 0% { transform: translateY(-10px); opacity: 0; } 30% { transform: translateY(0); opacity: 1; } 80% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(0); opacity: 0; } }
+				@media (prefers-reduced-motion: reduce) {
+					.cart-item { animation: none !important; }
+				}
+			`}</style>
+			<circle cx="32" cy="32" r="30" fill="#E8F0FE" />
+			<path
+				d="M16 20H20L23 42H45L48 24H22"
+				stroke="#1A73E8"
+				strokeWidth="2"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+				fill="#E8F0FE"
+			/>
+			<circle cx="25" cy="46" r="2" fill="#1A73E8" />
+			<circle cx="43" cy="46" r="2" fill="#1A73E8" />
+			<g className="cart-item">
+				<rect x="28" y="14" width="14" height="18" rx="1" fill="#4285F4" stroke="#1967D2" strokeWidth="1.5" />
+				<path d="M32 20H38M32 24H36" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+			</g>
+		</svg>
+	);
+}
+
+function CommunityIcon() {
+	return (
+		<svg
+			width="100%"
+			height="100%"
+			viewBox="0 0 64 64"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+			className="w-full h-full"
+			aria-hidden="true"
+		>
+			<style>{`
+				.bubble-1 { animation: popup 3s infinite; transform-origin: bottom left; }
+				.bubble-2 { animation: popup 3s infinite 1.5s; transform-origin: bottom right; }
+				@keyframes popup { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+				@media (prefers-reduced-motion: reduce) {
+					.bubble-1, .bubble-2 { animation: none !important; }
+				}
+			`}</style>
+			<circle cx="32" cy="32" r="30" fill="#E8F0FE" />
+			<g className="bubble-1">
+				<path
+					d="M16 22C16 18.6863 18.6863 16 22 16H38C41.3137 16 44 18.6863 44 22V32C44 35.3137 41.3137 38 38 38H22L16 42V22Z"
+					fill="#4285F4"
+				/>
+				<circle cx="24" cy="27" r="2" fill="white" />
+				<circle cx="30" cy="27" r="2" fill="white" />
+				<circle cx="36" cy="27" r="2" fill="white" />
+			</g>
+			<g className="bubble-2">
+				<path
+					d="M48 42C48 45.3137 45.3137 48 42 48H26C22.6863 48 20 45.3137 20 42V36C20 36 24 36 28 36H42V26L48 30V42Z"
+					fill="#1967D2"
+					stroke="#E8F0FE"
+					strokeWidth="2"
+				/>
+			</g>
+		</svg>
+	);
+}
+
 type AuthUser = {
 	name: string;
 	email?: string;
@@ -116,36 +295,27 @@ export function Home() {
 			try {
 				const bids = await fetchBids();
 
-				const list = Array.isArray(bids)
-					? bids
-					: Array.isArray((bids as any)?.data)
-						? (bids as any).data
-						: Array.isArray((bids as any)?.data?.items)
-							? (bids as any).data.items
-							: [];
-
 				const now = new Date();
-				const yyyy = now.getFullYear();
-				const mm = now.getMonth();
-				const dd = now.getDate();
+				const todayStart = new Date(now);
+				todayStart.setHours(0, 0, 0, 0);
+				const todayEnd = new Date(now);
+				todayEnd.setHours(23, 59, 59, 999);
+				const threeDaysLater = new Date(now);
+				threeDaysLater.setDate(threeDaysLater.getDate() + 3);
 
-				const isSameDay = (d: Date) =>
-					d.getFullYear() === yyyy && d.getMonth() === mm && d.getDate() === dd;
+				const parse = (s: any) => {
+					const t = Date.parse(String(s ?? ""));
+					return Number.isFinite(t) ? new Date(t) : null;
+				};
 
-				const newToday = list.filter((b: any) => {
-					const s = String(b.bidStart ?? b.startDate ?? "");
-					const d = s ? new Date(s) : null;
-					return d && Number.isFinite(d.getTime()) && isSameDay(d);
+				const newToday = bids.filter((b: any) => {
+					const s = parse(b.startDate ?? b.bidStart);
+					return !!s && s >= todayStart && s <= todayEnd;
 				}).length;
 
-				const soon3 = list.filter((b: any) => {
-					const s = String(b.bidEnd ?? b.endDate ?? "");
-					const d = s ? new Date(s) : null;
-					if (!d || !Number.isFinite(d.getTime())) return false;
-
-					const diffMs = d.getTime() - now.getTime();
-					const diffDays = diffMs / (1000 * 60 * 60 * 24);
-					return diffDays >= 0 && diffDays <= 3;
+				const soon3 = bids.filter((b: any) => {
+					const e = parse(b.endDate ?? b.bidEnd);
+					return !!e && e >= now && e <= threeDaysLater;
 				}).length;
 
 				setNewBidsToday(newToday);
@@ -159,227 +329,233 @@ export function Home() {
 		void loadHomeKpi();
 	}, []);
 
-	const onLogout = () => {
-		localStorage.removeItem("userId");
-		localStorage.removeItem("userName");
-		localStorage.removeItem("name");
-		localStorage.removeItem("email");
-		localStorage.removeItem("role");
-		localStorage.removeItem("companyName");
-		localStorage.removeItem("companyPosition");
-		localStorage.removeItem("accessToken");
-		localStorage.removeItem("refreshToken");
-		setIsAuthed(false);
-		setUser(null);
-		setWishlistCount(0);
-		navigate("/");
-	};
-
 	const doLogin = async (em: string, pw: string) => {
 		setErrorMsg(null);
 
-		const emailTrim = em.trim();
-
-		if (!emailTrim || !pw) {
+		if (!em || !pw) {
 			setErrorMsg("이메일과 비밀번호를 입력해 주세요.");
 			return;
 		}
 
-		if (is_login_locked(emailTrim)) {
+		if (is_login_locked(em)) {
 			setErrorMsg(
-				`로그인이 잠겨 있습니다. ${format_mmss(login_lock_remaining_ms(emailTrim))} 후 다시 시도해 주세요.`,
+				`로그인 시도가 제한되었습니다. ${format_mmss(login_lock_remaining_ms(em))} 후 다시 시도해 주세요.`,
 			);
 			return;
 		}
 
-		if (should_require_captcha(emailTrim) && !captchaValid) {
+		if (should_require_captcha(em) && !captchaValid) {
 			setErrorMsg("캡챠 인증을 완료해 주세요.");
 			return;
 		}
 
 		try {
 			setSubmitting(true);
-			const res = await login(emailTrim, pw);
+			const res = await login(em, pw);
 
 			if (res.status !== "success" || !res.data) {
-				record_login_failure(emailTrim);
-				setErrorMsg(res.message || "로그인에 실패했습니다.");
+				const st = record_login_failure(em);
+				if (st.lock_until && st.lock_until > Date.now()) {
+					setErrorMsg(
+						`로그인 실패가 누적되어 계정이 잠겼습니다. ${format_mmss(login_lock_remaining_ms(em))} 후 다시 시도해 주세요.`,
+					);
+					return;
+				}
+				const remaining = Math.max(0, 5 - st.count);
+				setErrorMsg((res.message || "로그인 실패") + ` (남은 시도: ${remaining}회)`);
 				return;
 			}
 
-			const uid = parse_user_id(res);
-			if (!uid) {
-				record_login_failure(emailTrim);
-				setErrorMsg("로그인 응답에 사용자 식별자가 없습니다.");
+			const userId = parse_user_id(res);
+			if (!userId) {
+				localStorage.removeItem("userId");
+				setErrorMsg("로그인 정보 처리 중 문제가 발생했습니다. 다시 시도해주세요.");
 				return;
 			}
 
-			record_login_success(emailTrim);
-			ensure_password_changed_at_initialized(emailTrim);
+			record_login_success(em);
+			localStorage.setItem("userId", userId);
+			localStorage.setItem("userName", String(res.data?.name ?? ""));
+			localStorage.setItem("email", String(res.data?.email ?? em));
+			mark_reco_popup_trigger();
+			navigate("/", { replace: true });
 
-			if (is_password_expired(emailTrim)) {
-				setErrorMsg("비밀번호가 만료되었습니다. 비밀번호를 재설정해 주세요.");
-				navigate("/reset-password");
-				return;
-			}
-
-			migrate_password_changed_at(emailTrim);
-
-			localStorage.setItem("userId", uid);
-			if (res.data?.name) localStorage.setItem("userName", String(res.data.name));
-			if (res.data?.email) localStorage.setItem("email", String(res.data.email));
-			if (typeof res.data?.role === "number") localStorage.setItem("role", String(res.data.role));
-
-			if ((res.data as any)?.companyName)
-				localStorage.setItem("companyName", String((res.data as any).companyName));
-			if ((res.data as any)?.companyPosition)
-				localStorage.setItem("companyPosition", String((res.data as any).companyPosition));
-
-			if ((res.data as any)?.accessToken)
-				localStorage.setItem("accessToken", String((res.data as any).accessToken));
-			if ((res.data as any)?.refreshToken)
-				localStorage.setItem("refreshToken", String((res.data as any).refreshToken));
+			migrate_password_changed_at(String(res.data?.email ?? em), userId);
+			ensure_password_changed_at_initialized(userId);
 
 			setIsAuthed(true);
 			setUser({
 				name: String(res.data?.name ?? "사용자"),
-				email: res.data?.email ? String(res.data.email) : undefined,
+				email: String(res.data?.email ?? em),
 			});
 
-			mark_reco_popup_trigger();
-			navigate("/dashboard");
-		} catch (e) {
-			record_login_failure(emailTrim);
-			setErrorMsg(e instanceof Error ? e.message : "로그인에 실패했습니다.");
+			if (is_password_expired(userId)) {
+				navigate("/profile", {
+					replace: true,
+					state: { passwordExpired: true, fromAfterChange: "/" },
+				});
+				return;
+			}
+
+			navigate("/", { replace: true });
+		} catch (err: any) {
+			const st = record_login_failure(em);
+			if (st.lock_until && st.lock_until > Date.now()) {
+				setErrorMsg(
+					`로그인 실패가 누적되어 계정이 잠겼습니다. ${format_mmss(login_lock_remaining_ms(em))} 후 다시 시도해 주세요.`,
+				);
+			} else {
+				const remaining = Math.max(0, 5 - st.count);
+				setErrorMsg((err?.message || "로그인 중 오류가 발생했습니다.") + ` (남은 시도: ${remaining}회)`);
+			}
 		} finally {
 			setSubmitting(false);
 		}
 	};
 
-	const canTestLogin = ENABLE_TEST_LOGIN;
+	const onQuickLogin = async (e?: React.FormEvent) => {
+		e?.preventDefault();
+		await doLogin(email.trim(), password.trim());
+	};
 
-	const onTestLogin = async () => {
-		if (!canTestLogin) return;
-		await doLogin(TEST_LOGIN.email, TEST_LOGIN.password);
+	const onLogout = () => {
+		localStorage.removeItem("userId");
+		localStorage.removeItem("refreshToken");
+
+		localStorage.removeItem("userName");
+		localStorage.removeItem("name");
+		localStorage.removeItem("email");
+
+		window.dispatchEvent(new Event("auth:changed"));
+
+		window.location.href = "/";
 	};
 
 	return (
-		<div className="min-h-[calc(100vh-64px)] bg-slate-50">
-			<div className="max-w-6xl mx-auto px-4 py-8">
-				<div className="grid grid-cols-12 gap-6">
-					<div className="col-span-12 lg:col-span-8 space-y-6">
-						<section className="bg-white border rounded-2xl p-5 shadow-sm">
-							<div className="flex items-center justify-between mb-4">
-								<h2 className="text-lg font-semibold text-slate-900">바로가기</h2>
-							</div>
-
-							<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-								<QuickBox
-									title="공고 찾기"
-									desc="관심있는 공고를 검색하고 필터링합니다."
-									onClick={() => navigate("/bids")}
-								/>
-								<QuickBox
-									title="장바구니"
-									desc="찜한 공고와 진행 단계를 관리합니다."
-									onClick={() => navigate("/cart")}
-									badge={wishlistCount}
-								/>
-								<QuickBox
-									title="커뮤니티"
-									desc="정보를 공유하고 질문을 남겨보세요."
-									onClick={() => navigate("/community")}
-								/>
-								<QuickBox
-									title="알림"
-									desc="장바구니 기반 알림을 확인합니다."
-									onClick={() => navigate("/notifications")}
-								/>
-							</div>
-						</section>
+		<div className="bg-slate-50">
+			<div className="max-w-7xl mx-auto px-5 py-8">
+				<div className="flex items-end justify-between gap-4 mb-6">
+					<div>
+						<div className="text-sm text-slate-500">AI 기반 입찰 탐색 · 관리</div>
+						<h1 className="text-2xl font-bold tracking-tight text-slate-900">
+							공고를 더 빠르게 찾고, 더 확실하게 준비하세요
+						</h1>
 					</div>
+					<div className="hidden md:flex gap-2"></div>
+				</div>
 
-					<div className="col-span-12 lg:col-span-4">
+				<div className="grid grid-cols-12 gap-6 items-stretch">
+					<section className="col-span-12 lg:col-span-8 bg-white border rounded-2xl p-5 shadow-sm h-full">
+						<div className="flex items-center justify-between mb-4">
+							<h2 className="font-semibold text-slate-900">바로가기</h2>
+						</div>
+
+						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							<QuickBox
+								title="대시보드"
+								desc="지표/분포/현황 한눈에"
+								icon={<DashboardIcon />}
+								onClick={() => navigate("/dashboard")}
+							/>
+							<QuickBox
+								title="공고 찾기"
+								desc="조건 필터 & AI 검색"
+								icon={<BidSearchIcon />}
+								onClick={() => navigate("/bids")}
+							/>
+							<QuickBox
+								title="장바구니"
+								desc={`관심 공고 관리${wishlistCount ? ` · ${wishlistCount}건` : ""}`}
+								badge={wishlistCount}
+								icon={<CartIcon />}
+								onClick={() => navigate("/cart")}
+							/>
+							<QuickBox
+								title="커뮤니티"
+								desc="실무 팁/질문/공유"
+								icon={<CommunityIcon />}
+								onClick={() => navigate("/community")}
+							/>
+						</div>
+					</section>
+
+					<div className="col-span-12 lg:col-span-4 h-full">
 						{!isAuthed ? (
 							<aside className="bg-white border rounded-2xl p-5 shadow-sm h-full flex flex-col">
 								<div className="mb-4">
-									<h3 className="text-lg font-semibold text-slate-900">로그인</h3>
-									<div className="text-sm text-slate-500">서비스를 이용하려면 로그인하세요.</div>
+									<h3 className="text-lg font-semibold text-slate-900 mb-2">로그인</h3>
+									<p className="text-sm text-slate-500">
+										로그인하면 장바구니/알림/AI 기능을 이용할 수 있습니다.
+									</p>
 								</div>
 
-								<form
-									className="space-y-3"
-									onSubmit={(e) => {
-										e.preventDefault();
-										if (submitting) return;
-										if (locked) return;
-										void doLogin(email, password);
-									}}
-								>
+								<form className="space-y-3" onSubmit={onQuickLogin}>
 									<div>
-										<label className="text-sm text-slate-600">이메일</label>
+										<div className="text-sm font-medium text-slate-700 mb-1">이메일</div>
 										<input
 											value={email}
 											onChange={(e) => setEmail(e.target.value)}
-											className="mt-1 w-full h-11 border rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
-											placeholder="example@email.com"
-											autoComplete="email"
+											className="w-full h-11 rounded-xl bg-slate-50 border px-3 outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-300"
+											placeholder="name@company.com"
+											type="email"
 										/>
 									</div>
 
 									<div>
-										<label className="text-sm text-slate-600">비밀번호</label>
+										<div className="text-sm font-medium text-slate-700 mb-1">비밀번호</div>
 										<input
-											type="password"
 											value={password}
 											onChange={(e) => setPassword(e.target.value)}
-											className="mt-1 w-full h-11 border rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
-											placeholder="비밀번호"
-											autoComplete="current-password"
+											className="w-full h-11 rounded-xl bg-slate-50 border px-3 outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-300"
+											placeholder="••••••••"
+											type="password"
 										/>
 									</div>
 
-									{captchaRequired ? (
-										<div className="pt-1">
-											<SimpleCaptcha onValidated={setCaptchaValid} />
-										</div>
-									) : null}
+									<SimpleCaptcha required={captchaRequired} onValidChange={setCaptchaValid} />
 
-									{locked ? (
-										<div className="text-xs text-red-600">
-											로그인이 잠겨 있습니다. {format_mmss(lockRemaining)} 후 다시 시도해 주세요.
-										</div>
-									) : null}
+									{errorMsg && <div className="text-sm text-red-600">{errorMsg}</div>}
 
-									{errorMsg ? <div className="text-sm text-red-600">{errorMsg}</div> : null}
+									{locked && (
+										<div className="text-sm text-amber-700">
+											로그인 시도가 제한되었습니다. {format_mmss(lockRemaining)} 후 다시
+											시도해 주세요.
+										</div>
+									)}
 
 									<button
 										type="submit"
-										disabled={submitting || (captchaRequired && !captchaValid) || locked}
-										className="w-full h-11 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
+										disabled={submitting || locked || (captchaRequired && !captchaValid)}
+										className="w-full h-11 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-60"
 									>
 										{submitting ? "로그인 중..." : "로그인"}
 									</button>
 
-									{canTestLogin ? (
-										<button
-											type="button"
-											onClick={onTestLogin}
-											disabled={submitting}
-											className="w-full h-11 rounded-xl border hover:bg-slate-50 text-slate-700 disabled:opacity-50"
-										>
-											테스트 로그인
-										</button>
-									) : null}
-
-									<div className="flex items-center justify-between text-sm text-slate-600 pt-1">
+									<div className="grid grid-cols-1 gap-3">
 										<button
 											type="button"
 											onClick={() => navigate("/signup")}
-											className="hover:text-blue-600 hover:underline"
+											className="h-11 rounded-xl border hover:bg-slate-50"
 										>
 											회원가입
 										</button>
+										{ENABLE_TEST_LOGIN && (
+											<button
+												type="button"
+												disabled={submitting}
+												onClick={async () => {
+													setEmail(TEST_LOGIN.email);
+													setPassword(TEST_LOGIN.password);
+													await doLogin(TEST_LOGIN.email, TEST_LOGIN.password);
+												}}
+												className="h-11 rounded-xl border hover:bg-slate-50"
+											>
+												테스트 로그인
+											</button>
+										)}
+									</div>
+
+									<div className="flex justify-between text-sm text-slate-500 pt-2">
 										<button
 											type="button"
 											onClick={() => navigate("/find-account")}
@@ -441,24 +617,17 @@ export function Home() {
 					<section className="col-span-12 lg:col-span-8 bg-white border rounded-2xl p-5 shadow-sm">
 						<div className="flex items-center justify-between mb-3">
 							<h3 className="font-semibold text-slate-900">오늘의 추천</h3>
-							<button className="text-sm text-blue-600 hover:underline" onClick={() => navigate("/bids")}>
+							<button
+								className="text-sm text-blue-600 hover:underline"
+								onClick={() => navigate("/bids")}
+							>
 								더 보기
 							</button>
 						</div>
 
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-							<MiniStat
-								label="신규 공고"
-								value={String(newBidsToday)}
-								sub="오늘 시작"
-								onClick={() => navigate("/dashboard?focus=new")}
-							/>
-							<MiniStat
-								label="마감 임박"
-								value={String(closingSoon3Days)}
-								sub="3일 이내"
-								onClick={() => navigate("/dashboard?focus=closingSoon")}
-							/>
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+							<MiniStat label="신규 공고" value={String(newBidsToday)} sub="오늘 시작" />
+							<MiniStat label="마감 임박" value={String(closingSoon3Days)} sub="3일 이내" />
 						</div>
 					</section>
 
@@ -474,26 +643,37 @@ function QuickBox({
 	desc,
 	onClick,
 	badge,
+	icon,
 }: {
 	title: string;
 	desc: string;
 	onClick: () => void;
 	badge?: number;
+	icon?: React.ReactNode;
 }) {
 	return (
 		<button
 			onClick={onClick}
 			className="group relative text-left border rounded-2xl p-4 hover:border-blue-200 hover:bg-blue-50/40 transition"
 		>
-			<div className="flex items-center justify-between mb-1">
-				<div className="font-semibold text-slate-900">{title}</div>
-				{!!badge && badge > 0 && (
-					<span className="min-w-[22px] h-[22px] px-1 rounded-full bg-slate-900 text-white text-[12px] flex items-center justify-center">
-						{badge}
-					</span>
-				)}
+			<div className="flex items-start gap-4">
+				{icon ? (
+					<div className="shrink-0 w-14 h-14 rounded-2xl bg-slate-50 border flex items-center justify-center overflow-hidden">
+						<div className="w-12 h-12">{icon}</div>
+					</div>
+				) : null}
+				<div className="min-w-0 flex-1">
+					<div className="flex items-center justify-between gap-3 mb-1">
+						<div className="font-semibold text-slate-900 truncate">{title}</div>
+						{!!badge && badge > 0 && (
+							<span className="min-w-[22px] h-[22px] px-1 rounded-full bg-slate-900 text-white text-[12px] flex items-center justify-center">
+								{badge}
+							</span>
+						)}
+					</div>
+					<div className="text-sm text-slate-500 leading-snug">{desc}</div>
+				</div>
 			</div>
-			<div className="text-sm text-slate-500">{desc}</div>
 
 			<div className="absolute right-4 bottom-4 text-sm text-blue-600 opacity-0 group-hover:opacity-100 transition">
 				이동 →
@@ -502,36 +682,7 @@ function QuickBox({
 	);
 }
 
-function MiniStat({
-	label,
-	value,
-	sub,
-	onClick,
-}: {
-	label: string;
-	value: string;
-	sub: string;
-	onClick?: () => void;
-}) {
-	if (onClick) {
-		return (
-			<button
-				type="button"
-				onClick={onClick}
-				className="text-left border rounded-2xl p-4 bg-slate-50 hover:bg-blue-50/40 hover:border-blue-200 transition focus:outline-none focus:ring-2 focus:ring-blue-200"
-			>
-				<div className="flex items-start justify-between gap-3">
-					<div>
-						<div className="text-sm text-slate-500">{label}</div>
-						<div className="text-2xl font-bold text-slate-900">{value}</div>
-						<div className="text-sm text-slate-500">{sub}</div>
-					</div>
-					<div className="text-blue-600 text-sm mt-1">이동 →</div>
-				</div>
-			</button>
-		);
-	}
-
+function MiniStat({ label, value, sub }: { label: string; value: string; sub: string }) {
 	return (
 		<div className="border rounded-2xl p-4 bg-slate-50">
 			<div className="text-sm text-slate-500">{label}</div>
@@ -546,6 +697,7 @@ function MiniKpi({ label, value }: { label: string; value: string }) {
 		<div className="border rounded-2xl p-4 bg-slate-50">
 			<div className="text-sm text-slate-500">{label}</div>
 			<div className="text-xl font-bold text-slate-900">{value}</div>
+			<div className="text-sm text-slate-500">{value}</div>
 		</div>
 	);
 }
