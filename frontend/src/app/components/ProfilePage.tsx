@@ -236,45 +236,50 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 		}
 	};
 
-	const onSaveCompany = async () => {
-		setCompanyError(null);
-		setCompanyNotice(null);
+    const onSaveCompany = async () => {
+        setCompanyError(null);
+        setCompanyNotice(null);
 
-		if (!userId) {
-			setCompanyError("로그인이 필요합니다.");
-			return;
-		}
+        if (!userId) {
+            setCompanyError("로그인이 필요합니다.");
+            return;
+        }
 
-		if (!companyName.trim()) {
-			setCompanyError("회사명을 입력해 주세요.");
-			return;
-		}
+        const nextName = companyName.trim();
+        const nextPos = companyPosition.trim();
 
-		try {
-			setCompanySaving(true);
+        if (!nextName) {
+            setCompanyError("회사명을 입력해 주세요.");
+            return;
+        }
 
-			const payload = {
-				id: companyId,
-				name: companyName.trim(),
-				license: "",
-				performanceHistory: companyPosition.trim(),
-			};
+        const prevName = localStorage.getItem("companyName") || "";
+        const prevPos = localStorage.getItem("companyPosition") || "";
 
-			const res = await upsertCompany(payload);
+        //  1) 완전 동일하면 저장하지 않고 안내만
+        if (prevName === nextName && prevPos === nextPos) {
+            setCompanyNotice("이미 등록된 회사 정보입니다.");
+            return;
+        }
 
-			if (res.status === "success") {
-				setCompanyNotice("회사 정보가 저장되었습니다.");
-			} else {
-				setCompanyError(res.message || "회사 정보 저장에 실패했습니다.");
-			}
-		} catch (e: any) {
-			setCompanyError(e?.message || "회사 정보 저장에 실패했습니다.");
-		} finally {
-			setCompanySaving(false);
-		}
-	};
+        // 2) 여기서부터는 업데이트(변경)로 간주하고 로컬에 저장
+        localStorage.setItem("companyName", nextName);
+        localStorage.setItem("companyPosition", nextPos);
 
-	return (
+        // UI에도 즉시 반영(선택이지만 안정적)
+        setCompanyName(nextName);
+        setCompanyPosition(nextPos);
+
+        //  3) 메시지: 기존 값이 있었으면 '업데이트', 없었으면 '등록'
+        if (prevName || prevPos) {
+            setCompanyNotice("회사 정보가 업데이트되었습니다.");
+        } else {
+            setCompanyNotice("회사 정보가 등록되었습니다.");
+        }
+    };
+
+
+    return (
 		<div className="space-y-6">
 			<div>
 				<h2 className="text-3xl mb-2">마이페이지</h2>
