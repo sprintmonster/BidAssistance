@@ -37,6 +37,9 @@ type Bid = {
     status: string;
     description: string;
 
+    bidCreated?: string | null;
+
+
     bidUrl?:string;
     documentUrl?: string;
     documentFileName?: string;
@@ -318,6 +321,7 @@ export function BidSummary() {
                     status: "진행중",
                     description: String(item.analysisResult ?? ""),
                     // description: String(item.analysisResult ?? item.name ?? item.title ?? ""),
+                    bidCreated: item.bidCreated ? String(item.bidCreated) : null,
 
                     attachments,
 
@@ -593,6 +597,20 @@ export function BidSummary() {
                         <div className="flex items-center gap-3">
                             <Calendar className="h-5 w-5 text-muted-foreground" />
                             <div>
+                                <p className="text-sm text-muted-foreground">
+                                    {bid.bidCreated ? "공고게시일" : "입찰서 제출 시작일"}
+                                </p>
+
+                                <p className="font-semibold whitespace-nowrap">
+                                    {new Date(bid.bidCreated ?? bid.announcementDate).toLocaleString("ko-KR", {
+                                        year: "numeric",
+                                        month: "2-digit",
+                                        day: "2-digit",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                    })}
+                                </p>
+
                                 <p className="text-sm text-muted-foreground">마감일</p>
                                 <p className="font-semibold text-red-600 whitespace-nowrap">
                                     {new Date(bid.deadline).toLocaleString("ko-KR", {

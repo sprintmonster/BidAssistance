@@ -58,7 +58,9 @@ export function Dashboard() {
 
 			try {
 				const res = await fetchBids();
-				const items = pick_list(res);
+                console.log("sample bid", bids[0]);
+
+                const items = pick_list(res);
 				setBids(items as Bid[]);
 			} catch (e) {
 				setBids([]);
@@ -288,32 +290,43 @@ function is_closing_soon_3days(b: any): boolean {
 }
 
 function build_kpi(bids: Bid[], wishlist: WishlistItem[]): Kpi {
-	const now = new Date();
-	const curMonth = month_key(now);
+    const now = new Date();
+    const curMonth = month_key(now);
 
-	const newBidsThisMonth = bids.filter((b: any) => {
-		const s = String(b.bidStart ?? b.startDate ?? "");
-		const d = to_date(s);
-		if (!d) return false;
-		return month_key(d) === curMonth;
-	}).length;
+    const newBidsThisMonth = bids.filter((b: any) => {
+        const s = String((b as any).bidStart ?? (b as any).startDate ?? "");
+        const d = to_date(s);
+        if (!d) return false;
+        return month_key(d) === curMonth;
+    }).length;
 
-	const closingSoon3Days = bids.filter(is_closing_soon_3days).length;
+    const closingSoon3Days = bids.filter(is_closing_soon_3days).length;
 
-	const totalExpectedAmount = bids.reduce((acc: number, b: any) => {
-		const v = Number(b.budget ?? b.amount ?? 0);
-		if (!Number.isFinite(v)) return acc;
-		return acc + v;
-	}, 0);
+    //  관심공고 bidId set
+    const wishSet = new Set<number>(
+        wishlist
+            .map((w: any) => Number(w.bidId ?? w.id))
+            .filter((x: number) => Number.isFinite(x)),
+    );
 
-	const totalExpectedAmountEok = `${Math.round(totalExpectedAmount / 100000000)}`;
+    // 관심공고만 합산 (estimatePrice 우선)
+    const totalExpectedAmount = bids.reduce((acc: number, b: any) => {
+        const bidKey = Number(b.id ?? b.bidId);
+        if (!Number.isFinite(bidKey) || !wishSet.has(bidKey)) return acc;
 
-	return {
-		newBidsThisMonth,
-		wishlistCount: wishlist.length,
-		closingSoon3Days,
-		totalExpectedAmountEok,
-	};
+        const raw = b.estimatePrice ?? b.budget ?? b.baseAmount ?? b.amount ?? 0;
+        const v = Number(raw);
+        return Number.isFinite(v) ? acc + v : acc;
+    }, 0);
+
+    const totalExpectedAmountEok = `${Math.round(totalExpectedAmount / 100000000)}`;
+
+    return {
+        newBidsThisMonth,
+        wishlistCount: wishlist.length,
+        closingSoon3Days,
+        totalExpectedAmountEok,
+    };
 }
 
 function build_region_dist(bids: Bid[]): RegionDistPoint[] {
@@ -357,9 +370,9 @@ function build_weekly_trend_forward(bids: Bid[], monthsForward: number): Monthly
 		const week = Math.ceil(d.getDate() / 7);
 		const label = `${week}주`;
 
-		const found = bucket.find((x) => x.name === label);
+		const found = bucket.find((x) => x.week === label);
 		if (found) found.value += 1;
-		else bucket.push({ name: label, value: 1 });
+        else bucket.push({ week: label, value: 1, range: "" });
 	});
 
 	const result = Array.from(monthBuckets.entries())
@@ -373,9 +386,9 @@ function build_weekly_trend_forward(bids: Bid[], monthsForward: number): Monthly
 }
 
 function normalize_weeks(points: WeeklyTrendPoint[]): WeeklyTrendPoint[] {
-	const map = new Map<string, number>();
-	points.forEach((p) => map.set(p.name, p.value));
+    const map = new Map<string, number>();
+    points.forEach((p) => map.set(p.week, p.value));
 
-	const weeks = ["1주", "2주", "3주", "4주", "5주"];
-	return weeks.map((w) => ({ name: w, value: map.get(w) || 0 }));
+    const weeks = ["1주", "2주", "3주", "4주", "5주"];
+    return weeks.map((w) => ({ week: w, value: map.get(w) || 0, range: "" }));
 }
