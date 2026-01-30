@@ -511,40 +511,66 @@ export function Home() {
 					<div className="hidden md:flex gap-2"></div>
 				</div>
 
+				{/* ✅ 핵심: 왼쪽(바로가기+오늘의 추천)을 한 컬럼으로 묶고, 오른쪽(로그인)을 독립 컬럼으로 둔다 */}
 				<div className="grid grid-cols-12 gap-6 items-start">
-					<section className="col-span-12 lg:col-span-8 bg-white border rounded-2xl p-5 shadow-sm h-[320px] flex flex-col">
-						<div className="flex items-center justify-between mb-4">
-							<h2 className="font-semibold text-slate-900">바로가기</h2>
-						</div>
+					<div className="col-span-12 lg:col-span-8 space-y-6">
+						<section className="bg-white border rounded-2xl p-5 shadow-sm h-[320px] flex flex-col">
+							<div className="flex items-center justify-between mb-4">
+								<h2 className="font-semibold text-slate-900">바로가기</h2>
+							</div>
 
-						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-							<QuickBox
-								title="대시보드"
-								desc="지표/분포/현황 한눈에"
-								icon={<DashboardIcon />}
-								onClick={() => navigate("/dashboard")}
-							/>
-							<QuickBox
-								title="공고 찾기"
-								desc="조건 필터 & AI 검색"
-								icon={<BidSearchIcon />}
-								onClick={() => navigate("/bids")}
-							/>
-							<QuickBox
-								title="장바구니"
-								desc={`관심 공고 관리${wishlistCount ? ` · ${wishlistCount}건` : ""}`}
-								badge={wishlistCount}
-								icon={<CartIcon />}
-								onClick={() => navigate("/cart")}
-							/>
-							<QuickBox
-								title="커뮤니티"
-								desc="실무 팁/질문/공유"
-								icon={<CommunityIcon />}
-								onClick={() => navigate("/community")}
-							/>
-						</div>
-					</section>
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+								<QuickBox
+									title="대시보드"
+									desc="지표/분포/현황 한눈에"
+									icon={<DashboardIcon />}
+									onClick={() => navigate("/dashboard")}
+								/>
+								<QuickBox
+									title="공고 찾기"
+									desc="조건 필터 & AI 검색"
+									icon={<BidSearchIcon />}
+									onClick={() => navigate("/bids")}
+								/>
+								<QuickBox
+									title="장바구니"
+									desc={`관심 공고 관리${wishlistCount ? ` · ${wishlistCount}건` : ""}`}
+									badge={wishlistCount}
+									icon={<CartIcon />}
+									onClick={() => navigate("/cart")}
+								/>
+								<QuickBox
+									title="커뮤니티"
+									desc="실무 팁/질문/공유"
+									icon={<CommunityIcon />}
+									onClick={() => navigate("/community")}
+								/>
+							</div>
+						</section>
+
+						<section className="bg-white border rounded-2xl p-5 shadow-sm">
+							<div className="flex items-center justify-between mb-3">
+								<h3 className="font-semibold text-slate-900">오늘의 추천</h3>
+							</div>
+
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<MiniStat
+									label="신규 공고"
+									value={String(newBidsToday)}
+									sub="오늘 시작"
+									icon={<NewBidIcon />}
+									onClick={() => navigate("/dashboard?focus=new")}
+								/>
+								<MiniStat
+									label="마감 임박"
+									value={String(closingSoon3Days)}
+									sub="3일 이내"
+									icon={<ClosingSoonIcon />}
+									onClick={() => navigate("/dashboard?focus=closingSoon")}
+								/>
+							</div>
+						</section>
+					</div>
 
 					<div className="col-span-12 lg:col-span-4">
 						{!isAuthed ? (
@@ -651,7 +677,6 @@ export function Home() {
 										{companyLabel ? (
 											<div className="text-xs text-muted-foreground">{companyLabel}</div>
 										) : null}
-
 										{user?.email && <div className="text-sm text-slate-500">{user.email}</div>}
 									</div>
 									<div className="w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
@@ -676,31 +701,6 @@ export function Home() {
 							</aside>
 						)}
 					</div>
-
-					<section className="col-span-12 lg:col-span-8 bg-white border rounded-2xl p-5 shadow-sm">
-						<div className="flex items-center justify-between mb-3">
-							<h3 className="font-semibold text-slate-900">오늘의 추천</h3>
-						</div>
-
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-							<MiniStat
-								label="신규 공고"
-								value={String(newBidsToday)}
-								sub="오늘 시작"
-								icon={<NewBidIcon />}
-								onClick={() => navigate("/dashboard?focus=new")}
-							/>
-							<MiniStat
-								label="마감 임박"
-								value={String(closingSoon3Days)}
-								sub="3일 이내"
-								icon={<ClosingSoonIcon />}
-								onClick={() => navigate("/dashboard?focus=closingSoon")}
-							/>
-						</div>
-					</section>
-
-					<div className="hidden lg:block lg:col-span-4" />
 				</div>
 			</div>
 		</div>
