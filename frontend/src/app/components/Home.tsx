@@ -84,6 +84,14 @@ export function Home() {
 		return () => window.clearInterval(id);
 	}, [email]);
 
+    const companyLabel = useMemo(() => {
+        const n = localStorage.getItem("companyName")?.trim() || "";
+        const p = localStorage.getItem("companyPosition")?.trim() || "";
+        if (!n && !p) return "";
+        if (n && p) return `${n} · ${p}`;
+        return n || p;
+    }, []);
+
 	const locked = useMemo(() => {
 		const em = email.trim();
 		if (!em) return false;
@@ -396,7 +404,11 @@ export function Home() {
 										<div className="text-lg font-semibold text-slate-900">
 											{mask_name(user?.name ?? "사용자")}
 										</div>
-										{user?.email && <div className="text-sm text-slate-500">{user.email}</div>}
+                                        {companyLabel ? (
+                                            <div className="text-xs text-muted-foreground">{companyLabel}</div>
+                                        ) : null}
+
+                                        {user?.email && <div className="text-sm text-slate-500">{user.email}</div>}
 									</div>
 									<div className="w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
 										{user?.name?.slice(0, 1) ?? "U"}

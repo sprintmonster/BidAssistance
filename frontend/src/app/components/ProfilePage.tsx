@@ -141,38 +141,38 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 		};
 	}, [userId]);
 
-	useEffect(() => {
-		if (!userId) return;
-		if (activeTab !== "company") return;
-
-		let ignore = false;
-		setCompanyLoading(true);
-		setCompanyError(null);
-		setCompanyNotice(null);
-
-		getCompany(userId)
-			.then((c) => {
-				if (ignore) return;
-				setCompanyId(c.companyId);
-				setCompanyName(c.name || "");
-				setCompanyPosition(c.performanceHistory || "");
-			})
-			.catch((e: any) => {
-				if (ignore) return;
-				setCompanyError(e?.message || "회사 정보를 불러오지 못했습니다.");
-				setCompanyId(undefined);
-				setCompanyName("");
-				setCompanyPosition("");
-			})
-			.finally(() => {
-				if (ignore) return;
-				setCompanyLoading(false);
-			});
-
-		return () => {
-			ignore = true;
-		};
-	}, [activeTab, userId]);
+	// useEffect(() => {
+	// 	if (!userId) return;
+	// 	if (activeTab !== "company") return;
+    //
+	// 	let ignore = false;
+	// 	setCompanyLoading(true);
+	// 	setCompanyError(null);
+	// 	setCompanyNotice(null);
+    //
+	// 	getCompany(userId)
+	// 		.then((c) => {
+	// 			if (ignore) return;
+	// 			setCompanyId(c.companyId);
+	// 			setCompanyName(c.name || "");
+	// 			setCompanyPosition(c.performanceHistory || "");
+	// 		})
+	// 		.catch((e: any) => {
+	// 			if (ignore) return;
+	// 			setCompanyError(e?.message || "회사 정보를 불러오지 못했습니다.");
+	// 			setCompanyId(undefined);
+	// 			setCompanyName("");
+	// 			setCompanyPosition("");
+	// 		})
+	// 		.finally(() => {
+	// 			if (ignore) return;
+	// 			setCompanyLoading(false);
+	// 		});
+    //
+	// 	return () => {
+	// 		ignore = true;
+	// 	};
+	// }, [activeTab, userId]);
 
 	const tabTriggerClass = useMemo(() => {
 		return [
@@ -255,6 +255,8 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 			const res = await upsertCompany(payload);
 
 			if (res.status === "success") {
+                localStorage.setItem("companyName", companyName.trim());
+                localStorage.setItem("companyPosition", companyPosition.trim());
 				setCompanyNotice("회사 정보가 저장되었습니다.");
 			} else {
 				setCompanyError(res.message || "회사 정보 저장에 실패했습니다.");
