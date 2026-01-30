@@ -162,6 +162,20 @@ function levelToKor(level: "high" | "medium" | "low") {
     if (level === "medium") return "보통";
     return "낮음";
 }
+function isLikelyNoticeFile(fileName: string) {
+    const n = (fileName || "").toLowerCase();
+
+    const keywordHit = n.includes("공고");
+
+    const ext = n.split(".").pop() || "";
+    const goodExt = ["pdf", "hwp", "hwpx", "doc", "docx"].includes(ext);
+    const badExt = ["xlsx", "xls", "jpg", "jpeg", "png", "zip"].includes(ext);
+
+    if (badExt) return false;
+    if (keywordHit && goodExt) return true;
+
+    return false;
+}
 
 function buildAiAnalysisReport(bid: Bid, completionRate: number) {
     const lines: string[] = [];
@@ -496,6 +510,16 @@ export function BidSummary() {
     if (error) return <div className="p-6 text-red-600">{error}</div>;
     if (!bid) return null;
     const hasAttachments = (bid.attachments?.length ?? 0) > 0;
+    const first = bid.attachments?.[0];
+
+    const firstLooksNotice =
+        first?.fileName ? isLikelyNoticeFile(first.fileName) : false;
+
+    const showUploadGuide = hasAttachments && !firstLooksNotice;
+    const showLinkGuide = !hasAttachments;
+
+    const needsUserUpload =
+        !hasAttachments || (hasAttachments && !firstLooksNotice);
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-4">
@@ -642,28 +666,62 @@ export function BidSummary() {
                                             </button>
                                         ))}
                                     </div>
-                                ) : bid.bidUrl ? (
-                                    <div className="mt-2 space-y-2">
-                                        <p className="text-xs text-muted-foreground">
-                                            첨부파일을 불러오지 못했을 수 있어요. <br/>공고 링크에서 직접 확인해 주세요.
-                                        </p>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="gap-2"
-                                            onClick={() => openDownload(bid.bidUrl!)}
-                                        >
-                                            공고 링크에서 확인
-                                        </Button>
-                                    </div>
                                 ) : (
                                     <p className="mt-1 text-muted-foreground">없음</p>
                                 )}
                             </div>
                         </div>
-
-
                     </div>
+                    {showUploadGuide && (
+                        <div className="mt-4 w-full rounded-xl border border-amber-300 bg-amber-50 px-5 py-4 text-sm text-amber-900 space-y-1">
+                            <div className="font-semibold">⚠️ 공고문이 아닐 수 있습니다</div>
+                            <div>
+                                현재 첨부파일은 내역서/도면일 가능성이 높아요.
+                            </div>
+                            <div>
+                                공고문(PDF/HWP)을 챗봇에 업로드하면 AI 요약이 가능합니다.
+                            </div>
+                            <div>
+                                👉 우측 하단 챗봇 버튼을 눌러 업로드해 주세요.
+                            </div>
+
+                            {bid.bidUrl && (
+                                <div className="pt-1">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 px-2"
+                                        onClick={() => openDownload(bid.bidUrl!)}
+                                    >
+                                        공고 링크에서 직접 확인
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {showLinkGuide && (
+                        <div className="mt-4 w-full rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-700 space-y-1">
+                            <div className="font-semibold">📄 첨부파일이 제공되지 않았습니다</div>
+                            <div>
+                                공고문은 공고 링크에서 직접 확인해 주세요.
+                            </div>
+
+                            {bid.bidUrl && (
+                                <div className="pt-1">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 px-3"
+                                        onClick={() => openDownload(bid.bidUrl!)}
+                                    >
+                                        공고 링크 열기
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                 </CardContent>
             </Card>
 
