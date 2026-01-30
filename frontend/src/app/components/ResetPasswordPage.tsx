@@ -160,6 +160,7 @@ export function ResetPasswordPage() {
                 name: formData.name.trim(),
                 birth: formData.birthDate,
                 answer: formData.answer.trim(),
+                requestId: Number(recoverySessionId)
             };
 
             const json = await api<ResetPasswordRes>(`/users/reset_password`, {
