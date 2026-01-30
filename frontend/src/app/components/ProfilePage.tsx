@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { getUserProfile, updateUserProfile } from "../api/users";
-import { getCompany, upsertCompany } from "../api/company";
+import { getCompanyForUser, upsertCompany } from "../api/company";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -255,8 +255,6 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 			const res = await upsertCompany(payload);
 
 			if (res.status === "success") {
-                localStorage.setItem("companyName", companyName.trim());
-                localStorage.setItem("companyPosition", companyPosition.trim());
 				setCompanyNotice("회사 정보가 저장되었습니다.");
 			} else {
 				setCompanyError(res.message || "회사 정보 저장에 실패했습니다.");

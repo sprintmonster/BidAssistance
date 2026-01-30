@@ -198,7 +198,7 @@ export function AppLayout() {
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="AI로 공고를 검색해보세요 (예: 서울/경기 10억~50억 시설공사, 마감 임박)"
+                  placeholder="공고를 키워드로 검색해보세요 (공고명/기관/예산/마감)"
                   className="w-full h-12 rounded-full bg-white text-slate-900 placeholder:text-slate-400 pl-5 pr-14
                   border border-blue-500/80 focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20 outline-none"
                 />
