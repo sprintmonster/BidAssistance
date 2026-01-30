@@ -199,6 +199,73 @@ function CommunityIcon() {
 	);
 }
 
+function NewBidIcon() {
+	return (
+		<svg
+			width="100%"
+			height="100%"
+			viewBox="0 0 64 64"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+			className="w-full h-full"
+			aria-hidden="true"
+		>
+			<style>{`
+				.new-sparkle { animation: sparkle 2s ease-in-out infinite; transform-origin: center; }
+				.new-doc { animation: float 3s ease-in-out infinite; }
+				@keyframes sparkle { 0%, 100% { transform: scale(0.8) rotate(0deg); opacity: 0.5; } 50% { transform: scale(1.2) rotate(180deg); opacity: 1; } }
+				@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+				@media (prefers-reduced-motion: reduce) {
+					.new-sparkle, .new-doc { animation: none !important; }
+				}
+			`}</style>
+			<circle cx="32" cy="32" r="30" fill="#E8F0FE" />
+			<g className="new-doc">
+				<rect x="22" y="18" width="20" height="28" rx="2" fill="white" stroke="#1A73E8" strokeWidth="2" />
+				<path d="M27 26H37M27 32H37M27 38H33" stroke="#8AB4F8" strokeWidth="2" strokeLinecap="round" />
+			</g>
+			<g className="new-sparkle">
+				<path
+					d="M46 16L47.5 20L51.5 21.5L47.5 23L46 27L44.5 23L40.5 21.5L44.5 20L46 16Z"
+					fill="#1A73E8"
+				/>
+			</g>
+		</svg>
+	);
+}
+
+function ClosingSoonIcon() {
+	return (
+		<svg
+			width="100%"
+			height="100%"
+			viewBox="0 0 64 64"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+			className="w-full h-full"
+			aria-hidden="true"
+		>
+			<style>{`
+				.clock-hand { animation: tick 4s linear infinite; transform-origin: 32px 32px; }
+				.clock-bell { animation: ring 0.2s ease-in-out infinite alternate; display: none; }
+				@keyframes tick { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+				@media (prefers-reduced-motion: reduce) {
+					.clock-hand, .clock-bell { animation: none !important; }
+				}
+			`}</style>
+			<circle cx="32" cy="32" r="30" fill="#E8F0FE" />
+			<circle cx="32" cy="32" r="14" fill="white" stroke="#1A73E8" strokeWidth="2" />
+			<path d="M32 14V18" stroke="#1A73E8" strokeWidth="2" strokeLinecap="round" />
+			<path d="M26 16L28 18M38 16L36 18" stroke="#1A73E8" strokeWidth="2" strokeLinecap="round" />
+			<g className="clock-hand">
+				<line x1="32" y1="32" x2="32" y2="24" stroke="#1967D2" strokeWidth="2" strokeLinecap="round" />
+				<line x1="32" y1="32" x2="36" y2="32" stroke="#8AB4F8" strokeWidth="2" strokeLinecap="round" />
+				<circle cx="32" cy="32" r="2" fill="#1A73E8" />
+			</g>
+		</svg>
+	);
+}
+
 type AuthUser = {
 	name: string;
 	email?: string;
@@ -619,17 +686,19 @@ export function Home() {
 							<h3 className="font-semibold text-slate-900">오늘의 추천</h3>
 						</div>
 
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 							<MiniStat
 								label="신규 공고"
 								value={String(newBidsToday)}
 								sub="오늘 시작"
+								icon={<NewBidIcon />}
 								onClick={() => navigate("/dashboard?focus=new")}
 							/>
 							<MiniStat
 								label="마감 임박"
 								value={String(closingSoon3Days)}
 								sub="3일 이내"
+								icon={<ClosingSoonIcon />}
 								onClick={() => navigate("/dashboard?focus=closingSoon")}
 							/>
 						</div>
@@ -690,11 +759,13 @@ function MiniStat({
 	label,
 	value,
 	sub,
+	icon,
 	onClick,
 }: {
 	label: string;
 	value: string;
 	sub: string;
+	icon?: React.ReactNode;
 	onClick?: () => void;
 }) {
 	if (onClick) {
@@ -702,15 +773,22 @@ function MiniStat({
 			<button
 				type="button"
 				onClick={onClick}
-				className="group text-left border rounded-2xl p-4 bg-slate-50 hover:bg-blue-50/40 hover:border-blue-200 transition focus:outline-none focus:ring-2 focus:ring-blue-200"
+				className="group w-full text-left border rounded-2xl p-4 bg-slate-50 hover:bg-blue-50/40 hover:border-blue-200 transition focus:outline-none focus:ring-2 focus:ring-blue-200"
 			>
 				<div className="flex items-start justify-between gap-3">
-					<div>
-						<div className="text-sm text-slate-500">{label}</div>
-						<div className="text-2xl font-bold text-slate-900">{value}</div>
-						<div className="text-sm text-slate-500">{sub}</div>
+					<div className="flex items-start gap-3 min-w-0">
+						{icon ? (
+							<div className="shrink-0 w-12 h-12 rounded-2xl bg-white border flex items-center justify-center overflow-hidden">
+								<div className="w-10 h-10">{icon}</div>
+							</div>
+						) : null}
+						<div className="min-w-0">
+							<div className="text-sm text-slate-500">{label}</div>
+							<div className="text-2xl font-bold text-slate-900">{value}</div>
+							<div className="text-sm text-slate-500">{sub}</div>
+						</div>
 					</div>
-					<div className="text-blue-600 text-sm mt-1 opacity-0 group-hover:opacity-100 transition">
+					<div className="text-blue-600 text-sm mt-1 opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
 						이동 →
 					</div>
 				</div>
@@ -719,7 +797,7 @@ function MiniStat({
 	}
 
 	return (
-		<div className="border rounded-2xl p-4 bg-slate-50">
+		<div className="border rounded-2xl p-4 bg-slate-50 w-full">
 			<div className="text-sm text-slate-500">{label}</div>
 			<div className="text-2xl font-bold text-slate-900">{value}</div>
 			<div className="text-sm text-slate-500">{sub}</div>
