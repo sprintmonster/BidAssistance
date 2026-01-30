@@ -34,15 +34,17 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 	}, [status]);
 
 	if (status === "checking") {
-		return (
-			<div className="py-10 text-center text-sm text-slate-500">
-				로그인 상태 확인 중...
-			</div>
-		);
+		return <div className="py-10 text-center text-sm text-slate-500">로그인 상태 확인 중...</div>;
 	}
 
 	if (status === "guest") {
-		return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+		return (
+			<Navigate
+				to="/login"
+				replace
+				state={{ from: `${location.pathname}${location.search || ""}` }}
+			/>
+		);
 	}
 
 	return <>{children}</>;

@@ -37,10 +37,9 @@ export function Home() {
 	const navigate = useNavigate();
 
 	const [wishlistCount, setWishlistCount] = useState(0);
-    const [newBidsToday, setNewBidsToday] = useState(0);
-    const [closingSoon3Days, setClosingSoon3Days] = useState(0);
+	const [newBidsToday, setNewBidsToday] = useState(0);
+	const [closingSoon3Days, setClosingSoon3Days] = useState(0);
 
-	// 홈 우측 로그인 폼
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 
@@ -62,7 +61,6 @@ export function Home() {
 		return { name: name || "사용자", email: storedEmail };
 	});
 
-	// 접근통제: 로그인 잠금/캡챠
 	const [captchaValid, setCaptchaValid] = useState(true);
 	const captchaRequired = useMemo(() => {
 		return should_require_captcha(email.trim());
@@ -84,13 +82,13 @@ export function Home() {
 		return () => window.clearInterval(id);
 	}, [email]);
 
-    const companyLabel = useMemo(() => {
-        const n = localStorage.getItem("companyName")?.trim() || "";
-        const p = localStorage.getItem("companyPosition")?.trim() || "";
-        if (!n && !p) return "";
-        if (n && p) return `${n} · ${p}`;
-        return n || p;
-    }, []);
+	const companyLabel = useMemo(() => {
+		const n = localStorage.getItem("companyName")?.trim() || "";
+		const p = localStorage.getItem("companyPosition")?.trim() || "";
+		if (!n && !p) return "";
+		if (n && p) return `${n} · ${p}`;
+		return n || p;
+	}, []);
 
 	const locked = useMemo(() => {
 		const em = email.trim();
@@ -113,269 +111,275 @@ export function Home() {
 			.catch(() => setWishlistCount(0));
 	}, [isAuthed]);
 
-    useEffect(() => {
-        const loadHomeKpi = async () => {
-            try {
-                const bids = await fetchBids();
+	useEffect(() => {
+		const loadHomeKpi = async () => {
+			try {
+				const bids = await fetchBids();
 
-                const now = new Date();
-                const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
-                const todayEnd = new Date(now); todayEnd.setHours(23, 59, 59, 999);
-                const threeDaysLater = new Date(now); threeDaysLater.setDate(threeDaysLater.getDate() + 3);
+				const list = Array.isArray(bids)
+					? bids
+					: Array.isArray((bids as any)?.data)
+						? (bids as any).data
+						: Array.isArray((bids as any)?.data?.items)
+							? (bids as any).data.items
+							: [];
 
-                const parse = (s: any) => {
-                    const t = Date.parse(String(s ?? ""));
-                    return Number.isFinite(t) ? new Date(t) : null;
-                };
+				const now = new Date();
+				const yyyy = now.getFullYear();
+				const mm = now.getMonth();
+				const dd = now.getDate();
 
-                const newToday = bids.filter((b: any) => {
-                    const s = parse(b.startDate ?? b.bidStart);
-                    return !!s && s >= todayStart && s <= todayEnd;
-                }).length;
+				const isSameDay = (d: Date) =>
+					d.getFullYear() === yyyy && d.getMonth() === mm && d.getDate() === dd;
 
-                const closingSoon = bids.filter((b: any) => {
-                    const e = parse(b.endDate ?? b.bidEnd);
-                    return !!e && e >= now && e <= threeDaysLater;
-                }).length;
+				const newToday = list.filter((b: any) => {
+					const s = String(b.bidStart ?? b.startDate ?? "");
+					const d = s ? new Date(s) : null;
+					return d && Number.isFinite(d.getTime()) && isSameDay(d);
+				}).length;
 
-                setNewBidsToday(newToday);
-                setClosingSoon3Days(closingSoon);
-            } catch {
-                setNewBidsToday(0);
-                setClosingSoon3Days(0);
-            }
-        };
+				const soon3 = list.filter((b: any) => {
+					const s = String(b.bidEnd ?? b.endDate ?? "");
+					const d = s ? new Date(s) : null;
+					if (!d || !Number.isFinite(d.getTime())) return false;
 
-        void loadHomeKpi();
-    }, []);
+					const diffMs = d.getTime() - now.getTime();
+					const diffDays = diffMs / (1000 * 60 * 60 * 24);
+					return diffDays >= 0 && diffDays <= 3;
+				}).length;
 
-    const doLogin = async (em: string, pw: string) => {
-        setErrorMsg(null);
+				setNewBidsToday(newToday);
+				setClosingSoon3Days(soon3);
+			} catch {
+				setNewBidsToday(0);
+				setClosingSoon3Days(0);
+			}
+		};
 
-        if (!em || !pw) {
-            setErrorMsg("이메일과 비밀번호를 입력하세요.");
-            return;
-        }
+		void loadHomeKpi();
+	}, []);
 
-        if (is_login_locked(em)) {
-            setErrorMsg(`로그인이 잠겨 있습니다. ${format_mmss(login_lock_remaining_ms(em))} 후 다시 시도해 주세요.`);
-            return;
-        }
-
-        if (should_require_captcha(em) && !captchaValid) {
-            setErrorMsg("캡챠 인증을 완료해 주세요.");
-            return;
-        }
-
-        try {
-            setSubmitting(true);
-            const res = await login(em, pw);
-
-            if (res.status !== "success" || !res.data) {
-                const st = record_login_failure(em);
-                if (st.lock_until && st.lock_until > Date.now()) {
-                    setErrorMsg(
-                        `로그인 실패가 누적되어 계정이 잠겼습니다. ${format_mmss(login_lock_remaining_ms(em))} 후 다시 시도해 주세요.`,
-                    );
-                    return;
-                }
-                const remaining = Math.max(0, 5 - st.count);
-                setErrorMsg((res.message || "로그인 실패") + ` (남은 시도: ${remaining}회)`);
-                return;
-            }
-
-            const userId = parse_user_id(res);
-            if (!userId) {
-                localStorage.removeItem("userId");
-                setErrorMsg("로그인 정보 처리 중 문제가 발생했습니다. 다시 시도해주세요.");
-                return;
-            }
-
-            record_login_success(em);
-            localStorage.setItem("userId", userId);
-            localStorage.setItem("userName", String(res.data?.name ?? ""));
-            localStorage.setItem("email", String(res.data?.email ?? em));
-			mark_reco_popup_trigger();
-			navigate("/", { replace: true });
-
-            migrate_password_changed_at(String(res.data?.email ?? em), userId);
-            ensure_password_changed_at_initialized(userId);
-
-            setIsAuthed(true);
-            setUser({
-                name: String(res.data?.name ?? "사용자"),
-                email: String(res.data?.email ?? em),
-            });
-
-            if (is_password_expired(userId)) {
-                navigate("/profile", {
-                    replace: true,
-                    state: { passwordExpired: true, fromAfterChange: "/" },
-                });
-                return;
-            }
-
-            navigate("/", { replace: true });
-        } catch (err: any) {
-            const st = record_login_failure(em);
-            if (st.lock_until && st.lock_until > Date.now()) {
-                setErrorMsg(
-                    `로그인 실패가 누적되어 계정이 잠겼습니다. ${format_mmss(login_lock_remaining_ms(em))} 후 다시 시도해 주세요.`,
-                );
-            } else {
-                const remaining = Math.max(0, 5 - st.count);
-                setErrorMsg((err?.message || "로그인 중 오류가 발생했습니다.") + ` (남은 시도: ${remaining}회)`);
-            }
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    const onQuickLogin = async (e?: React.FormEvent) => {
-        e?.preventDefault();
-        await doLogin(email.trim(), password.trim());
-    };
-
-
-    const onLogout = () => {
+	const onLogout = () => {
 		localStorage.removeItem("userId");
-		localStorage.removeItem("refreshToken");
-
 		localStorage.removeItem("userName");
 		localStorage.removeItem("name");
 		localStorage.removeItem("email");
+		localStorage.removeItem("role");
+		localStorage.removeItem("companyName");
+		localStorage.removeItem("companyPosition");
+		localStorage.removeItem("accessToken");
+		localStorage.removeItem("refreshToken");
+		setIsAuthed(false);
+		setUser(null);
+		setWishlistCount(0);
+		navigate("/");
+	};
 
-        window.dispatchEvent(new Event("auth:changed"));
+	const doLogin = async (em: string, pw: string) => {
+		setErrorMsg(null);
 
-		window.location.href = "/";
+		const emailTrim = em.trim();
+
+		if (!emailTrim || !pw) {
+			setErrorMsg("이메일과 비밀번호를 입력해 주세요.");
+			return;
+		}
+
+		if (is_login_locked(emailTrim)) {
+			setErrorMsg(
+				`로그인이 잠겨 있습니다. ${format_mmss(login_lock_remaining_ms(emailTrim))} 후 다시 시도해 주세요.`,
+			);
+			return;
+		}
+
+		if (should_require_captcha(emailTrim) && !captchaValid) {
+			setErrorMsg("캡챠 인증을 완료해 주세요.");
+			return;
+		}
+
+		try {
+			setSubmitting(true);
+			const res = await login(emailTrim, pw);
+
+			if (res.status !== "success" || !res.data) {
+				record_login_failure(emailTrim);
+				setErrorMsg(res.message || "로그인에 실패했습니다.");
+				return;
+			}
+
+			const uid = parse_user_id(res);
+			if (!uid) {
+				record_login_failure(emailTrim);
+				setErrorMsg("로그인 응답에 사용자 식별자가 없습니다.");
+				return;
+			}
+
+			record_login_success(emailTrim);
+			ensure_password_changed_at_initialized(emailTrim);
+
+			if (is_password_expired(emailTrim)) {
+				setErrorMsg("비밀번호가 만료되었습니다. 비밀번호를 재설정해 주세요.");
+				navigate("/reset-password");
+				return;
+			}
+
+			migrate_password_changed_at(emailTrim);
+
+			localStorage.setItem("userId", uid);
+			if (res.data?.name) localStorage.setItem("userName", String(res.data.name));
+			if (res.data?.email) localStorage.setItem("email", String(res.data.email));
+			if (typeof res.data?.role === "number") localStorage.setItem("role", String(res.data.role));
+
+			if ((res.data as any)?.companyName)
+				localStorage.setItem("companyName", String((res.data as any).companyName));
+			if ((res.data as any)?.companyPosition)
+				localStorage.setItem("companyPosition", String((res.data as any).companyPosition));
+
+			if ((res.data as any)?.accessToken)
+				localStorage.setItem("accessToken", String((res.data as any).accessToken));
+			if ((res.data as any)?.refreshToken)
+				localStorage.setItem("refreshToken", String((res.data as any).refreshToken));
+
+			setIsAuthed(true);
+			setUser({
+				name: String(res.data?.name ?? "사용자"),
+				email: res.data?.email ? String(res.data.email) : undefined,
+			});
+
+			mark_reco_popup_trigger();
+			navigate("/dashboard");
+		} catch (e) {
+			record_login_failure(emailTrim);
+			setErrorMsg(e instanceof Error ? e.message : "로그인에 실패했습니다.");
+		} finally {
+			setSubmitting(false);
+		}
+	};
+
+	const canTestLogin = ENABLE_TEST_LOGIN;
+
+	const onTestLogin = async () => {
+		if (!canTestLogin) return;
+		await doLogin(TEST_LOGIN.email, TEST_LOGIN.password);
 	};
 
 	return (
-		<div className="bg-slate-50">
-			<div className="max-w-7xl mx-auto px-5 py-8">
-				{/* 상단: 홈 전용 컴팩트 소개 */}
-				<div className="flex items-end justify-between gap-4 mb-6">
-					<div>
-						<div className="text-sm text-slate-500">AI 기반 입찰 탐색 · 관리</div>
-						<h1 className="text-2xl font-bold tracking-tight text-slate-900">
-							공고를 더 빠르게 찾고, 더 확실하게 준비하세요
-						</h1>
+		<div className="min-h-[calc(100vh-64px)] bg-slate-50">
+			<div className="max-w-6xl mx-auto px-4 py-8">
+				<div className="grid grid-cols-12 gap-6">
+					<div className="col-span-12 lg:col-span-8 space-y-6">
+						<section className="bg-white border rounded-2xl p-5 shadow-sm">
+							<div className="flex items-center justify-between mb-4">
+								<h2 className="text-lg font-semibold text-slate-900">바로가기</h2>
+							</div>
+
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+								<QuickBox
+									title="공고 찾기"
+									desc="관심있는 공고를 검색하고 필터링합니다."
+									onClick={() => navigate("/bids")}
+								/>
+								<QuickBox
+									title="장바구니"
+									desc="찜한 공고와 진행 단계를 관리합니다."
+									onClick={() => navigate("/cart")}
+									badge={wishlistCount}
+								/>
+								<QuickBox
+									title="커뮤니티"
+									desc="정보를 공유하고 질문을 남겨보세요."
+									onClick={() => navigate("/community")}
+								/>
+								<QuickBox
+									title="알림"
+									desc="장바구니 기반 알림을 확인합니다."
+									onClick={() => navigate("/notifications")}
+								/>
+							</div>
+						</section>
 					</div>
-					<div className="hidden md:flex gap-2"></div>
-				</div>
 
-				{/* 핵심 수정: 바로가기 섹션과 우측 박스를 "같은 row"로 배치 */}
-				<div className="grid grid-cols-12 gap-6 items-stretch">
-					{/* ROW 1 - LEFT (바로가기) */}
-					<section className="col-span-12 lg:col-span-8 bg-white border rounded-2xl p-5 shadow-sm h-full">
-						<div className="flex items-center justify-between mb-4">
-							<h2 className="font-semibold text-slate-900">바로가기</h2>
-						</div>
-
-						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-							<QuickBox
-								title="대시보드"
-								desc="지표/분포/현황 한눈에"
-								onClick={() => navigate("/dashboard")}
-							/>
-							<QuickBox
-								title="공고 찾기"
-								desc="조건 필터 & AI 검색"
-								onClick={() => navigate("/bids")}
-							/>
-							<QuickBox
-								title="장바구니"
-								desc={`관심 공고 관리${wishlistCount ? ` · ${wishlistCount}건` : ""}`}
-								badge={wishlistCount}
-								onClick={() => navigate("/cart")}
-							/>
-							<QuickBox
-								title="커뮤니티"
-								desc="실무 팁/질문/공유"
-								onClick={() => navigate("/community")}
-							/>
-						</div>
-					</section>
-
-					{/* ROW 1 - RIGHT (로그인/회원정보) */}
-					<div className="col-span-12 lg:col-span-4 h-full">
+					<div className="col-span-12 lg:col-span-4">
 						{!isAuthed ? (
 							<aside className="bg-white border rounded-2xl p-5 shadow-sm h-full flex flex-col">
 								<div className="mb-4">
-									<h3 className="text-lg font-semibold text-slate-900 mb-2">로그인</h3>
-									<p className="text-sm text-slate-500">
-										로그인하면 장바구니/알림/AI 기능을 이용할 수 있습니다.
-									</p>
+									<h3 className="text-lg font-semibold text-slate-900">로그인</h3>
+									<div className="text-sm text-slate-500">서비스를 이용하려면 로그인하세요.</div>
 								</div>
 
-								<form className="space-y-3" onSubmit={onQuickLogin}>
+								<form
+									className="space-y-3"
+									onSubmit={(e) => {
+										e.preventDefault();
+										if (submitting) return;
+										if (locked) return;
+										void doLogin(email, password);
+									}}
+								>
 									<div>
-										<div className="text-sm font-medium text-slate-700 mb-1">이메일</div>
+										<label className="text-sm text-slate-600">이메일</label>
 										<input
 											value={email}
 											onChange={(e) => setEmail(e.target.value)}
-											className="w-full h-11 rounded-xl bg-slate-50 border px-3 outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-300"
-											placeholder="name@company.com"
-											type="email"
+											className="mt-1 w-full h-11 border rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
+											placeholder="example@email.com"
+											autoComplete="email"
 										/>
 									</div>
 
 									<div>
-										<div className="text-sm font-medium text-slate-700 mb-1">비밀번호</div>
+										<label className="text-sm text-slate-600">비밀번호</label>
 										<input
+											type="password"
 											value={password}
 											onChange={(e) => setPassword(e.target.value)}
-											className="w-full h-11 rounded-xl bg-slate-50 border px-3 outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-300"
-											placeholder="••••••••"
-											type="password"
+											className="mt-1 w-full h-11 border rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
+											placeholder="비밀번호"
+											autoComplete="current-password"
 										/>
 									</div>
 
-									<SimpleCaptcha required={captchaRequired} onValidChange={setCaptchaValid} />
-
-									{errorMsg && <div className="text-sm text-red-600">{errorMsg}</div>}
-
-									{locked && (
-										<div className="text-sm text-amber-700">
-											로그인 시도가 제한되었습니다. {format_mmss(lockRemaining)} 후 다시
-											시도해 주세요.
+									{captchaRequired ? (
+										<div className="pt-1">
+											<SimpleCaptcha onValidated={setCaptchaValid} />
 										</div>
-									)}
+									) : null}
+
+									{locked ? (
+										<div className="text-xs text-red-600">
+											로그인이 잠겨 있습니다. {format_mmss(lockRemaining)} 후 다시 시도해 주세요.
+										</div>
+									) : null}
+
+									{errorMsg ? <div className="text-sm text-red-600">{errorMsg}</div> : null}
 
 									<button
 										type="submit"
-										disabled={submitting || locked || (captchaRequired && !captchaValid)}
-										className="w-full h-11 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-60"
+										disabled={submitting || (captchaRequired && !captchaValid) || locked}
+										className="w-full h-11 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
 									>
 										{submitting ? "로그인 중..." : "로그인"}
 									</button>
 
-									<div className="grid grid-cols-1 gap-3">
+									{canTestLogin ? (
+										<button
+											type="button"
+											onClick={onTestLogin}
+											disabled={submitting}
+											className="w-full h-11 rounded-xl border hover:bg-slate-50 text-slate-700 disabled:opacity-50"
+										>
+											테스트 로그인
+										</button>
+									) : null}
+
+									<div className="flex items-center justify-between text-sm text-slate-600 pt-1">
 										<button
 											type="button"
 											onClick={() => navigate("/signup")}
-											className="h-11 rounded-xl border hover:bg-slate-50"
+											className="hover:text-blue-600 hover:underline"
 										>
 											회원가입
 										</button>
-                                        {ENABLE_TEST_LOGIN && (
-                                            <button
-                                                type="button"
-                                                disabled={submitting}
-                                                onClick={async () => {
-                                                    setEmail(TEST_LOGIN.email);
-                                                    setPassword(TEST_LOGIN.password);
-                                                    await doLogin(TEST_LOGIN.email, TEST_LOGIN.password);
-                                                }}
-                                                className="h-11 rounded-xl border hover:bg-slate-50"
-                                            >
-                                                테스트 로그인
-                                            </button>
-                                        )}
-
-                                    </div>
-
-									<div className="flex justify-between text-sm text-slate-500 pt-2">
 										<button
 											type="button"
 											onClick={() => navigate("/find-account")}
@@ -393,7 +397,6 @@ export function Home() {
 									</div>
 								</form>
 
-								{/* h-full로 늘어났을 때 하단 여백을 자연스럽게 처리 */}
 								<div className="flex-1" />
 							</aside>
 						) : (
@@ -404,11 +407,11 @@ export function Home() {
 										<div className="text-lg font-semibold text-slate-900">
 											{mask_name(user?.name ?? "사용자")}
 										</div>
-                                        {companyLabel ? (
-                                            <div className="text-xs text-muted-foreground">{companyLabel}</div>
-                                        ) : null}
+										{companyLabel ? (
+											<div className="text-xs text-muted-foreground">{companyLabel}</div>
+										) : null}
 
-                                        {user?.email && <div className="text-sm text-slate-500">{user.email}</div>}
+										{user?.email && <div className="text-sm text-slate-500">{user.email}</div>}
 									</div>
 									<div className="w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
 										{user?.name?.slice(0, 1) ?? "U"}
@@ -435,26 +438,30 @@ export function Home() {
 						)}
 					</div>
 
-					{/* ROW 2 - LEFT (오늘의 추천) */}
 					<section className="col-span-12 lg:col-span-8 bg-white border rounded-2xl p-5 shadow-sm">
 						<div className="flex items-center justify-between mb-3">
 							<h3 className="font-semibold text-slate-900">오늘의 추천</h3>
-							<button
-								className="text-sm text-blue-600 hover:underline"
-								onClick={() => navigate("/bids")}
-							>
+							<button className="text-sm text-blue-600 hover:underline" onClick={() => navigate("/bids")}>
 								더 보기
 							</button>
 						</div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <MiniStat label="신규 공고" value={String(newBidsToday)} sub="오늘 시작" />
-                            <MiniStat label="마감 임박" value={String(closingSoon3Days)} sub="3일 이내" />
-                        </div>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<MiniStat
+								label="신규 공고"
+								value={String(newBidsToday)}
+								sub="오늘 시작"
+								onClick={() => navigate("/dashboard?focus=new")}
+							/>
+							<MiniStat
+								label="마감 임박"
+								value={String(closingSoon3Days)}
+								sub="3일 이내"
+								onClick={() => navigate("/dashboard?focus=closingSoon")}
+							/>
+						</div>
+					</section>
 
-                    </section>
-
-					{/* ROW 2 - RIGHT (비워두기: 레이아웃 안정) */}
 					<div className="hidden lg:block lg:col-span-4" />
 				</div>
 			</div>
@@ -495,7 +502,36 @@ function QuickBox({
 	);
 }
 
-function MiniStat({ label, value, sub }: { label: string; value: string; sub: string }) {
+function MiniStat({
+	label,
+	value,
+	sub,
+	onClick,
+}: {
+	label: string;
+	value: string;
+	sub: string;
+	onClick?: () => void;
+}) {
+	if (onClick) {
+		return (
+			<button
+				type="button"
+				onClick={onClick}
+				className="text-left border rounded-2xl p-4 bg-slate-50 hover:bg-blue-50/40 hover:border-blue-200 transition focus:outline-none focus:ring-2 focus:ring-blue-200"
+			>
+				<div className="flex items-start justify-between gap-3">
+					<div>
+						<div className="text-sm text-slate-500">{label}</div>
+						<div className="text-2xl font-bold text-slate-900">{value}</div>
+						<div className="text-sm text-slate-500">{sub}</div>
+					</div>
+					<div className="text-blue-600 text-sm mt-1">이동 →</div>
+				</div>
+			</button>
+		);
+	}
+
 	return (
 		<div className="border rounded-2xl p-4 bg-slate-50">
 			<div className="text-sm text-slate-500">{label}</div>
