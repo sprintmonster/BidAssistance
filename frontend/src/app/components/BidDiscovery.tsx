@@ -385,9 +385,9 @@ export function BidDiscovery({
 				</CardHeader>
 
 				<CardContent className="space-y-3">
-					<div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-						<div className="flex flex-1 items-center gap-2">
-							<div className="relative flex-1">
+                    <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:flex-wrap">
+                        <div className="flex flex-1 items-center gap-2 min-w-0">
+                            <div className="relative flex-1 min-w-[240px]">
 								<Search className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
 								<Input
 									value={keyword}
@@ -413,7 +413,7 @@ export function BidDiscovery({
 							</Button>
 						</div>
 
-						<div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center shrink-0">
 							<Select
 								value={agency}
 								onValueChange={(v) => {

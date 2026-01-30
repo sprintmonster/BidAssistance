@@ -104,7 +104,9 @@ export function CartPage({
 			return;
 		}
 		const items = await fetchWishlist(userId);
-		setWishlist(items);
+        console.log("wishlist raw items", items);
+
+        setWishlist(items);
 	};
 
 	useEffect(() => {
