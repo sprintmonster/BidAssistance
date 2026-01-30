@@ -7,7 +7,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Textarea } from "./ui/textarea";
 import { Separator } from "./ui/separator";
 import { Avatar, AvatarFallback } from "./ui/avatar";
-import {fetchChatResponse, fetchChatWithFile} from "../api/chatbot";
+import {fetchChatResponse, ChatRequest} from "../api/chatbot";
 
 type Sender = "user" | "bot";
 
@@ -28,6 +28,15 @@ const QUICK_PROMPTS = [
 function nowTime() {
 	return new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
 }
+
+const readFileAsBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+};
 
 function Bubble({ message }: { message: Message }) {
 	const isUser = message.sender === "user";
@@ -108,7 +117,6 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
         const trimmed = text.trim();
         if ((!trimmed && !selectedFile) || isTyping) return;
 
-        // 1. 사용자 메시지 UI 표시
         const userMessage: Message = {
             id: Date.now(),
             text: trimmed + (selectedFile ? `\n[첨부파일: ${selectedFile.name}]` : ""),
@@ -122,28 +130,30 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
         try {
             let result;
 
-            // 2. 파일이 있으면 '파일 전송 함수', 없으면 '일반 함수' 호출
             if (selectedFile) {
-                const formData = new FormData();
-                formData.append("query", trimmed);
-                formData.append("thread_id", "user_session_1");
-                formData.append("file", selectedFile);
+                const base64File = await readFileAsBase64(selectedFile); // 파일을 Base64로 변환
 
-                // ★ 여기서 API 함수 사용!
-                result = await fetchChatWithFile(formData);
-                clearFile(); // 전송 후 파일 비우기
-            } else {
-                // 일반 텍스트 전송
+                const requestData: ChatRequest = { // Payload에 담아서 전송
+                    query: trimmed, // 입력한 텍스트
+                    thread_id: "user_session_1",
+                    payload: {
+                        fileName: selectedFile.name,
+                        fileData: base64File // 전체 문자열
+                    }
+                };
+
+                result = await fetchChatResponse(requestData);
+                clearFile();
+
+            } else { // 일반 텍스트 전송
                 result = await fetchChatResponse({
                     query: trimmed,
                     thread_id: "user_session_1"
                 });
             }
 
-            // 3. 봇 응답 처리
             const botMessage: Message = {
                 id: Date.now() + 1,
-                // ChatResponse 인터페이스에 맞게 데이터 꺼내기
                 text: result.data.message,
                 sender: "bot",
                 timestamp: nowTime(),
@@ -165,6 +175,8 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
     };
 
 	const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.nativeEvent.isComposing) return;
+
 		if (e.key === "Enter" && !e.shiftKey) {
 			e.preventDefault();
 			send(input);
