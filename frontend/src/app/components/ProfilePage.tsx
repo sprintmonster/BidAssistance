@@ -113,6 +113,14 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 		safeSetLocalStorage(PROFILE_TAB_STORAGE_KEY, activeTab);
 	}, [activeTab]);
 
+    useEffect(() => {
+        if (activeTab !== "company") return;
+
+        // 백엔드 조회 대신, 프론트 저장값으로 채우기
+        setCompanyName(localStorage.getItem("companyName") || "");
+        setCompanyPosition(localStorage.getItem("companyPosition") || "");
+    }, [activeTab]);
+
 	useEffect(() => {
 		if (!userId) return;
 
