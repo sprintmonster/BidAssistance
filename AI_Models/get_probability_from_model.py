@@ -154,7 +154,7 @@ class ProbabilityPredictor:
         }
     
     
-    def get_highest_probability_ranges(self, input_features, bin_width=0.5, top_k=5):
+    def get_highest_probability_ranges(self, input_features, bin_width=0.001, top_k=3):
         """
         Quantile Function을 PDF로 변환하여 확률 밀도가 높은 구간 찾기
         
@@ -214,8 +214,15 @@ class ProbabilityPredictor:
                 pdf_values[-1] = 100.0
         
         # 2. bin_width 단위로 구간을 나누고 평균 PDF 계산
-        min_val, max_val = float(pred_quantiles.min()), float(pred_quantiles.max())
-        bins = np.arange(min_val, max_val + bin_width, bin_width)
+        # min/max를 bin_width 단위로 정렬하여 깔끔한 경계 생성
+        min_val = float(pred_quantiles.min())
+        max_val = float(pred_quantiles.max())
+        
+        # bin_width 단위로 내림/올림하여 정밀도 맞춤
+        min_aligned = np.floor(min_val / bin_width) * bin_width
+        max_aligned = np.ceil(max_val / bin_width) * bin_width
+        
+        bins = np.arange(min_aligned, max_aligned + bin_width, bin_width)
         
         bin_info = []
         for i in range(len(bins) - 1):
@@ -235,7 +242,7 @@ class ProbabilityPredictor:
             probability = avg_pdf * bin_width
             
             bin_info.append({
-                'range': f'[{lower:.2f}%, {upper:.2f}%]',
+                'range': f'{(lower-1)*100:+.1f}% ~ {(upper-1)*100:+.1f}%',  # 증감으로 표시, 0.1%p 단위, ~ 앞뒤 공백
                 'lower': float(lower),
                 'upper': float(upper),
                 'center': float((lower + upper) / 2),
@@ -361,9 +368,7 @@ def main():
     print("\n 사정률에 대한 구간별 확률")
     print(f"\n✨ 확률이 높은 상위 5개 구간:")
     for i, r in enumerate(result['top_ranges'], 1):
-        lower_val = r['lower']*100 - 100
-        upper_val = r['upper']*100 - 100
-        print(f"  {i}위. {lower_val:+.1f}~{upper_val:+.1f} (확률: {r['probability_percent']:.2f}%)")
+        print(f"  {i}위. {r['range']} = 사정율 {r['lower']*100:.1f}%~{r['upper']*100:.1f}% (확률: {r['probability_percent']:.2f}%)")
 
 
 if __name__ == "__main__":

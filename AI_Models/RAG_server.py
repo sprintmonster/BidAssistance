@@ -103,7 +103,7 @@ class TFTPredictorAdapter:
                     "predicted_max": result["statistics"]["q75"],
                     "confidence": "high",
                     "top_ranges": top_ranges,
-                    "rationale": f"TFT Model - Top 5 ranges computed",
+                    "rationale": f"TFT Model - Top 3 ranges computed",
                     "model_type": "QuantileTransformerRegressor"
                 }
             else:
@@ -159,7 +159,7 @@ async def predict_base(req: PredictReq):
             '기초금액': req.features[3]
         }
         
-        # TFT 모델로 확률 높은 상위 5개 구간 예측
+        # TFT 모델로 확률 높은 상위 3개 구간 예측
         result = tft_predictor.get_highest_probability_ranges(input_dict, bin_width=0.001, top_k=3)
         
         if result and result.get("top_ranges"):

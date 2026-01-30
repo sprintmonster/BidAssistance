@@ -1,12 +1,10 @@
 """Bid Assistance RAG Pipeline (LangGraph)
 
-공고문 -> LLM 추출 -> ToolNode(RAG+낙찰가예측+경쟁) -> LLM 리포트
+공고문 -> LLM 추출 -> ToolNode(RAG+사정율예측+경쟁) -> LLM 리포트
 
 요구 파일/아티팩트
 -----------------
-- model_1dcnn.py (사용자 업로드 코드)
-- best_model.pt (학습 코드에서 저장되는 state_dict)
-- scalers.json 또는 scalers.npz (필수 권장: X/y 스케일러 + target_log 설정)
+- (선택) 사용자 예측 함수가 있는 .py 파일
 
 의존성
 ------
@@ -14,7 +12,7 @@ pip install langgraph langchain-core langchain-openai langchain-community langch
 # PDF 입력을 쓰면(둘 중 하나 권장):
 #   pip install pypdf
 #   pip install pymupdf
-# CNN1D 모델을 쓰면 추가:
+# 모델 추론:
 pip install torch numpy pandas matplotlib
 
 환경변수
@@ -27,14 +25,11 @@ python BidAssitanceModel_fixed_pdf.py \
   --doc_dir ./rag_corpus \
   --index_dir ./rag_index \
   --input bid_notice.txt \
-  --award_model ./model_1dcnn.py \
-  --award_weights ./results/best_model.pt \
-  --award_scaler ./results/scalers.json
+    --award_model ./my_predictor.py
 
 주의
 ----
-- scalers.json(.npz)가 없으면, CNN1D 모델은 올바른 역변환이 불가능하므로
-  예측을 수행하지 않고 low-confidence로 반환합니다.
+-- 별도 사용자 모델을 사용할 경우, 해당 모델의 입력/출력 스펙에 맞춰야 합니다.
 """
 
 from __future__ import annotations
@@ -58,6 +53,11 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import ToolNode
+
+try:
+    from get_probability_from_model import ProbabilityPredictor
+except Exception:
+    ProbabilityPredictor = None
 from langgraph.graph.message import add_messages 
 
 # ------------------------------
@@ -245,7 +245,7 @@ class HeuristicAwardPricePredictor(AwardPricePredictor):
                 "confidence": "low",
                 "rationale": [
                     "공고문에서 예산/추정가격을 확정적으로 파악하지 못했습니다.",
-                    "낙찰가 예측 모델을 사용하려면 공고의 기초금액/추정가격 등 핵심 숫자 필드를 보완해야 합니다.",
+                    "사정율 예측 모델을 사용하려면 공고의 기초금액/추정가격 등 핵심 숫자 필드를 보완해야 합니다.",
                 ],
                 "model": {"type": "heuristic", "name": "baseline_band"},
             }
@@ -271,12 +271,63 @@ class HeuristicAwardPricePredictor(AwardPricePredictor):
             "point_estimate": point,
             "confidence": "medium" if strictness <= 1 else "low",
             "rationale": [
-                "기초금액/추정가격을 기준(base)으로 낙찰가 밴드(비율) 추정(휴리스틱)입니다.",
-                "정확한 예측은 낙찰가 예측 모델로 대체해야 합니다.",
+                "기초금액/추정가격을 기준(base)으로 사정율 밴드(비율) 추정(휴리스틱)입니다.",
+                "정확한 예측은 사정율 예측 모델로 대체해야 합니다.",
             ],
             "used_base": base,
             "used_band": {"min_ratio": min_ratio, "max_ratio": max_ratio},
             "model": {"type": "heuristic", "name": "baseline_band"},
+        }
+
+
+class ProbabilityAwardPricePredictor(AwardPricePredictor):
+    """TFT ProbabilityPredictor 기반 사정율(구간) 예측"""
+
+    def __init__(self, model_path: str, bin_width: float = 0.001, top_k: int = 3):
+        if ProbabilityPredictor is None:
+            raise RuntimeError("get_probability_from_model.py 로딩에 실패했습니다.")
+        self.predictor = ProbabilityPredictor(model_path=model_path)
+        self.bin_width = bin_width
+        self.top_k = top_k
+
+    def predict(self, requirements: Dict[str, Any], retrieved_context: str) -> Dict[str, Any]:
+        pr_range = _parse_number(requirements.get("expected_price_range"))
+        lower_rate = _parse_number(requirements.get("award_lower_rate"))
+        estimate = _parse_number(requirements.get("estimate_price"))
+        budget = _parse_number(requirements.get("budget"))
+
+        input_dict = {
+            "예가범위": pr_range if pr_range is not None else 0.0,
+            "낙찰하한율": lower_rate if lower_rate is not None else 0.0,
+            "추정가격": estimate if estimate is not None else 0.0,
+            "기초금액": budget if budget is not None else 0.0,
+        }
+
+        result = self.predictor.get_highest_probability_ranges(
+            input_dict, bin_width=self.bin_width, top_k=self.top_k
+        )
+
+        if not result or not result.get("top_ranges"):
+            return {
+                "currency": "KRW",
+                "predicted_min": None,
+                "predicted_max": None,
+                "point_estimate": None,
+                "confidence": "low",
+                "rationale": ["TFT 예측 결과가 비어있습니다."],
+                "model": {"type": "tft", "name": "ProbabilityPredictor"},
+            }
+
+        top_ranges = result["top_ranges"]
+        return {
+            "currency": "KRW",
+            "predicted_min": result["statistics"]["q25"],
+            "predicted_max": result["statistics"]["q75"],
+            "point_estimate": top_ranges[0]["center"],
+            "confidence": "high",
+            "top_ranges": top_ranges,
+            "rationale": ["TFT 확률구간 기반 사정율 예측 결과입니다."],
+            "model": {"type": "tft", "name": "ProbabilityPredictor"},
         }
 
 
@@ -296,7 +347,7 @@ class CallableAwardPricePredictor(AwardPricePredictor):
                 "point_estimate": None,
                 "confidence": "low",
                 "rationale": [
-                    "사용자 낙찰가 예측 함수 실행 중 예외가 발생했습니다.",
+                    "사용자 사정율 예측 함수 실행 중 예외가 발생했습니다.",
                     f"예외: {type(e).__name__}: {str(e)}",
                 ],
                 "model": self.model_info,
@@ -309,7 +360,7 @@ class CallableAwardPricePredictor(AwardPricePredictor):
                 "predicted_min": None,
                 "predicted_max": None,
                 "confidence": "medium",
-                "rationale": ["사용자 모델이 단일 낙찰가 예측값(포인트)을 반환했습니다."],
+                "rationale": ["사용자 모델이 단일 사정율 예측값(포인트)을 반환했습니다."],
                 "model": self.model_info,
             }
         if isinstance(out, dict):
@@ -324,301 +375,6 @@ class CallableAwardPricePredictor(AwardPricePredictor):
             "confidence": "low",
             "rationale": ["사용자 모델 출력 형식이 예상(dict/숫자)과 달라 해석할 수 없습니다."],
             "model": self.model_info,
-        }
-
-
-class CNN1DAwardPricePredictor(AwardPricePredictor):
-    """Auto-adapter for model_1dcnn.py (1D CNN + scalers + log target)."""
-
-    def __init__(
-        self,
-        module: Any,
-        weights_path: str,
-        scaler_path: Optional[str] = None,
-        device: Optional[str] = None,
-        hidden: int = 64,
-        dropout: float = 0.1,
-    ):
-        self.module = module
-        self.weights_path = weights_path
-        self.scaler_path = scaler_path
-        self.device = device
-        self.hidden = hidden
-        self.dropout = dropout
-
-        self._torch = self._import_torch()
-        self._np = self._import_numpy()
-
-        if self.device is None:
-            self.device = "cuda" if self._torch.cuda.is_available() else "cpu"
-
-        self.model = self.module.CNN1DRegressor(hidden=self.hidden, dropout=self.dropout).to(self.device)
-        self._load_weights()
-
-        self.x_scaler = None
-        self.y_scaler = None
-        self.target_log = True
-        self.feature_cols = ["기초금액", "추정가격", "예가범위", "낙찰하한율"]
-
-        self._load_scalers()
-
-    def _import_torch(self):
-        try:
-            import torch  # type: ignore
-            return torch
-        except Exception as e:
-            raise RuntimeError(
-                "PyTorch(torch)가 설치되어 있지 않거나 로딩에 실패했습니다. "
-                "CNN1D 낙찰가 예측 모델을 사용하려면 torch가 필요합니다."
-            ) from e
-
-    def _import_numpy(self):
-        try:
-            import numpy as np  # type: ignore
-            return np
-        except Exception as e:
-            raise RuntimeError("numpy가 설치되어 있지 않거나 로딩에 실패했습니다.") from e
-
-    def _load_weights(self) -> None:
-        if not os.path.exists(self.weights_path):
-            raise FileNotFoundError(f"낙찰가 모델 가중치(.pt) 파일을 찾을 수 없습니다: {self.weights_path}")
-        state = self._torch.load(self.weights_path, map_location=self.device)
-        if isinstance(state, dict) and all(isinstance(k, str) for k in state.keys()):
-            self.model.load_state_dict(state)
-        elif isinstance(state, dict) and "state_dict" in state and isinstance(state["state_dict"], dict):
-            self.model.load_state_dict(state["state_dict"])
-        else:
-            raise ValueError("가중치 포맷을 해석할 수 없습니다. state_dict(dict) 형태를 기대합니다.")
-        self.model.eval()
-
-    def _load_scalers(self) -> None:
-        if not self.scaler_path:
-            base_dir = os.path.dirname(self.weights_path) or "."
-            c_json = os.path.join(base_dir, "scalers.json")
-            c_npz = os.path.join(base_dir, "scalers.npz")
-            if os.path.exists(c_json):
-                self.scaler_path = c_json
-            elif os.path.exists(c_npz):
-                self.scaler_path = c_npz
-
-        if not self.scaler_path or not os.path.exists(self.scaler_path):
-            return
-
-        x_mean = None
-        x_std = None
-        y_mean = None
-        y_std = None
-        feature_cols = None
-        target_log = None
-
-        if self.scaler_path.lower().endswith(".json"):
-            with open(self.scaler_path, "r", encoding="utf-8") as f:
-                cfg = json.load(f)
-            x_mean = cfg.get("x_mean")
-            x_std = cfg.get("x_std")
-            y_mean = cfg.get("y_mean")
-            y_std = cfg.get("y_std")
-            feature_cols = cfg.get("feature_cols")
-            target_log = cfg.get("target_log")
-        elif self.scaler_path.lower().endswith(".npz"):
-            arr = self._np.load(self.scaler_path, allow_pickle=True)
-            x_mean = arr.get("x_mean")
-            x_std = arr.get("x_std")
-            y_mean = arr.get("y_mean")
-            y_std = arr.get("y_std")
-            feature_cols = arr.get("feature_cols")
-            target_log = arr.get("target_log")
-        else:
-            raise ValueError("지원하지 않는 스케일러 파일 확장자입니다. .json 또는 .npz만 지원합니다.")
-
-        if x_mean is None or x_std is None or y_mean is None or y_std is None:
-            raise ValueError("scaler 파일에 x_mean/x_std/y_mean/y_std 값이 없습니다.")
-
-        self.x_scaler = self.module.StandardScaler()
-        self.x_scaler.mean_ = self._np.asarray(x_mean, dtype=self._np.float32)
-        self.x_scaler.std_ = self._np.asarray(x_std, dtype=self._np.float32)
-
-        self.y_scaler = self.module.TargetScaler()
-        self.y_scaler.mean_ = float(self._np.asarray(y_mean).reshape(-1)[0])
-        self.y_scaler.std_ = float(self._np.asarray(y_std).reshape(-1)[0])
-
-        if feature_cols is not None:
-            if isinstance(feature_cols, (list, tuple)):
-                self.feature_cols = [str(x) for x in feature_cols]
-            else:
-                # e.g. numpy array
-                try:
-                    self.feature_cols = [str(x) for x in list(feature_cols)]
-                except Exception:
-                    pass
-
-        if target_log is not None:
-            self.target_log = bool(target_log)
-
-    def _extract_feature(
-        self,
-        requirements: Dict[str, Any],
-        retrieved_context: str,
-        keys: Sequence[str],
-        patterns: Sequence[str],
-    ) -> Optional[float]:
-        for k in keys:
-            v = _parse_number(requirements.get(k))
-            if v is not None:
-                return v
-
-        text = retrieved_context or ""
-        for pat in patterns:
-            m = re.search(pat, text)
-            if m:
-                v = _parse_number(m.group(1))
-                if v is not None:
-                    return v
-        return None
-
-    def _build_feature_vector(self, requirements: Dict[str, Any], retrieved_context: str) -> Tuple[Optional[Any], List[str]]:
-        missing: List[str] = []
-
-        base_amount = self._extract_feature(
-            requirements,
-            retrieved_context,
-            keys=["budget", "base_amount", "기초금액"],
-            patterns=[
-                r"기초\s*금액\s*[:：]?\s*([0-9][0-9,]*(?:\.[0-9]+)?)",
-                r"기초금액\s*[:：]?\s*([0-9][0-9,]*(?:\.[0-9]+)?)",
-            ],
-        )
-        if base_amount is None:
-            missing.append("기초금액(budget)")
-
-        estimate_price = self._extract_feature(
-            requirements,
-            retrieved_context,
-            keys=["estimate_price", "추정가격", "예정가격"],
-            patterns=[
-                r"추정\s*가격\s*[:：]?\s*([0-9][0-9,]*(?:\.[0-9]+)?)",
-                r"예정\s*가격\s*[:：]?\s*([0-9][0-9,]*(?:\.[0-9]+)?)",
-            ],
-        )
-        if estimate_price is None:
-            missing.append("추정가격(estimate_price)")
-
-        price_range = self._extract_feature(
-            requirements,
-            retrieved_context,
-            keys=["expected_price_range", "예가범위"],
-            patterns=[
-                r"예가\s*범위\s*[:：]?\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*%?",
-                r"예가범위\s*[:：]?\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*%?",
-            ],
-        )
-        price_range = _coerce_percent(price_range)
-        if price_range is None:
-            missing.append("예가범위(expected_price_range)")
-
-        lower_rate = self._extract_feature(
-            requirements,
-            retrieved_context,
-            keys=["award_lower_rate", "낙찰하한율"],
-            patterns=[
-                r"낙찰\s*하한\s*율\s*[:：]?\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*%?",
-                r"낙찰하한율\s*[:：]?\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*%?",
-            ],
-        )
-        lower_rate = _coerce_percent(lower_rate)
-        if lower_rate is None:
-            missing.append("낙찰하한율(award_lower_rate)")
-
-        if missing:
-            return None, missing
-
-        x = self._np.asarray(
-            [base_amount, estimate_price, price_range, lower_rate],
-            dtype=self._np.float32,
-        ).reshape(1, -1)
-        return x, []
-
-    def predict(self, requirements: Dict[str, Any], retrieved_context: str) -> Dict[str, Any]:
-        x, missing = self._build_feature_vector(requirements, retrieved_context or "")
-        if missing:
-            return {
-                "currency": "KRW",
-                "predicted_min": None,
-                "predicted_max": None,
-                "point_estimate": None,
-                "confidence": "low",
-                "rationale": [
-                    "낙찰가 예측에 필요한 피처를 충분히 확보하지 못해 모델 추론을 수행할 수 없습니다.",
-                    "누락 피처: " + ", ".join(missing),
-                    "해결: 공고문 추출 필드에 예가범위/낙찰하한율을 포함하거나, RAG 코퍼스에서 해당 수치를 회수할 수 있도록 문서를 보강하세요.",
-                ],
-                "model": {
-                    "type": "cnn1d",
-                    "code": getattr(self.module, "__file__", "<module>"),
-                    "weights": self.weights_path,
-                    "scaler": self.scaler_path,
-                    "device": self.device,
-                    "hidden": self.hidden,
-                    "dropout": self.dropout,
-                },
-            }
-
-        if self.x_scaler is None or self.y_scaler is None:
-            return {
-                "currency": "KRW",
-                "predicted_min": None,
-                "predicted_max": None,
-                "point_estimate": None,
-                "confidence": "low",
-                "rationale": [
-                    "CNN1D 모델은 학습 시 X/y 스케일링(및 로그 변환)을 사용했으나, scaler/config 파일이 없어 올바른 역변환이 불가능합니다.",
-                    "해결: 학습 시 x_mean/x_std/y_mean/y_std 및 target_log를 scalers.json(.npz)로 저장하세요.",
-                ],
-                "model": {
-                    "type": "cnn1d",
-                    "code": getattr(self.module, "__file__", "<module>"),
-                    "weights": self.weights_path,
-                    "scaler": self.scaler_path,
-                    "device": self.device,
-                    "hidden": self.hidden,
-                    "dropout": self.dropout,
-                },
-            }
-
-        x_scaled = self.x_scaler.transform(x)  # (1,F)
-        x_tensor = self._torch.from_numpy(x_scaled.astype("float32")).reshape(1, -1, 1).to(self.device)
-
-        with self._torch.no_grad():
-            y_hat_scaled = self.model(x_tensor).detach().cpu().numpy().reshape(-1)
-
-        y_hat = self.y_scaler.inverse_transform(y_hat_scaled).reshape(-1)
-        if self.target_log:
-            y_hat = self._np.expm1(y_hat)
-
-        point = float(y_hat[0])
-        pred_min = round(point * 0.98)
-        pred_max = round(point * 1.02)
-
-        return {
-            "currency": "KRW",
-            "predicted_min": pred_min,
-            "predicted_max": pred_max,
-            "point_estimate": round(point),
-            "confidence": "medium",
-            "rationale": [
-                "사용자 1D-CNN 낙찰가 예측 모델 추론 결과입니다.",
-                "predicted_min/max는 불확실도 추정치가 아니라, 보고서 표기를 위한 ±2% 휴리스틱 밴드입니다(필요 시 교체).",
-                f"피처 사용 순서: {', '.join(self.feature_cols)}",
-            ],
-            "model": {
-                "type": "cnn1d",
-                "code": getattr(self.module, "__file__", "<module>"),
-                "weights": self.weights_path,
-                "scaler": self.scaler_path,
-                "device": self.device,
-                "hidden": self.hidden,
-                "dropout": self.dropout,
-            },
         }
 
 
@@ -733,17 +489,15 @@ class RagIndex:
 # ------------------------------
 
 class BidRAGPipeline:
-    """End-to-end pipeline: extract -> tools(RAG/award_price/competitor) -> report.
+    """End-to-end pipeline: extract -> tools(RAG/adjustment_rate/competitor) -> report.
 
     award_model_path
     ---------------
     1) Wrapper mode (권장): python 파일에 아래 함수 구현
-        predict_award_price(requirements: dict, retrieved_context: str) -> dict
+        predict_adjustment_rate(requirements: dict, retrieved_context: str) -> dict
         또는 predict(requirements, retrieved_context) -> dict   (단, 시그니처가 2개 인자여야 함)
 
-    2) Auto mode: model_1dcnn.py를 지정하고, 아래 artifacts가 존재하면 자동 연결
-        --award_weights ./results/best_model.pt
-        --award_scaler  ./results/scalers.json
+    2) 별도 예측 모델을 쓰지 않으면 TFT 기반 확률 예측기를 기본으로 사용합니다.
     """
 
     def __init__(
@@ -754,11 +508,6 @@ class BidRAGPipeline:
         embedding_model: str = "text-embedding-3-large",
         top_k: int = 6,
         award_model_path: Optional[str] = None,
-        award_weights_path: Optional[str] = None,
-        award_scaler_path: Optional[str] = None,
-        award_device: Optional[str] = None,
-        award_hidden: int = 64,
-        award_dropout: float = 0.1,
         award_predict_fn: Optional[Callable[[Dict[str, Any], str], Any]] = None,
     ):
         load_api_keys("api_key.txt")
@@ -773,11 +522,6 @@ class BidRAGPipeline:
 
         self.award_predictor = self._init_award_predictor(
             award_model_path=award_model_path,
-            award_weights_path=award_weights_path,
-            award_scaler_path=award_scaler_path,
-            award_device=award_device,
-            award_hidden=award_hidden,
-            award_dropout=award_dropout,
             award_predict_fn=award_predict_fn,
         )
 
@@ -788,11 +532,6 @@ class BidRAGPipeline:
     def _init_award_predictor(
         self,
         award_model_path: Optional[str],
-        award_weights_path: Optional[str],
-        award_scaler_path: Optional[str],
-        award_device: Optional[str],
-        award_hidden: int,
-        award_dropout: float,
         award_predict_fn: Optional[Callable[[Dict[str, Any], str], Any]],
     ) -> AwardPricePredictor:
         if callable(award_predict_fn):
@@ -802,29 +541,36 @@ class BidRAGPipeline:
             )
 
         if not award_model_path:
+            if ProbabilityPredictor is not None:
+                tft_path = os.getenv("TFT_MODEL_PATH", "./results_tft_4feat/best_model.pt")
+                try:
+                    return ProbabilityAwardPricePredictor(model_path=tft_path, bin_width=0.001, top_k=3)
+                except Exception as e:
+                    return CallableAwardPricePredictor(
+                        predict_fn=lambda _r, _c: {
+                            "currency": "KRW",
+                            "predicted_min": None,
+                            "predicted_max": None,
+                            "point_estimate": None,
+                            "confidence": "low",
+                            "rationale": [
+                                "TFT 모델 로딩에 실패하여 휴리스틱으로 대체합니다.",
+                                f"로딩 오류: {type(e).__name__}: {str(e)}",
+                            ],
+                        },
+                        model_info={"type": "tft_error_fallback", "path": tft_path},
+                    )
             return HeuristicAwardPricePredictor()
 
         try:
             module = _load_module_from_py(award_model_path)
 
-            # Wrapper function: predict_award_price(requirements, retrieved_context)
-            fn = getattr(module, "predict_award_price", None)
+            # Wrapper function: predict_adjustment_rate(requirements, retrieved_context)
+            fn = getattr(module, "predict_adjustment_rate", None)
             if callable(fn) and _callable_looks_like_wrapper(fn):
                 return CallableAwardPricePredictor(
                     predict_fn=fn,
-                    model_info={"type": "python_file", "path": award_model_path, "fn": "predict_award_price"},
-                )
-
-            # Auto mode: model_1dcnn.py style (important: module also defines predict(model, loader, device))
-            if hasattr(module, "CNN1DRegressor") and hasattr(module, "StandardScaler") and hasattr(module, "TargetScaler"):
-                weights_path = award_weights_path or "./results/best_model.pt"
-                return CNN1DAwardPricePredictor(
-                    module=module,
-                    weights_path=weights_path,
-                    scaler_path=award_scaler_path,
-                    device=award_device,
-                    hidden=award_hidden,
-                    dropout=award_dropout,
+                    model_info={"type": "python_file", "path": award_model_path, "fn": "predict_adjustment_rate"},
                 )
 
             # Generic wrapper: predict(requirements, retrieved_context) with proper signature
@@ -836,8 +582,8 @@ class BidRAGPipeline:
                 )
 
             raise AttributeError(
-                "Model module must define predict_award_price(requirements, retrieved_context), "
-                "or expose CNN1DRegressor+StandardScaler+TargetScaler for auto mode."
+                "Model module must define predict_adjustment_rate(requirements, retrieved_context), "
+                "or define predict(requirements, retrieved_context)."
             )
 
         except Exception as e:
@@ -849,7 +595,7 @@ class BidRAGPipeline:
                     "point_estimate": None,
                     "confidence": "low",
                     "rationale": [
-                        "낙찰가 예측 모델 로딩에 실패하여 휴리스틱(기본값)으로 대체합니다.",
+                        "사정율 예측 모델 로딩에 실패하여 휴리스틱(기본값)으로 대체합니다.",
                         f"로딩 오류: {type(e).__name__}: {str(e)}",
                     ],
                 },
@@ -866,13 +612,13 @@ class BidRAGPipeline:
         retrieved_context = "" 
 
         try:
-            # 1. 모델 예측 수행 (Heuristic 또는 CNN)
+            # 1. 모델 예측 수행 (Heuristic 또는 TFT)
             pred_result = self.award_predictor.predict(reqs, retrieved_context)
         except Exception as e:
             pred_result = {
                 "error": str(e),
                 "confidence": "low",
-                "rationale": ["예측 모델 실행 중 오류 발생"]
+                "rationale": ["사정율 예측 모델 실행 중 오류 발생"]
             }
 
         # 2. 결과를 state에 저장 (리포트 작성 시 참고하도록)
@@ -881,7 +627,7 @@ class BidRAGPipeline:
 
         # 3. LLM이 이해하기 쉽도록 messages에도 요약 정보 추가 (선택사항)
         pred_json = json.dumps(pred_result, ensure_ascii=False)
-        sys_msg = SystemMessage(content=f"[낙찰가 예측 모델 결과]\n{pred_json}")
+        sys_msg = SystemMessage(content=f"[사정율 예측 모델 결과]\n{pred_json}")
 
         # state가 Annotated로 수정되었다면 리스트 반환, 아니면 + 연산
         # (여기서는 앞서 수정한 Annotated 방식을 가정하여 리스트 반환)
@@ -901,8 +647,8 @@ class BidRAGPipeline:
     #         return "\n\n---\n\n".join(chunks)
 
     #     @tool
-    #     def predict_award_price(requirements_json: str, retrieved_context: str) -> str:
-    #         """낙찰가 예측 Tool (ToolNode 블록)."""
+    #     def predict_adjustment_rate(requirements_json: str, retrieved_context: str) -> str:
+    #         """사정율 예측 Tool (ToolNode 블록)."""
     #         try:
     #             reqs = json.loads(requirements_json)
     #             if not isinstance(reqs, dict):
@@ -920,7 +666,7 @@ class BidRAGPipeline:
     #                 "point_estimate": None,
     #                 "confidence": "low",
     #                 "rationale": [
-    #                     "낙찰가 예측 중 예외가 발생했습니다. 모델/피처 파이프라인을 점검하세요.",
+    #                     "사정율 예측 중 예외가 발생했습니다. 모델/피처 파이프라인을 점검하세요.",
     #                     f"예외: {type(e).__name__}: {str(e)}",
     #                 ],
     #                 "model": {"type": "runtime_error"},
@@ -933,7 +679,7 @@ class BidRAGPipeline:
     #                 "predicted_max": None,
     #                 "point_estimate": None,
     #                 "confidence": "low",
-    #                 "rationale": ["낙찰가 예측 모델 출력이 dict가 아니어서 처리할 수 없습니다."],
+    #                 "rationale": ["사정율 예측 모델 출력이 dict가 아니어서 처리할 수 없습니다."],
     #                 "model": {"type": "invalid_output"},
     #             }
 
@@ -972,13 +718,13 @@ class BidRAGPipeline:
     #             "recommended_positioning": [
     #                 "요구사항 매핑표(요구사항-근거-증빙)를 제안서 최상단에 배치해 누락 리스크를 제거합니다.",
     #                 "유사실적/핵심인력/품질(보안/안전) 체계를 명확히 제시해 기술평가 리스크를 낮춥니다.",
-    #                 "낙찰가 전략은 '예측값 + 유사 낙찰사례 분포 + 내부 원가/마진'으로 최종 결정합니다.",
+    #                 "사정율 전략은 '예측값 + 유사 낙찰사례 분포 + 내부 원가/마진'으로 최종 결정합니다.",
     #             ],
     #             "confidence": "low" if retrieved_context in ("", "(검색 결과 없음)") else "medium",
     #         }
     #         return json.dumps(result, ensure_ascii=False)
 
-    #     return [rag_retrieve, predict_award_price, competitor_analysis]
+    #     return [rag_retrieve, predict_adjustment_rate, competitor_analysis]
 
     def _build_graph(self):
         workflow = StateGraph(GraphState)
@@ -1017,7 +763,7 @@ class BidRAGPipeline:
                 "사용자가 제공한 공고문 텍스트에서 요구사항을 구조화해 추출하라. "
                 "숫자는 가능하면 원 단위 숫자(float/int)로 정규화하고, "
                 "확실하지 않으면 null로 둔다. "
-                "특히 낙찰가 모델 입력을 위해 예가범위(expected_price_range), 낙찰하한율(award_lower_rate)도 추출을 시도하라."
+                "특히 사정율 모델 입력을 위해 예가범위(expected_price_range), 낙찰하한율(award_lower_rate)도 추출을 시도하라."
             )
         )
 
@@ -1066,7 +812,7 @@ class BidRAGPipeline:
             content=(
                 "너는 제안/투찰 agent다. 다음 순서로 도구를 호출해 근거를 수집하라.\n"
                 "1) rag_retrieve(query): 공고 요약 + 핵심 키워드로 유사 공고/낙찰사례 검색\n"
-                "2) predict_award_price(requirements_json, retrieved_context): 낙찰가 예측(사용자 모델)\n"
+                "2) predict_adjustment_rate(requirements_json, retrieved_context): 사정율 예측(사용자 모델)\n"
                 "3) competitor_analysis(requirements_json, retrieved_context): 경쟁/시장 시그널 산출\n\n"
                 "도구 호출이 모두 끝나면, 더 이상 도구를 호출하지 말고 종료하라."
             )
@@ -1104,7 +850,12 @@ class BidRAGPipeline:
                 "필수 섹션(순서 유지):\n"
                 "# 1. 공고 요약\n"
                 "# 2. 참가자격/실적/제출서류 체크리스트\n"
-                "# 3. 낙찰가 예측(범위/포인트/근거/리스크)\n"
+                "# 3. 확률이 높은 상위 3위 사정률 구간과 확률\n"
+                "   prediction_result의 top_ranges에서 'range' 필드를 그대로 사용하라.\n"
+                "   다음 형식으로 각 구간을 표시하라:\n"
+                "   - **1위**: \n"
+                "     - 범위: range 필드 값\n"
+                "     - 확률: X.XX%\n"
                 "# 4. 권고 액션(다음 72시간 To-Do)\n\n"
                 "제약: 근거가 불충분하면 '가정'으로 명시하고 추가 수집 항목을 제시하라."
             )
@@ -1112,7 +863,7 @@ class BidRAGPipeline:
 
         ctx = SystemMessage(content=(
         f"[추출된 요구사항]\n{reqs_json}\n\n"
-        f"[낙찰가 예측 모델 결과]\n{pred_json}"
+        f"[사정율 예측 모델 결과]\n{pred_json}"
         ))
         final = self.llm.invoke([sys, ctx] + messages)
         report = final.content if isinstance(final, AIMessage) else str(final)
@@ -1128,6 +879,7 @@ class BidRAGPipeline:
         final_state: GraphState = self.graph.invoke(initial, config={"configurable": {"thread_id": thread_id}})
         return {
             "requirements": final_state.get("requirements", {}),
+            "prediction_result": final_state.get("prediction_result", {}),
             "report_markdown": final_state.get("report_markdown", ""),
             "messages": final_state.get("messages", []),
         }
@@ -1158,16 +910,10 @@ if __name__ == "__main__":
         "--award_model",
         default=None,
         help=(
-            "낙찰가 예측 모델 python 파일(.py). "
-            "Wrapper mode: predict_award_price(requirements, retrieved_context) 또는 predict(requirements, retrieved_context). "
-            "Auto mode: model_1dcnn.py를 지정하고 --award_weights/--award_scaler를 함께 지정."
+            "사정율 예측 모델 python 파일(.py). "
+            "predict_adjustment_rate(requirements, retrieved_context) 또는 predict(requirements, retrieved_context) 구현 필요."
         ),
     )
-    parser.add_argument("--award_weights", default=None, help="CNN1D 가중치 파일(.pt). 예: ./results/best_model.pt")
-    parser.add_argument("--award_scaler", default=None, help="CNN1D scaler 파일(.json/.npz). 예: ./results/scalers.json")
-    parser.add_argument("--award_device", default=None, help="torch device. 예: cpu 또는 cuda")
-    parser.add_argument("--award_hidden", type=int, default=64, help="CNN1D hidden size (학습과 동일해야 함)")
-    parser.add_argument("--award_dropout", type=float, default=0.1, help="CNN1D dropout (학습과 동일해야 함)")
 
     args = parser.parse_args()
 
@@ -1185,11 +931,6 @@ if __name__ == "__main__":
         doc_dir=args.doc_dir,
         index_dir=args.index_dir,
         award_model_path=args.award_model,
-        award_weights_path=args.award_weights,
-        award_scaler_path=args.award_scaler,
-        award_device=args.award_device,
-        award_hidden=args.award_hidden,
-        award_dropout=args.award_dropout,
     )
     out = pipe.analyze(text)
     markdown_content = out["report_markdown"]
