@@ -75,20 +75,24 @@ def usage_tool(query: str):
     # 1️⃣ FAISS 로드 (완전 분리)
     image_faiss = load_image_faiss(IMAGE_FAISS_DIR)
     api_faiss = load_api_faiss(API_FAISS_DIR)
+    text_faiss = load_text_faiss(TEXT_FAISS_DIR)
     # 2️⃣ 벡터 유사도 검색
     image_docs = search_image_context(image_faiss, query)
     api_docs = search_api_context(api_faiss, query)
+    text_docs = search_text_context(text_faiss,query)
     # 3️⃣ 컨텍스트 분리 정리
-    contexts = build_context(image_docs, api_docs)
+    contexts = build_context(image_docs, api_docs, text_docs)
     image_context = contexts["image"]
     api_context = contexts["api"]
+    text_context = contexts["text"]
+
 
     # 4️⃣ LLM 프롬프트
     prompt = f"""
         Role 설정 : 
         너는 소형·중형 건설사를 대상으로 운영하는 "나라장터 기반 조달·입찰 인텔리전스 플랫폼"사이트의 
         편리한 이용을 도와주는 챗봇이다. 
-        아래의 3가지 문서 "웹페이지 스크린샷 기반 정보", "API 정의서 엑셀 기반 정보"와
+        아래의 3가지 문서 "웹페이지 스크린샷 기반 정보", "API 정의서 엑셀 기반 정보", "홈페이지 사용 설명서"와
         "요구사항"의 내용을 참고하여 사용자의 질문에 대한 답변을 생성하라.
 
         요구사항:
@@ -106,6 +110,9 @@ def usage_tool(query: str):
 
         [API 정의서 엑셀 기반 정보]
         {api_context}
+
+        [홈페이지 사용 설명서]
+        {text_context}
 
         [질문]
         {query}
