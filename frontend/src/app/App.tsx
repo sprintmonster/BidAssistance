@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { HashRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 import { AppLayout } from "./layout/AppLayout";
@@ -116,7 +116,7 @@ export default function App() {
 	const canManageNotices = isOperatorAccount();
 
 	return (
-		<BrowserRouter>
+		<HashRouter>
 			{globalLoading && (
 				<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[9999]">
 					<div className="bg-white px-6 py-3 rounded-lg shadow">처리 중...</div>
@@ -251,6 +251,6 @@ export default function App() {
 				<Route path="/find-account" element={<FindAccountRoute />} />
 				<Route path="/reset-password" element={<ResetPasswordRoute />} />
 			</Routes>
-		</BrowserRouter>
+		</HashRouter>
 	);
 }

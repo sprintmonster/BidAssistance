@@ -88,6 +88,33 @@ function normalizePostFromList(it: any): Post {
 	const id = toNum(it?.postId ?? it?.id);
 	if (!Number.isFinite(id) || id <= 0) throw new Error(`목록 게시글 ID 오류 (id=${String(it?.postId ?? it?.id)})`);
 
+	const listAttachments =
+		it?.attachments ??
+		it?.files ??
+		it?.fileList ??
+		it?.attachFiles ??
+		it?.attachmentList ??
+		[];
+
+	const rawCount =
+		it?.attachmentCount ??
+		it?.attachmentsCount ??
+		it?.attachmentCnt ??
+		it?.fileCount ??
+		it?.filesCount ??
+		it?.fileCnt ??
+		it?.attachCount ??
+		it?.attachCnt;
+
+	let attachmentCount = toNum(rawCount, -1);
+	if (attachmentCount < 0) {
+		if (it?.hasAttachment === true || it?.hasAttachments === true || it?.hasFile === true)
+			attachmentCount = 1;
+		else if (Array.isArray(listAttachments) && listAttachments.length > 0)
+			attachmentCount = listAttachments.length;
+		else attachmentCount = 0;
+	}
+
 	return {
 		id,
 		title: toStr(it?.title),
@@ -101,7 +128,7 @@ function normalizePostFromList(it: any): Post {
 		likedByMe: !!it?.likedByMe,
 		commentCount: toNum(it?.commentCount ?? 0),
 		comments: it?.comments ?? [],
-		attachmentCount: toNum(it?.attachmentCount ?? 0),
+		attachmentCount,
 		attachments: it?.attachments ?? [],
 		content: it?.content,
 	};
