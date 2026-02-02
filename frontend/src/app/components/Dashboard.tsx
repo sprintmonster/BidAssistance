@@ -137,7 +137,24 @@ export function Dashboard() {
 		return filteredBids.slice(start, start + pageSize);
 	}, [filteredBids, safePage]);
 
-	return (
+    const pageWindowSize = 5;
+
+    const windowStart = Math.floor((safePage - 1) / pageWindowSize) * pageWindowSize + 1;
+    const windowEnd = Math.min(totalPages, windowStart + pageWindowSize - 1);
+
+    const pageNumbers = useMemo(() => {
+        const arr: number[] = [];
+        for (let n = windowStart; n <= windowEnd; n++) arr.push(n);
+        return arr;
+    }, [windowStart, windowEnd]);
+
+    const canPrevWindow = windowStart > 1;
+    const canNextWindow = windowEnd < totalPages;
+
+    const goPrevWindow = () => setPage(Math.max(1, windowStart - pageWindowSize));
+    const goNextWindow = () => setPage(Math.min(totalPages, windowStart + pageWindowSize));
+
+    return (
 		<div className="space-y-8">
 			{error ? (
 				<div className="border rounded-2xl p-4 bg-red-50 text-red-700 text-sm">{error}</div>
@@ -194,44 +211,77 @@ export function Dashboard() {
 									</div>
 								</li>
 							))}
-							{totalPages > 1 && (
-								<div className="mt-4 flex justify-center gap-2">
-									<button
-										type="button"
-										className="px-3 py-1 border rounded-lg text-sm disabled:opacity-50"
-										disabled={safePage === 1}
-										onClick={() => setPage((p) => Math.max(1, p - 1))}
-									>
-										이전
-									</button>
+                            {totalPages > 1 && (
+                                <div className="mt-4 flex justify-center items-center gap-2 flex-wrap">
+                                    {/* 페이지 묶음 이전 */}
+                                    <button
+                                        type="button"
+                                        className="px-3 py-1 border rounded-lg text-sm disabled:opacity-50"
+                                        disabled={!canPrevWindow}
+                                        onClick={goPrevWindow}
+                                    >
+                                        이전
+                                    </button>
 
-									{Array.from({ length: totalPages }).map((_, i) => {
-										const n = i + 1;
-										return (
-											<button
-												key={n}
-												type="button"
-												onClick={() => setPage(n)}
-												className={`px-3 py-1 border rounded-lg text-sm ${
-													n === safePage ? "bg-gray-900 text-white" : "bg-white hover:bg-gray-100"
-												}`}
-											>
-												{n}
-											</button>
-										);
-									})}
+                                    {/* 앞쪽 생략 표시 */}
+                                    {windowStart > 1 && (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={() => setPage(1)}
+                                                className={`px-3 py-1 border rounded-lg text-sm ${
+                                                    safePage === 1 ? "bg-gray-900 text-white" : "bg-white hover:bg-gray-100"
+                                                }`}
+                                            >
+                                                1
+                                            </button>
+                                            <span className="px-1 text-gray-400">…</span>
+                                        </>
+                                    )}
 
-									<button
-										type="button"
-										className="px-3 py-1 border rounded-lg text-sm disabled:opacity-50"
-										disabled={safePage === totalPages}
-										onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-									>
-										다음
-									</button>
-								</div>
-							)}
-						</ul>
+                                    {/* 현재 윈도우(예: 1~5, 6~10...) */}
+                                    {pageNumbers.map((n) => (
+                                        <button
+                                            key={n}
+                                            type="button"
+                                            onClick={() => setPage(n)}
+                                            className={`px-3 py-1 border rounded-lg text-sm ${
+                                                n === safePage ? "bg-gray-900 text-white" : "bg-white hover:bg-gray-100"
+                                            }`}
+                                        >
+                                            {n}
+                                        </button>
+                                    ))}
+
+                                    {/* 뒤쪽 생략 표시 */}
+                                    {windowEnd < totalPages && (
+                                        <>
+                                            <span className="px-1 text-gray-400">…</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setPage(totalPages)}
+                                                className={`px-3 py-1 border rounded-lg text-sm ${
+                                                    safePage === totalPages ? "bg-gray-900 text-white" : "bg-white hover:bg-gray-100"
+                                                }`}
+                                            >
+                                                {totalPages}
+                                            </button>
+                                        </>
+                                    )}
+
+                                    {/* 페이지 묶음 다음 */}
+                                    <button
+                                        type="button"
+                                        className="px-3 py-1 border rounded-lg text-sm disabled:opacity-50"
+                                        disabled={!canNextWindow}
+                                        onClick={goNextWindow}
+                                    >
+                                        다음
+                                    </button>
+                                </div>
+                            )}
+
+                        </ul>
 					)}
 				</div>
 			) : null}
