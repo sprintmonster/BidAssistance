@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { api } from "../api/client";
@@ -39,15 +39,14 @@ type Bid = {
 
     bidCreated?: string | null;
 
-
-    bidUrl?:string;
+    bidUrl?: string;
     documentUrl?: string;
     documentFileName?: string;
 
-    attachments? : Array<{
-        id : number;
+    attachments?: Array<{
+        id: number;
         fileName: string;
-        url : string;
+        url: string;
     }>;
 
     requirements: {
@@ -64,30 +63,47 @@ type Bid = {
         competitors: string;
     };
 };
+
+type AnalysisStructured = {
+    summary: {
+        title?: string;
+        noticeNo?: string;
+        agency?: string;
+        region?: string;
+        baseAmount?: number;
+        estimatedPrice?: number;
+        priceRangePercent?: number; // 예가범위 3.0
+        lowerBoundRate?: number; // 낙찰하한율 89.745
+    };
+    requirements: {
+        eligibility?: string[]; // 참가자격
+        regionReq?: string[]; // 지역요건
+        performance?: string[]; // 실적요건
+        documents?: string[]; // 제출서류
+        missing?: string[]; // "추가 수집 필요" 같은 표시
+    };
+    pricePrediction: {
+        min?: number;
+        max?: number;
+        point?: number;
+        confidence?: "low" | "medium" | "high";
+        basis?: string;
+        risks?: string[];
+    };
+    actions72h: string[]; // 권고 액션(다음 72시간)
+};
+
 type AnalysisDto = {
-    analysisContent?: string | null; // 마크다운 리포트
-    pdfUrl?: string | null;          // Azure PDF 링크
-    predictedPrice?: number | null;  // 있으면(필드명은 실제 응답 확인 필요)
-    analysisDate?: string | null;    // 있으면
+    analysisContent?: string | null; // 마크다운/텍스트 리포트
+    pdfUrl?: string | null; // Azure PDF 링크
+    predictedPrice?: number | null;
+    analysisDate?: string | null;
+
+    structured?: AnalysisStructured | null;
 };
 
 function safeFileName(name: string) {
     return name.replace(/[\\/:*?"<>|]/g, "_");
-}
-
-async function downloadFromUrl(url: string, fileName: string) {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("download_failed");
-    const blob = await res.blob();
-
-    const objectUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = objectUrl;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(objectUrl);
 }
 
 function downloadText(content: string, fileName: string) {
@@ -102,6 +118,7 @@ function downloadText(content: string, fileName: string) {
     a.remove();
     URL.revokeObjectURL(objectUrl);
 }
+
 function openDownload(url: string) {
     const a = document.createElement("a");
     a.href = url;
@@ -162,20 +179,176 @@ function levelToKor(level: "high" | "medium" | "low") {
     if (level === "medium") return "보통";
     return "낮음";
 }
+
 function isLikelyNoticeFile(fileName: string) {
     const n = (fileName || "").toLowerCase();
 
-    const keywordHit = n.includes("공고");
-
-    const ext = n.split(".").pop() || "";
+    const ext = (n.split(".").pop() || "").toLowerCase();
     const goodExt = ["pdf", "hwp", "hwpx", "doc", "docx"].includes(ext);
     const badExt = ["xlsx", "xls", "jpg", "jpeg", "png", "zip"].includes(ext);
 
     if (badExt) return false;
-    if (keywordHit && goodExt) return true;
+    if (!goodExt) return false;
 
-    return false;
+    // 공고문/입찰/제안요청/RFP 같은 키워드가 있을 때만 공고문으로 간주
+    const keywordHit =
+        n.includes("공고")
+
+
+    return keywordHit;
 }
+
+
+/**
+ * 백엔드 변경 없이, 리포트 텍스트를 구조화 데이터로 파싱.
+ * - 샘플 리포트(• 공고명, • 리스크: 아래에 • 항목 등)에 맞춤
+ */
+function parseKoreanMarkdownReport(text: string): AnalysisStructured {
+    const raw = String(text || "");
+
+    const lines = raw
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean);
+
+    const result: AnalysisStructured = {
+        summary: {},
+        requirements: {},
+        pricePrediction: {},
+        actions72h: [],
+    };
+
+    const getNum = (s: string) => Number(String(s).replace(/[^\d]/g, ""));
+    const getFloat = (s: string) => Number(String(s).replace(/[^\d.]/g, ""));
+
+    // 1) "- **키**: 값" 패턴 파싱
+    // 예) - **공고번호**: R26...
+    const kv = new Map<string, string>();
+    for (const l of lines) {
+        const m = l.match(/^-?\s*\*\*(.+?)\*\*:\s*(.+)$/); // "- **키**: 값" 또는 "**키**: 값"
+        if (m) {
+            const key = m[1].trim();
+            const val = m[2].trim();
+            kv.set(key, val);
+        }
+    }
+
+    // 2) summary 채우기 (키 이름은 리포트에 나온 그대로)
+    const title = kv.get("공고명");
+    if (title) result.summary.title = title;
+
+    const noticeNo = kv.get("공고번호");
+    if (noticeNo) result.summary.noticeNo = noticeNo;
+
+    const agency = kv.get("수요기관");
+    if (agency) result.summary.agency = agency;
+
+    const region = kv.get("지역");
+    if (region) result.summary.region = region;
+
+    const baseAmount = kv.get("기초금액");
+    if (baseAmount) result.summary.baseAmount = getNum(baseAmount);
+
+    const estimated = kv.get("추정가격");
+    if (estimated) result.summary.estimatedPrice = getNum(estimated);
+
+    const pr = kv.get("예가범위");
+    if (pr) result.summary.priceRangePercent = getFloat(pr);
+
+    const lb = kv.get("낙찰하한율");
+    if (lb) result.summary.lowerBoundRate = getFloat(lb);
+
+    // 3) requirements 채우기
+    // "정보 없음 (추가 수집 필요)"면 missing에 넣기
+    const missing: string[] = [];
+
+    function setReq(key: "참가자격" | "실적" | "제출서류", target: keyof AnalysisStructured["requirements"]) {
+        const v = kv.get(key);
+        if (!v) {
+            missing.push(key);
+            return;
+        }
+        const isMissing = v.includes("추가 수집 필요") || v.includes("정보 없음");
+        if (isMissing) {
+            missing.push(key);
+            return;
+        }
+        // 값이 여러 개인 경우 split
+        const items = v
+            .split(/,|\/|·|및|\s{2,}/g)
+            .map((s) => s.trim())
+            .filter(Boolean);
+        (result.requirements as any)[target] = items.length ? items : [v];
+    }
+
+    setReq("참가자격", "eligibility");
+    setReq("실적", "performance");
+    setReq("제출서류", "documents");
+    if (missing.length) result.requirements.missing = missing;
+
+    // 4) pricePrediction 채우기 (리포트 포맷 키 대응)
+    const point =
+        kv.get("포인트 예측가") ??
+        kv.get("예상 낙찰가") ??
+        kv.get("예상 낙찰가(포인트)") ??
+        null;
+
+    const conf = kv.get("신뢰도");
+    if (conf) {
+        const c = conf.trim();
+        if (c.includes("높")) result.pricePrediction.confidence = "high";
+        else if (c.includes("중") || c.includes("보통")) result.pricePrediction.confidence = "medium";
+        else if (c.includes("낮")) result.pricePrediction.confidence = "low";
+    }
+
+    const basis = kv.get("근거");
+    if (basis) result.pricePrediction.basis = basis;
+
+    if (point) result.pricePrediction.point = getNum(point);
+
+    const min =
+        kv.get("최소 예측가") ??
+        kv.get("예상 최소 낙찰가") ??
+        null;
+
+    if (min) result.pricePrediction.min = getNum(min);
+
+    const max =
+        kv.get("최대 예측가") ??
+        kv.get("예상 최대 낙찰가") ??
+        null;
+
+    if (max) result.pricePrediction.max = getNum(max);
+
+    // 5) 리스크: 이건 "> **리스크**: ..." 형태라서 별도 파싱
+    // 예) > **리스크**: 예가 범위가 ...
+    const riskLines: string[] = [];
+    for (const l of lines) {
+        const m = l.match(/^>\s*\*\*리스크\*\*:\s*(.+)$/);
+        if (m) riskLines.push(m[1].trim());
+    }
+    if (riskLines.length) result.pricePrediction.risks = riskLines;
+
+    // 6) 권고 액션(다음 72시간): "# 4. 권고 액션..." 이후의 "1. ..." 들 파싱
+    const actionStart = lines.findIndex((x) => x.startsWith("# 4. 권고 액션"));
+    if (actionStart >= 0) {
+        for (let i = actionStart + 1; i < lines.length; i++) {
+            const l = lines[i];
+            // 다음 섹션으로 넘어가면 종료(대충 다음 # 로)
+            if (l.startsWith("# ")) break;
+
+            const m = l.match(/^\d+\.\s*(.+)$/);
+            if (m) {
+                // "1. **참가자격 ...**: ..." 이런 경우 bold 제거
+                const cleaned = m[1].replace(/\*\*(.+?)\*\*/g, "$1").trim();
+                result.actions72h.push(cleaned);
+            }
+        }
+    }
+
+    return result;
+}
+
 
 function buildAiAnalysisReport(bid: Bid, completionRate: number) {
     const lines: string[] = [];
@@ -244,6 +417,36 @@ function buildAiAnalysisReport(bid: Bid, completionRate: number) {
     return lines.join("\n");
 }
 
+function formatKo(dt?: string | null) {
+    if (!dt) return "데이터 준비 중";
+    const d = new Date(dt);
+    if (Number.isNaN(d.getTime())) return dt; // 파싱 실패 시 원문 표시
+    return d.toLocaleString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+}
+
+function mergeStructured(
+    base: AnalysisStructured | null | undefined,
+    fill: AnalysisStructured | null | undefined,
+): AnalysisStructured | null {
+    if (!base && !fill) return null;
+
+    const b = base ?? { summary: {}, requirements: {}, pricePrediction: {}, actions72h: [] };
+    const f = fill ?? { summary: {}, requirements: {}, pricePrediction: {}, actions72h: [] };
+
+    return {
+        summary: { ...f.summary, ...b.summary }, // base(dto.structured)가 있으면 우선
+        requirements: { ...f.requirements, ...b.requirements },
+        pricePrediction: { ...f.pricePrediction, ...b.pricePrediction },
+        actions72h: (b.actions72h && b.actions72h.length ? b.actions72h : f.actions72h) ?? [],
+    };
+}
+
 export function BidSummary() {
     const navigate = useNavigate();
     const { bidId } = useParams();
@@ -262,6 +465,32 @@ export function BidSummary() {
     const [adding, setAdding] = useState(false);
     const [alreadyAdded, setAlreadyAdded] = useState(false);
 
+    const autoAnalyzeOnceRef = useRef(false);
+
+    //  파싱 결과(구조화 데이터)
+    const structured = analysis?.structured ?? null;
+    const req = structured?.requirements ?? null;
+
+    const renderListOrEmpty = (title: string, arr?: string[]) => {
+        return (
+            <div>
+                <h4 className="font-semibold mb-3">{title}</h4>
+                {!arr || arr.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">정보 없음 (추가 수집 필요)</div>
+                ) : (
+                    <ul className="space-y-2">
+                        {arr.map((x, i) => (
+                            <li key={i} className="flex items-start gap-2">
+                                <CheckCircle2 className="h-4 w-4 mt-0.5 text-green-600" />
+                                <span className="text-sm">{x}</span>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+        );
+    };
+
     useEffect(() => {
         if (!Number.isFinite(numericBidId)) {
             setError("잘못된 공고 ID 입니다.");
@@ -274,44 +503,26 @@ export function BidSummary() {
                 setLoading(true);
                 setError(null);
 
-                // ✅ API: GET /api/bid/{bidId}
+                // ✅ API: GET /api/bids/{bidId}
                 const res = await api(`/bids/${numericBidId}`, { method: "GET" });
 
                 const data = (res as any)?.data;
-
                 const item =
-                    data && typeof data === "object" && !Array.isArray(data) ? data :
-                        (data?.items?.[0] ?? null) ||
-                        (Array.isArray(data) ? data[0] : null);
+                    data && typeof data === "object" && !Array.isArray(data)
+                        ? data
+                        : (data?.items?.[0] ?? null) || (Array.isArray(data) ? data[0] : null);
 
                 if (!item) {
                     setError("상세 정보를 찾을 수 없습니다.");
                     setBid(null);
                     return;
                 }
-                // const docUrlRaw =
-                //     item.bidReportURL ?? item.bidReportUrl ?? item.documentUrl ?? item.bidURL ?? item.bidUrl;
-                //
-                // const documentUrl = docUrlRaw ? String(docUrlRaw) : undefined;
-                //
-                // const fileNameFromUrl = (u?: string) => {
-                //     if (!u) return undefined;
-                //     try {
-                //         const url = new URL(u, window.location.origin);
-                //         const last = decodeURIComponent(url.pathname.split("/").pop() || "");
-                //         // 확장자 있으면 그걸 파일명으로 사용, 없으면 undefined
-                //         return last && last.includes(".") ? last : undefined;
-                //     } catch {
-                //         return undefined;
-                //     }
-                // };
-
 
                 const reportUrl = item.bidReportURL ? String(item.bidReportURL) : "";
                 const bidUrl = item.bidURL ? String(item.bidURL) : "";
-                //  attachments 파싱 (서버가 내려주는 첨부파일 배열 대응)
-                const attachmentsRaw = Array.isArray(item.attachments) ? item.attachments : [];
 
+                // attachments 파싱
+                const attachmentsRaw = Array.isArray(item.attachments) ? item.attachments : [];
                 const attachments = attachmentsRaw
                     .map((a: any) => ({
                         id: Number(a.id),
@@ -320,9 +531,14 @@ export function BidSummary() {
                     }))
                     .filter((a: any) => Number.isFinite(a.id) && a.id > 0 && !!a.url);
 
-                const firstAttachment = attachments[0];
+                // 공고문 후보 첨부파일 찾기(첫번째만 보지 말기)
+                const noticeAttachment = attachments.find((a: any) => isLikelyNoticeFile(a.fileName));
+                const fallbackAttachment = attachments[0];
 
-                //  서버 필드 -> 프론트 Bid 타입 매핑
+                // analysisResult가 객체면 String() 하면 [object Object]가 됨 → analysisContent를 우선 사용
+                const analysisContentFromBid =
+                    item.analysisResult?.analysisContent ?? item.analysisResult?.content ?? "";
+
                 const mapped: Bid = {
                     id: Number(item.id ?? item.bid_id ?? item.bidId ?? numericBidId),
                     title: String(item.name ?? item.title ?? ""),
@@ -333,30 +549,28 @@ export function BidSummary() {
                     announcementDate: String(item.startDate ?? ""),
                     type: "공사",
                     status: "진행중",
-                    description: String(item.analysisResult ?? ""),
-                    // description: String(item.analysisResult ?? item.name ?? item.title ?? ""),
+                    description: String(analysisContentFromBid ?? ""),
                     bidCreated: item.bidCreated ? String(item.bidCreated) : null,
 
                     attachments,
 
                     bidUrl: bidUrl || undefined,
-                    documentUrl: firstAttachment?.url || reportUrl || bidUrl || undefined,
-                    documentFileName: firstAttachment
-                        ? firstAttachment.fileName
-                        : reportUrl
-                            ? "첨부파일"
-                            : bidUrl
-                                ? "공고 링크"
-                                : undefined,
-
-
+                    documentUrl: noticeAttachment?.url || fallbackAttachment?.url || reportUrl || bidUrl || undefined,
+                    documentFileName: noticeAttachment?.fileName
+                        ? noticeAttachment.fileName
+                        : fallbackAttachment?.fileName
+                            ? fallbackAttachment.fileName
+                            : reportUrl
+                                ? "첨부파일"
+                                : bidUrl
+                                    ? "공고 링크"
+                                    : undefined,
 
                     requirements: { license: [], location: "", experience: "", technicalStaff: "" },
                     risks: [],
                     checklist: [],
                     priceGuidance: { recommended: "", historical: "", competitors: "" },
                 };
-
 
                 setBid(mapped);
             } catch (e: any) {
@@ -401,28 +615,71 @@ export function BidSummary() {
         void sync();
     }, [bid?.id]);
 
-    const completedItems = checklist.filter((item) => item.checked).length;
-    const completionRate = checklist.length ? (completedItems / checklist.length) * 100 : 0;
+    // 제출서류(파싱 결과)도 체크리스트로 합치고 싶으면 병합
+    const docChecklist = useMemo(() => {
+        const docs = structured?.requirements?.documents ?? [];
+        return docs.map((d) => ({ item: d, checked: false }));
+    }, [structured?.requirements?.documents]);
 
-    const handleAnalyze = async () => {
+    const mergedChecklist = useMemo(() => {
+        // 중복 제거(같은 item)까지 하고 싶으면 Set으로 처리
+        const all = [...checklist, ...docChecklist];
+        const seen = new Set<string>();
+        const out: { item: string; checked: boolean }[] = [];
+        for (const x of all) {
+            const key = x.item.trim();
+            if (!key) continue;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            out.push(x);
+        }
+        return out;
+    }, [checklist, docChecklist]);
+
+    const completedItems = mergedChecklist.filter((item) => item.checked).length;
+    const completionRate = mergedChecklist.length ? (completedItems / mergedChecklist.length) * 100 : 0;
+
+    const handleAnalyze = useCallback(async () => {
+
+
         if (!bid) return;
+
+        // 이미 분석 데이터 있으면 스킵 (중복 호출 방지)
+        if (analysis?.structured || analysis?.analysisContent || analysis?.predictedPrice) return;
 
         try {
             setAnalyzing(true);
 
-            //  POST /api/analysis/predict/{bidId}
             const res = await api(`/analysis/predict/${bid.id}`, { method: "POST" });
-
             const dto = (res as any)?.data ?? (res as any);
 
-            setAnalysis(dto as AnalysisDto);
+            const rawText = String(dto?.analysisContent ?? "");
+            const parsed = rawText ? parseKoreanMarkdownReport(rawText) : null;
+            const merged = mergeStructured(dto?.structured, parsed);
+
+            setAnalysis({ ...(dto as AnalysisDto), structured: merged });
             toast.success("AI 분석이 완료되었습니다.");
         } catch (e: any) {
             toast.error(e?.message || "AI 분석 요청에 실패했습니다.");
         } finally {
             setAnalyzing(false);
         }
-    };
+    }, [bid?.id, analysis?.structured, analysis?.analysisContent, analysis?.predictedPrice]);
+
+    useEffect(() => {
+        if (!bid) return;
+        if (autoAnalyzeOnceRef.current) return;
+
+        // 이미 분석 결과 있으면 스킵
+        if (analysis?.structured || analysis?.analysisContent || analysis?.predictedPrice) {
+            autoAnalyzeOnceRef.current = true;
+            return;
+        }
+
+        autoAnalyzeOnceRef.current = true;
+        void handleAnalyze();
+    }, [bid?.id, handleAnalyze, analysis?.structured, analysis?.analysisContent, analysis?.predictedPrice]);
+
 
     const handleAddToCart = async () => {
         if (!bid) return;
@@ -450,7 +707,6 @@ export function BidSummary() {
                 return;
             }
 
-            // 다시 동기화
             const items = await fetchWishlist(userId);
             setAlreadyAdded(items.some((it) => it.bidId === bid.id));
 
@@ -465,61 +721,64 @@ export function BidSummary() {
     const handleDownloadNotice = async () => {
         if (!bid) return;
 
-        // 1) 첨부파일 URL이 있으면: 새 탭 열기(혹은 다운로드 시도)
-        if (bid.documentFileName === "첨부파일" && bid.documentUrl) {
-            openDownload(bid.documentUrl);
+        // 첨부파일 있으면 첫 파일(또는 공고문 후보)을 열기
+        const hasAttachments = (bid.attachments?.length ?? 0) > 0;
+        if (hasAttachments) {
+            // 공고문 후보 우선
+            const notice = (bid.attachments ?? []).find((a) => isLikelyNoticeFile(a.fileName));
+            openDownload((notice ?? bid.attachments![0]).url);
             toast.success("첨부파일을 열었습니다.");
             return;
         }
 
-        // 2) 첨부파일 없고 공고 링크면: 공고 페이지 열기
-        if (bid.documentFileName === "공고 링크" && bid.documentUrl) {
-            openDownload(bid.documentUrl);
+        // 없으면 공고 링크
+        if (bid.bidUrl) {
+            openDownload(bid.bidUrl);
             toast.info("공고 링크로 이동합니다.");
             return;
         }
 
-        // 3) 둘 다 없으면: 텍스트로 폴백
+        // 둘 다 없으면 텍스트로 폴백
         const baseName = safeFileName(`공고문_${bid.id}_${bid.title}`);
-        const txt = buildTextNotice({ ...bid, checklist });
+        const txt = buildTextNotice({ ...bid, checklist: mergedChecklist });
         downloadText(txt, `${baseName}.txt`);
         toast.info("첨부파일이 없어 텍스트 공고문으로 다운로드했습니다.");
     };
 
-
     const handleDownloadAiReport = () => {
-        if (!bid) return;
-
-        // 1) PDF 링크 있으면 그걸 우선
         const pdfUrl = analysis?.pdfUrl ?? null;
-        if (pdfUrl) {
-            openDownload(pdfUrl);
-            toast.success("AI 분석 PDF 리포트를 열었습니다.");
+        if (!pdfUrl) {
+            toast.error("PDF 리포트가 아직 생성되지 않았습니다. AI 분석을 먼저 실행해 주세요.");
             return;
         }
-
-        // 2) 없으면 TXT로 폴백 (기존 로직)
-        const baseName = safeFileName(`AI_분석_리포트_${bid.id}_${bid.title}`);
-        const report = buildAiAnalysisReport({ ...bid, checklist }, completionRate);
-        downloadText(report, `${baseName}.txt`);
-        toast.success("AI 분석 리포트(TXT) 다운로드가 시작되었습니다.");
+        openDownload(pdfUrl);
     };
 
 
     if (loading) return <div className="p-6">불러오는 중...</div>;
     if (error) return <div className="p-6 text-red-600">{error}</div>;
     if (!bid) return null;
+
     const hasAttachments = (bid.attachments?.length ?? 0) > 0;
     const first = bid.attachments?.[0];
-
-    const firstLooksNotice =
-        first?.fileName ? isLikelyNoticeFile(first.fileName) : false;
+    const firstLooksNotice = first?.fileName ? isLikelyNoticeFile(first.fileName) : false;
 
     const showUploadGuide = hasAttachments && !firstLooksNotice;
+    const hasNoticeAttachment = (bid.attachments ?? []).some((a) => isLikelyNoticeFile(a.fileName));
+
     const showLinkGuide = !hasAttachments;
 
-    const needsUserUpload =
-        !hasAttachments || (hasAttachments && !firstLooksNotice);
+    const budgetNumber = Number(bid.budget);
+    const budgetLabel = Number.isFinite(budgetNumber) ? budgetNumber.toLocaleString() : "데이터 준비 중";
+
+    // 투찰(파싱 결과 우선, 없으면 기존 필드 사용)
+    const predictedPoint = structured?.pricePrediction?.point ?? analysis?.predictedPrice ?? null;
+    const predictedMin = structured?.pricePrediction?.min ?? null;
+    const predictedMax = structured?.pricePrediction?.max ?? null;
+
+    const risksParsed = structured?.pricePrediction?.risks ?? [];
+    const actions72h = structured?.actions72h ?? [];
+
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-4">
@@ -537,11 +796,9 @@ export function BidSummary() {
                     className="gap-4 ml-auto"
                     onClick={handleAddToCart}
                     disabled={adding || !wishlistSynced || alreadyAdded}
-                    >
+                >
                     {alreadyAdded ? "장바구니 담김" : adding ? "담는 중..." : "장바구니 담기"}
                 </Button>
-
-
             </div>
 
             {/* Header */}
@@ -556,39 +813,45 @@ export function BidSummary() {
                             </div>
 
                             <CardTitle className="text-2xl mb-2">{bid.title}</CardTitle>
-                            <CardDescription>{bid.description || "상세 설명(analysisResult) 준비 중"}</CardDescription>
+
+                            {/* 분석 내용이 있으면 일부만 보여주고 싶다면 slice */}
+                            <CardDescription>
+                                {structured?.summary?.noticeNo
+                                    ? `공고번호: ${structured.summary.noticeNo}`
+                                    : "AI 분석을 실행하면 공고 요약/요건/투찰가이드가 구조화되어 표시됩니다."}
+                            </CardDescription>
                         </div>
 
-                        {/* 공고 링크 버튼(우측 상단) */}
-                        {bid.bidUrl && (
-                            <div className="shrink-0 flex gap-2">
+                        {/* 우측 상단 버튼 */}
+                        <div className="shrink-0 flex gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleAnalyze}
+                                disabled={analyzing}
+                                className="gap-2"
+                            >
+                                <Sparkles className="h-4 w-4" />
+                                {analyzing ? "분석 중..." : "AI 분석하기"}
+                            </Button>
+
+                            <Button variant="outline" size="sm" onClick={handleDownloadNotice} className="gap-2">
+                                공고문 열기
+                            </Button>
+
+                            {bid.bidUrl && (
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={handleAnalyze}
-                                    disabled={analyzing}
+                                    onClick={() => openDownload(bid.bidUrl!)}
                                     className="gap-2"
                                 >
-                                    <Sparkles className="h-4 w-4" />
-                                    {analyzing ? "분석 중..." : "AI 분석하기"}
+                                    공고 링크
                                 </Button>
-
-                                {bid.bidUrl && (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => openDownload(bid.bidUrl!)}
-                                        className="gap-2"
-                                    >
-                                        공고 링크
-                                    </Button>
-                                )}
-                            </div>
-
-                        )}
+                            )}
+                        </div>
                     </div>
                 </CardHeader>
-
 
                 <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
@@ -612,9 +875,7 @@ export function BidSummary() {
                             <DollarSign className="h-5 w-5 text-muted-foreground" />
                             <div>
                                 <p className="text-sm text-muted-foreground">예산</p>
-                                <p className="font-semibold whitespace-nowrap">
-                                    {Number(bid.budget).toLocaleString()}
-                                </p>
+                                <p className="font-semibold whitespace-nowrap">{budgetLabel}</p>
                             </div>
                         </div>
 
@@ -626,25 +887,11 @@ export function BidSummary() {
                                 </p>
 
                                 <p className="font-semibold whitespace-nowrap">
-                                    {new Date(bid.bidCreated ?? bid.announcementDate).toLocaleString("ko-KR", {
-                                        year: "numeric",
-                                        month: "2-digit",
-                                        day: "2-digit",
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                    })}
+                                    {formatKo(bid.bidCreated ?? bid.announcementDate)}
                                 </p>
 
                                 <p className="text-sm text-muted-foreground">마감일</p>
-                                <p className="font-semibold text-red-600 whitespace-nowrap">
-                                    {new Date(bid.deadline).toLocaleString("ko-KR", {
-                                        year: "numeric",
-                                        month: "2-digit",
-                                        day: "2-digit",
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                    })}
-                                </p>
+                                <p className="font-semibold text-red-600 whitespace-nowrap">{formatKo(bid.deadline)}</p>
                             </div>
                         </div>
 
@@ -672,18 +919,13 @@ export function BidSummary() {
                             </div>
                         </div>
                     </div>
+
                     {showUploadGuide && (
                         <div className="mt-4 w-full rounded-xl border border-amber-300 bg-amber-50 px-5 py-4 text-sm text-amber-900 space-y-1">
                             <div className="font-semibold">⚠️ 공고문이 아닐 수 있습니다</div>
-                            <div>
-                                현재 첨부파일은 내역서/도면일 가능성이 높아요.
-                            </div>
-                            <div>
-                                공고문(PDF/HWP)을 챗봇에 업로드하면 AI 요약이 가능합니다.
-                            </div>
-                            <div>
-                                👉 우측 하단 챗봇 버튼을 눌러 업로드해 주세요.
-                            </div>
+                            <div>현재 첨부파일은 내역서/도면일 가능성이 높아요.</div>
+                            <div>공고문(PDF/HWP)을 챗봇에 업로드하면 AI 요약이 가능합니다.</div>
+                            <div>👉 우측 하단 챗봇 버튼을 눌러 업로드해 주세요.</div>
 
                             {bid.bidUrl && (
                                 <div className="pt-1">
@@ -703,9 +945,7 @@ export function BidSummary() {
                     {showLinkGuide && (
                         <div className="mt-4 w-full rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-700 space-y-1">
                             <div className="font-semibold">📄 첨부파일이 제공되지 않았습니다</div>
-                            <div>
-                                공고문은 공고 링크에서 직접 확인해 주세요.
-                            </div>
+                            <div>공고문은 공고 링크에서 직접 확인해 주세요.</div>
 
                             {bid.bidUrl && (
                                 <div className="pt-1">
@@ -721,7 +961,6 @@ export function BidSummary() {
                             )}
                         </div>
                     )}
-
                 </CardContent>
             </Card>
 
@@ -734,6 +973,7 @@ export function BidSummary() {
                     <TabsTrigger value="price">투찰 가이드</TabsTrigger>
                 </TabsList>
 
+                {/* AI 요약 */}
                 <TabsContent value="summary" className="space-y-4">
                     <Card>
                         <CardHeader>
@@ -756,49 +996,66 @@ export function BidSummary() {
                         </CardHeader>
 
                         <CardContent className="space-y-6">
-
-
                             <div>
-                                <h4 className="font-semibold mb-3">🌐 입찰 방식</h4>
-                                <p className="text-sm">{bid.requirements.technicalStaff || "데이터 준비 중"}</p>
+                                <h4 className="font-semibold mb-3">🧾 공고 요약</h4>
+                                <div className="text-sm text-muted-foreground space-y-1">
+                                    <div>공고명: {structured?.summary?.title ?? bid.title}</div>
+                                    <div>공고번호: {structured?.summary?.noticeNo ?? "데이터 준비 중"}</div>
+                                    <div>수요기관: {structured?.summary?.agency ?? bid.agency}</div>
+                                    <div>지역: {structured?.summary?.region ?? bid.region}</div>
+                                    <div>
+                                        기초금액:{" "}
+                                        {structured?.summary?.baseAmount
+                                            ? structured.summary.baseAmount.toLocaleString() + " 원"
+                                            : "데이터 준비 중"}
+                                    </div>
+                                    <div>
+                                        추정가격:{" "}
+                                        {structured?.summary?.estimatedPrice
+                                            ? structured.summary.estimatedPrice.toLocaleString() + " 원"
+                                            : "데이터 준비 중"}
+                                    </div>
+                                    <div>
+                                        예가범위:{" "}
+                                        {typeof structured?.summary?.priceRangePercent === "number"
+                                            ? `${structured.summary.priceRangePercent}%`
+                                            : "데이터 준비 중"}
+                                    </div>
+                                    <div>
+                                        낙찰하한율:{" "}
+                                        {typeof structured?.summary?.lowerBoundRate === "number"
+                                            ? `${structured.summary.lowerBoundRate}%`
+                                            : "데이터 준비 중"}
+                                    </div>
+                                </div>
                             </div>
+
                             <Separator />
 
-                            <div>
-                                <h4 className="font-semibold mb-3">📋 자격 요건</h4>
-                                {bid.requirements.license.length === 0 ? (
-                                    <div className="text-sm text-muted-foreground">데이터 준비 중</div>
-                                ) : (
-                                    <ul className="space-y-2">
-                                        {bid.requirements.license.map((item, index) => (
-                                            <li key={index} className="flex items-start gap-2">
-                                                <CheckCircle2 className="h-4 w-4 mt-0.5 text-green-600" />
-                                                <span className="text-sm">{item}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </div>
-
+                            {renderListOrEmpty("📋 참가자격", req?.eligibility)}
                             <Separator />
-
-                            <div>
-                                <h4 className="font-semibold mb-3">📍 지역 요건</h4>
-                                <p className="text-sm">{bid.requirements.location || "데이터 준비 중"}</p>
-                            </div>
-
+                            {renderListOrEmpty("📍 지역 요건", req?.regionReq)}
                             <Separator />
+                            {renderListOrEmpty("📈 실적 요건", req?.performance)}
 
-                            <div>
-                                <h4 className="font-semibold mb-3">📈 실적 요건</h4>
-                                <p className="text-sm">{bid.requirements.experience || "데이터 준비 중"}</p>
-                            </div>
-
-
+                            {req?.missing?.length ? (
+                                <>
+                                    <Separator />
+                                    <div className="rounded-lg border bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                                        <div className="font-semibold mb-1">추가 수집 필요 항목</div>
+                                        <ul className="list-disc pl-5 space-y-1">
+                                            {req.missing.map((m, i) => (
+                                                <li key={i}>{m}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </>
+                            ) : null}
                         </CardContent>
                     </Card>
                 </TabsContent>
 
+                {/* 체크리스트 */}
                 <TabsContent value="checklist" className="space-y-4">
                     <Card>
                         <CardHeader>
@@ -807,28 +1064,31 @@ export function BidSummary() {
                                 제출서류 체크리스트
                             </CardTitle>
                             <CardDescription>
-                                진행률: {completedItems}/{checklist.length} ({completionRate.toFixed(0)}%)
+                                진행률: {completedItems}/{mergedChecklist.length} ({completionRate.toFixed(0)}%)
                             </CardDescription>
                             <Progress value={completionRate} className="mt-2" />
                         </CardHeader>
                         <CardContent>
-                            {checklist.length === 0 ? (
+                            {mergedChecklist.length === 0 ? (
                                 <div className="text-sm text-muted-foreground">체크리스트 데이터 준비 중</div>
                             ) : (
                                 <div className="space-y-3">
-                                    {checklist.map((item, index) => (
+                                    {mergedChecklist.map((item, index) => (
                                         <button
-                                            key={index}
+                                            key={`${item.item}-${index}`}
                                             type="button"
                                             onClick={() => {
+                                                // mergedChecklist는 derived라 직접 setChecklist로만 토글
+                                                // docChecklist는 기본 false라, 토글이 필요하면 상태로 승격해야 함
+                                                // 여기서는 "기존 checklist" 항목만 토글 가능하게 처리
                                                 setChecklist((prev) =>
-                                                    prev.map((x, i) => (i === index ? { ...x, checked: !x.checked } : x)),
+                                                    prev.map((x) =>
+                                                        x.item === item.item ? { ...x, checked: !x.checked } : x,
+                                                    ),
                                                 );
                                             }}
                                             className={`w-full text-left flex items-center gap-3 p-3 rounded-lg border transition ${
-                                                item.checked
-                                                    ? "bg-green-50 border-green-200"
-                                                    : "bg-gray-50 hover:bg-gray-100"
+                                                item.checked ? "bg-green-50 border-green-200" : "bg-gray-50 hover:bg-gray-100"
                                             }`}
                                         >
                                             {item.checked ? (
@@ -848,10 +1108,18 @@ export function BidSummary() {
                                     ))}
                                 </div>
                             )}
+
+                            {docChecklist.length > 0 ? (
+                                <div className="mt-4 text-xs text-muted-foreground">
+                                    * 제출서류 목록(파싱)은 기본 미체크 상태로 표시됩니다. (필요하면 docChecklist도 state로
+                                    승격해서 토글 가능하게 바꿀 수 있어요)
+                                </div>
+                            ) : null}
                         </CardContent>
                     </Card>
                 </TabsContent>
 
+                {/* 리스크 */}
                 <TabsContent value="risks" className="space-y-4">
                     <Card>
                         <CardHeader>
@@ -862,38 +1130,21 @@ export function BidSummary() {
                             <CardDescription>참여 전 확인이 필요한 사항</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {bid.risks.length === 0 ? (
+                            {risksParsed.length === 0 ? (
                                 <div className="text-sm text-muted-foreground">리스크 데이터 준비 중</div>
                             ) : (
                                 <div className="space-y-3">
-                                    {bid.risks.map((risk, index) => (
+                                    {risksParsed.map((text, index) => (
                                         <div
                                             key={index}
-                                            className={`flex items-start gap-3 p-4 rounded-lg border ${
-                                                risk.level === "high"
-                                                    ? "bg-red-50 border-red-200"
-                                                    : risk.level === "medium"
-                                                        ? "bg-yellow-50 border-yellow-200"
-                                                        : "bg-blue-50 border-blue-200"
-                                            }`}
+                                            className="flex items-start gap-3 p-4 rounded-lg border bg-yellow-50 border-yellow-200"
                                         >
-                                            <AlertTriangle
-                                                className={`h-5 w-5 mt-0.5 ${
-                                                    risk.level === "high"
-                                                        ? "text-red-600"
-                                                        : risk.level === "medium"
-                                                            ? "text-yellow-600"
-                                                            : "text-blue-600"
-                                                }`}
-                                            />
+                                            <AlertTriangle className="h-5 w-5 mt-0.5 text-yellow-700" />
                                             <div>
-                                                <Badge
-                                                    variant={risk.level === "high" ? "destructive" : "outline"}
-                                                    className="mb-2"
-                                                >
-                                                    {levelToKor(risk.level)}
+                                                <Badge variant="outline" className="mb-2">
+                                                    주의
                                                 </Badge>
-                                                <p className="text-sm">{risk.text}</p>
+                                                <p className="text-sm">{text}</p>
                                             </div>
                                         </div>
                                     ))}
@@ -903,6 +1154,7 @@ export function BidSummary() {
                     </Card>
                 </TabsContent>
 
+                {/* 투찰 가이드 */}
                 <TabsContent value="price" className="space-y-4">
                     <Card>
                         <CardHeader>
@@ -910,37 +1162,67 @@ export function BidSummary() {
                                 <TrendingUp className="h-5 w-5" />
                                 투찰 범위 가이드
                             </CardTitle>
-                            <CardDescription>과거 데이터 기반 추천 투찰률</CardDescription>
+                            <CardDescription>AI 예측 기반 추천 투찰 범위 + 권고 액션</CardDescription>
                         </CardHeader>
+
                         <CardContent className="space-y-6">
                             <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
-                                <p className="text-sm text-muted-foreground mb-2">추천 투찰 범위</p>
+                                <p className="text-sm text-muted-foreground mb-2">포인트 예측가</p>
                                 <p className="text-3xl font-bold text-blue-600">
-                                    {bid.priceGuidance.recommended || "데이터 준비 중"}
+                                    {predictedPoint ? `${Number(predictedPoint).toLocaleString()} 원` : "데이터 준비 중"}
                                 </p>
+
+                                <div className="mt-2 text-sm text-muted-foreground">
+                                    {predictedMin && predictedMax
+                                        ? `예상 범위: ${Number(predictedMin).toLocaleString()} ~ ${Number(predictedMax).toLocaleString()} 원`
+                                        : null}
+                                </div>
+
+                                <div className="mt-2 text-xs text-muted-foreground">
+                                    신뢰도: {structured?.pricePrediction?.confidence ?? "데이터 준비 중"}
+                                </div>
                             </div>
 
                             <Separator />
 
                             <div className="space-y-4">
                                 <div>
-                                    <h4 className="font-semibold mb-2">📊 과거 낙찰 데이터</h4>
+                                    <h4 className="font-semibold mb-2">🧠 근거</h4>
                                     <p className="text-sm text-muted-foreground">
-                                        {bid.priceGuidance.historical || "데이터 준비 중"}
+                                        {structured?.pricePrediction?.basis ?? "데이터 준비 중"}
                                     </p>
                                 </div>
 
                                 <div>
-                                    <h4 className="font-semibold mb-2">🏢 예상 경쟁 현황</h4>
-                                    <p className="text-sm text-muted-foreground">
-                                        {bid.priceGuidance.competitors || "데이터 준비 중"}
-                                    </p>
+                                    <h4 className="font-semibold mb-2">⚠️ 리스크</h4>
+                                    {risksParsed.length === 0 ? (
+                                        <p className="text-sm text-muted-foreground">데이터 준비 중</p>
+                                    ) : (
+                                        <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+                                            {risksParsed.map((r, i) => (
+                                                <li key={i}>{r}</li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <h4 className="font-semibold mb-2">✅ 권고 액션(다음 72시간)</h4>
+                                    {actions72h.length === 0 ? (
+                                        <p className="text-sm text-muted-foreground">데이터 준비 중</p>
+                                    ) : (
+                                        <ul className="list-decimal pl-5 text-sm text-muted-foreground space-y-1">
+                                            {actions72h.map((a, i) => (
+                                                <li key={i}>{a}</li>
+                                            ))}
+                                        </ul>
+                                    )}
                                 </div>
 
                                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                                     <p className="text-sm">
-                                        <strong>💡 인사이트:</strong> 유사 규모·지역의 낙찰률 분포를 참고해 84.0% 전후의
-                                        투찰가를 검토하세요.
+                                        <strong>💡 인사이트:</strong> 예가범위/낙찰하한율에 따라 실제 투찰 전략은 달라질 수 있어요.
+                                        공고문 원문과 지역·자격요건을 먼저 확정한 뒤 투찰가를 결정하세요.
                                     </p>
                                 </div>
                             </div>
@@ -949,14 +1231,13 @@ export function BidSummary() {
                 </TabsContent>
             </Tabs>
 
-    <div className="pt-4 text-xs text-muted-foreground leading-relaxed">
-        본 페이지에 제공되는 정보 및 AI 분석 결과는 참고용 자료이며,
-        실제 공고문 원문 및 나라장터(G2B) 공지 내용을 반드시 우선 확인하시기 바랍니다.<br/>
-        당사는 본 자료의 정확성, 완전성 및 최신성을 보장하지 않으며,
-        이를 근거로 한 의사결정 및 입찰 결과에 대해 책임을 지지 않습니다.
-    </div>
-
-
+            <div className="pt-4 text-xs text-muted-foreground leading-relaxed">
+                본 페이지에 제공되는 정보 및 AI 분석 결과는 참고용 자료이며, 실제 공고문 원문 및
+                나라장터(G2B) 공지 내용을 반드시 우선 확인하시기 바랍니다.
+                <br />
+                당사는 본 자료의 정확성, 완전성 및 최신성을 보장하지 않으며, 이를 근거로 한 의사결정 및
+                입찰 결과에 대해 책임을 지지 않습니다.
+            </div>
         </div>
     );
 }
