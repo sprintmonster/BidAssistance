@@ -1,5 +1,13 @@
 import { api } from "./client";
-import type { ApiResponse, Post, PostListData, SortKey, PostCategory, Comment, Attachment } from "../types/community";
+import type {
+	ApiResponse,
+	Post,
+	PostListData,
+	SortKey,
+	PostCategory,
+	Comment,
+	Attachment,
+} from "../types/community";
 
 function toNum(v: any, fallback = 0) {
 	const n = Number(v);
@@ -30,14 +38,14 @@ function pickAuthorId(raw: any): string | undefined {
 }
 
 function normalizeAttachment(a: any): Attachment {
-	const name = toStr(a?.name ?? a?.fileName ?? "file");
-	const url = toStr(a?.url ?? "");
+	const name = toStr(a?.name ?? a?.fileName ?? a?.originalName ?? "file");
+	const url = toStr(a?.url ?? a?.downloadUrl ?? "");
 	return {
-		id: toNum(a?.id),
+		id: toNum(a?.id ?? a?.fileId ?? a?.attachmentId ?? 0),
 		name,
-		type: toStr(a?.type ?? ""),
+		type: toStr(a?.type ?? a?.mimeType ?? ""),
 		url,
-		size: toNum(a?.size ?? 0),
+		size: toNum(a?.size ?? a?.fileSize ?? 0),
 		isImage: !!a?.isImage || isImageByName(name) || url.startsWith("data:image"),
 	};
 }
@@ -45,7 +53,9 @@ function normalizeAttachment(a: any): Attachment {
 function normalizeComment(raw: any): Comment {
 	const id = toNum(raw?.id ?? raw?.commentId);
 	if (!Number.isFinite(id) || id <= 0) {
-		throw new Error(`댓글 ID가 올바르지 않습니다. (id=${String(raw?.id ?? raw?.commentId)})`);
+		throw new Error(
+			`댓글 ID가 올바르지 않습니다. (id=${String(raw?.id ?? raw?.commentId)})`,
+		);
 	}
 
 	return {
@@ -61,9 +71,13 @@ function normalizeComment(raw: any): Comment {
 
 function normalizePostFromDetail(raw: any): Post {
 	const id = toNum(raw?.id ?? raw?.postId);
-	if (!Number.isFinite(id) || id <= 0) throw new Error(`게시글 ID가 올바르지 않습니다. (id=${String(raw?.id)})`);
+	if (!Number.isFinite(id) || id <= 0) {
+		throw new Error(
+			`게시글 ID가 올바르지 않습니다. (id=${String(raw?.id ?? raw?.postId)})`,
+		);
+	}
 
-	const attachments = (raw?.attachments ?? []).map(normalizeAttachment);
+	const attachments = (raw?.attachments ?? raw?.files ?? []).map(normalizeAttachment);
 
 	return {
 		id,
@@ -71,65 +85,107 @@ function normalizePostFromDetail(raw: any): Post {
 		content: toStr(raw?.content ?? ""),
 		contentPreview: toStr(raw?.contentPreview ?? ""),
 		category: raw?.category ?? "question",
-		authorId: raw?.authorId != null ? String(raw.authorId) : undefined,
-		authorName: toStr(raw?.userName ?? raw?.authorName ?? "—"),
+		authorId: raw?.authorId != null ? String(raw.authorId) : pickAuthorId(raw),
+		authorName: toStr(raw?.userName ?? raw?.authorName ?? raw?.writerName ?? "—"),
 		createdAt: toStr(raw?.createdAt),
 		views: toNum(raw?.viewCount ?? raw?.views ?? 0),
 		likes: toNum(raw?.likeCount ?? raw?.likes ?? 0),
 		likedByMe: !!raw?.likedByMe,
 		comments: (raw?.comments ?? []).map(normalizeComment),
 		commentCount: toNum(raw?.commentCount ?? (raw?.comments?.length ?? 0)),
-		attachmentCount: toNum(raw?.attachmentCount ?? attachments.length),
+		attachmentCount: toNum(raw?.attachmentCount ?? raw?.fileCount ?? attachments.length),
 		attachments,
 	};
 }
 
-function normalizePostFromList(it: any): Post {
-	const id = toNum(it?.postId ?? it?.id);
-	if (!Number.isFinite(id) || id <= 0) throw new Error(`목록 게시글 ID 오류 (id=${String(it?.postId ?? it?.id)})`);
+function yn_to_bool(v: any): boolean | null {
+	if (typeof v === "boolean") return v;
+	if (typeof v === "number") return v !== 0;
+	if (typeof v !== "string") return null;
+	const s = v.trim().toUpperCase();
+	if (s === "Y" || s === "YES" || s === "TRUE" || s === "T") return true;
+	if (s === "N" || s === "NO" || s === "FALSE" || s === "F") return false;
+	return null;
+}
 
-	const listAttachments =
+function pickListAttachments(it: any): any[] {
+	return (
 		it?.attachments ??
 		it?.files ??
 		it?.fileList ??
 		it?.attachFiles ??
 		it?.attachmentList ??
-		[];
+		it?.attachedFiles ??
+		it?.uploadFiles ??
+		[]
+	);
+}
 
-	const rawCount =
+function pickListAttachmentCount(it: any, list: any[]): number {
+	const raw =
 		it?.attachmentCount ??
 		it?.attachmentsCount ??
 		it?.attachmentCnt ??
+		it?.attachCount ??
+		it?.attachCnt ??
 		it?.fileCount ??
 		it?.filesCount ??
 		it?.fileCnt ??
-		it?.attachCount ??
-		it?.attachCnt;
+		it?.uploadCount ??
+		it?.uploadCnt;
 
-	let attachmentCount = toNum(rawCount, -1);
-	if (attachmentCount < 0) {
-		if (it?.hasAttachment === true || it?.hasAttachments === true || it?.hasFile === true)
-			attachmentCount = 1;
-		else if (Array.isArray(listAttachments) && listAttachments.length > 0)
-			attachmentCount = listAttachments.length;
-		else attachmentCount = 0;
+	const n = Number(raw);
+	if (Number.isFinite(n) && n >= 0) return n;
+
+	// boolean/YN 플래그류 지원
+	const b1 = yn_to_bool(it?.hasAttachment ?? it?.hasAttachments ?? it?.hasFile);
+	if (b1 === true) return 1;
+
+	const b2 = yn_to_bool(it?.fileYn ?? it?.fileYN ?? it?.attachYn ?? it?.attachYN ?? it?.attchYn);
+	if (b2 === true) return 1;
+
+	// id가 있는 형태(예: atchFileId / attachmentId / fileGroupId 등) 지원
+	const idLike =
+		it?.atchFileId ??
+		it?.attachmentId ??
+		it?.fileId ??
+		it?.fileGroupId ??
+		it?.fileGroup ??
+		it?.attachGroupId ??
+		it?.attachFileId;
+	if (idLike != null && String(idLike).trim() !== "" && String(idLike).trim() !== "0") return 1;
+
+	// 리스트 자체가 있으면 길이로 추정
+	if (Array.isArray(list) && list.length > 0) return list.length;
+
+	return 0;
+}
+
+function normalizePostFromList(it: any): Post {
+	const id = toNum(it?.postId ?? it?.id);
+	if (!Number.isFinite(id) || id <= 0) {
+		throw new Error(`목록 게시글 ID 오류 (id=${String(it?.postId ?? it?.id)})`);
 	}
+
+	const listAttachments = pickListAttachments(it);
+	const attachmentCount = pickListAttachmentCount(it, listAttachments);
 
 	return {
 		id,
 		title: toStr(it?.title),
-		contentPreview: toStr(it?.contentPreview ?? ""),
+		contentPreview: toStr(it?.contentPreview ?? it?.preview ?? ""),
 		category: it?.category ?? "question",
-		authorId: it?.authorId != null ? String(it.authorId) : undefined,
-		authorName: toStr(it?.authorName ?? "—"),
+		authorId: it?.authorId != null ? String(it.authorId) : pickAuthorId(it),
+		authorName: toStr(it?.authorName ?? it?.userName ?? it?.writerName ?? "—"),
 		createdAt: toStr(it?.createdAt),
-		views: toNum(it?.views ?? 0),
-		likes: toNum(it?.likes ?? 0),
+		views: toNum(it?.views ?? it?.viewCount ?? 0),
+		likes: toNum(it?.likes ?? it?.likeCount ?? 0),
 		likedByMe: !!it?.likedByMe,
 		commentCount: toNum(it?.commentCount ?? 0),
 		comments: it?.comments ?? [],
 		attachmentCount,
-		attachments: it?.attachments ?? [],
+		// 목록에서는 상세 구조가 아닐 수 있으니, 배열이 맞을 때만 넣음
+		attachments: Array.isArray(it?.attachments) ? it.attachments : [],
 		content: it?.content,
 	};
 }
@@ -168,12 +224,26 @@ export function fetchCommunityPosts(opts: {
 		.then(unwrap)
 		.then((data: any) => {
 			const items = (data?.items ?? []).map(normalizePostFromList);
+
+			// 개발 중 확인용 (원하면 지워도 됨)
+			if ((import.meta as any)?.env?.DEV) {
+				const sample = items.slice(0, 5).map((p: any) => ({
+					id: p.id,
+					title: p.title,
+					attachmentCount: p.attachmentCount,
+				}));
+				// eslint-disable-next-line no-console
+				console.debug("[community] list attachmentCount sample:", sample);
+			}
+
 			return { ...data, items };
 		});
 }
 
 export function fetchCommunityPost(postId: number) {
-	return api<ApiResponse<any>>(`/board/${postId}`).then(unwrap).then((raw) => normalizePostFromDetail(raw));
+	return api<ApiResponse<any>>(`/board/${postId}`)
+		.then(unwrap)
+		.then((raw) => normalizePostFromDetail(raw));
 }
 
 export function createCommunityPost(payload: {
