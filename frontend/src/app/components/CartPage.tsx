@@ -16,6 +16,12 @@ function parse_time(v: string): number {
 	return 0;
 }
 
+function is_past_bid(bidEnd: string, nowMs: number): boolean {
+	const t = parse_time(String(bidEnd));
+	if (t <= 0) return false;
+	return t < nowMs;
+}
+
 function formatAmount(value: unknown): string {
 	if (value == null || value === "") return "-";
 	const n =
@@ -104,9 +110,7 @@ export function CartPage({
 			return;
 		}
 		const items = await fetchWishlist(userId);
-        console.log("wishlist raw items", items);
-
-        setWishlist(items);
+		setWishlist(items);
 	};
 
 	useEffect(() => {
@@ -125,13 +129,24 @@ export function CartPage({
 			LOST: 0,
 		};
 		for (const it of wishlist) {
+			if (is_past_bid(String(it.bidEnd), nowMs)) continue;
 			counts[it.stage] = (counts[it.stage] ?? 0) + 1;
 		}
 		return counts;
-	}, [wishlist]);
+	}, [wishlist, nowMs]);
+
+	const activeWishlist = useMemo(
+		() => wishlist.filter((it) => !is_past_bid(String(it.bidEnd), nowMs)),
+		[wishlist, nowMs],
+	);
+
+	const pastWishlist = useMemo(
+		() => wishlist.filter((it) => is_past_bid(String(it.bidEnd), nowMs)),
+		[wishlist, nowMs],
+	);
 
 	const visibleItems = useMemo(() => {
-		let items = wishlist.slice();
+		let items = activeWishlist.slice();
 		if (activeStage !== "ALL") items = items.filter((it) => it.stage === activeStage);
 
 		items.sort((a, b) => {
@@ -144,7 +159,13 @@ export function CartPage({
 		});
 
 		return items;
-	}, [wishlist, activeStage, sortKey]);
+	}, [activeWishlist, activeStage, sortKey]);
+
+	const visiblePastItems = useMemo(() => {
+		const items = pastWishlist.slice();
+		items.sort((a, b) => parse_time(String(b.bidEnd)) - parse_time(String(a.bidEnd)));
+		return items;
+	}, [pastWishlist]);
 
 	const onDelete = async (bidId: number) => {
 		try {
@@ -267,7 +288,11 @@ export function CartPage({
 					{wishlist.length === 0 ? (
 						<div className="p-5 text-slate-500">찜한 공고가 없습니다.</div>
 					) : visibleItems.length === 0 ? (
-						<div className="p-5 text-slate-500">해당 단계에 공고가 없습니다.</div>
+						<div className="p-5 text-slate-500">
+							{activeWishlist.length === 0
+								? "현재 진행 중인 공고가 없습니다."
+								: "해당 단계에 공고가 없습니다."}
+						</div>
 					) : (
 						<div className="divide-y">
 							{visibleItems.map((w) => {
@@ -367,6 +392,81 @@ export function CartPage({
 						</div>
 					)}
 				</div>
+
+				{pastWishlist.length > 0 ? (
+					<div className="bg-white border rounded-2xl overflow-hidden">
+						<div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b">
+							<div className="font-semibold text-slate-900">지난 공고 목록</div>
+							<div className="text-sm text-slate-500">{pastWishlist.length}건</div>
+						</div>
+
+						<div className="divide-y">
+							{visiblePastItems.map((w) => {
+								const amountText = w.baseAmount
+									? `${formatAmount(w.baseAmount)}원`
+									: "";
+								const endText = w.bidEnd
+									? `마감 ${formatDateTimeOneLine(String(w.bidEnd))}`
+									: "";
+
+								return (
+									<div
+										key={`past:${w.id}:${w.bidId}`}
+										className="px-4 sm:px-5 py-4 hover:bg-slate-50 transition-colors"
+									>
+										<div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 sm:gap-4 items-start">
+											<button
+												type="button"
+												className="text-left min-w-0"
+												onClick={() => navigate(`/bids/${w.bidId}`)}
+											>
+												<div className="flex items-center gap-2 min-w-0">
+													<div className="font-semibold text-slate-900 truncate">
+														{w.title}
+													</div>
+													<span className="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-700">
+														마감됨
+													</span>
+												</div>
+
+												<div className="mt-1 text-sm text-slate-500 flex flex-wrap gap-x-2 gap-y-1">
+													<span>{w.agency}</span>
+													{w.baseAmount ? (
+														<>
+															<span className="text-slate-300">·</span>
+															<span>{amountText}</span>
+														</>
+													) : null}
+													{w.bidEnd ? (
+														<>
+															<span className="text-slate-300">·</span>
+															<span>{endText}</span>
+														</>
+													) : null}
+												</div>
+											</button>
+
+											<div className="flex items-center justify-end">
+												<button
+													type="button"
+													className="h-10 w-10 inline-flex items-center justify-center rounded-full border bg-white hover:bg-red-50 hover:border-red-200 transition-colors"
+													onClick={(e) => {
+														e.stopPropagation();
+														void onDelete(w.bidId);
+													}}
+													aria-label="삭제"
+													title="삭제"
+												>
+													<Trash2 className="h-4 w-4 text-red-500" />
+												</button>
+											</div>
+										</div>
+									</div>
+								);
+							})}
+						</div>
+					</div>
+				) : null}
 			</div>
 		</div>
 	);
