@@ -5,9 +5,29 @@ import { Trash2 } from "lucide-react";
 import { fetchWishlist, toggleWishlist, updateWishlist } from "../api/wishlist";
 import type { WishlistItem } from "../types/wishlist";
 import type { BidStage } from "../types/bid";
-import { BID_STAGE_OPTIONS, BID_STAGES } from "../types/bid";
+import { BID_STAGE_OPTIONS } from "../types/bid";
 
 type SortKey = "DEADLINE_ASC" | "DEADLINE_DESC" | "TITLE_ASC";
+
+type PastResult = "NONE" | "WON" | "LOST";
+
+const ACTIVE_STAGES: BidStage[] = [
+	"INTEREST",
+	"REVIEW",
+	"DECIDED",
+	"DOC_PREP",
+	"SUBMITTED",
+];
+
+const ACTIVE_STAGE_OPTIONS = BID_STAGE_OPTIONS.filter((o) =>
+	(ACTIVE_STAGES as readonly string[]).includes(o.value),
+);
+
+const PAST_RESULT_OPTIONS: Array<{ value: PastResult; label: string }> = [
+	{ value: "NONE", label: "미투찰" },
+	{ value: "WON", label: "낙찰" },
+	{ value: "LOST", label: "탈락" },
+];
 
 function parse_time(v: string): number {
 	if (!v) return 0;
@@ -84,6 +104,12 @@ function dday_label(daysLeft: number): string | null {
 	return `D-${daysLeft}`;
 }
 
+function past_result_from_stage(stage: BidStage): PastResult {
+	if (stage === "WON") return "WON";
+	if (stage === "LOST") return "LOST";
+	return "NONE";
+}
+
 export function CartPage({
 	setGlobalLoading,
 	showToast,
@@ -118,23 +144,6 @@ export function CartPage({
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	const stageCounts = useMemo(() => {
-		const counts: Record<BidStage, number> = {
-			INTEREST: 0,
-			REVIEW: 0,
-			DECIDED: 0,
-			DOC_PREP: 0,
-			SUBMITTED: 0,
-			WON: 0,
-			LOST: 0,
-		};
-		for (const it of wishlist) {
-			if (is_past_bid(String(it.bidEnd), nowMs)) continue;
-			counts[it.stage] = (counts[it.stage] ?? 0) + 1;
-		}
-		return counts;
-	}, [wishlist, nowMs]);
-
 	const activeWishlist = useMemo(
 		() => wishlist.filter((it) => !is_past_bid(String(it.bidEnd), nowMs)),
 		[wishlist, nowMs],
@@ -145,8 +154,26 @@ export function CartPage({
 		[wishlist, nowMs],
 	);
 
+	const stageCounts = useMemo(() => {
+		const counts: Record<BidStage, number> = {
+			INTEREST: 0,
+			REVIEW: 0,
+			DECIDED: 0,
+			DOC_PREP: 0,
+			SUBMITTED: 0,
+			WON: 0,
+			LOST: 0,
+		};
+		for (const it of activeWishlist) {
+			if ((ACTIVE_STAGES as readonly string[]).includes(it.stage))
+				counts[it.stage] = (counts[it.stage] ?? 0) + 1;
+		}
+		return counts;
+	}, [activeWishlist]);
+
 	const visibleItems = useMemo(() => {
 		let items = activeWishlist.slice();
+
 		if (activeStage !== "ALL") items = items.filter((it) => it.stage === activeStage);
 
 		items.sort((a, b) => {
@@ -161,10 +188,26 @@ export function CartPage({
 		return items;
 	}, [activeWishlist, activeStage, sortKey]);
 
-	const visiblePastItems = useMemo(() => {
-		const items = pastWishlist.slice();
-		items.sort((a, b) => parse_time(String(b.bidEnd)) - parse_time(String(a.bidEnd)));
-		return items;
+	const pastGrouped = useMemo(() => {
+		const none: WishlistItem[] = [];
+		const won: WishlistItem[] = [];
+		const lost: WishlistItem[] = [];
+
+		for (const it of pastWishlist) {
+			const r = past_result_from_stage(it.stage);
+			if (r === "WON") won.push(it);
+			else if (r === "LOST") lost.push(it);
+			else none.push(it);
+		}
+
+		const by_end_desc = (a: WishlistItem, b: WishlistItem) =>
+			parse_time(String(b.bidEnd)) - parse_time(String(a.bidEnd));
+
+		none.sort(by_end_desc);
+		won.sort(by_end_desc);
+		lost.sort(by_end_desc);
+
+		return { none, won, lost };
 	}, [pastWishlist]);
 
 	const onDelete = async (bidId: number) => {
@@ -213,19 +256,168 @@ export function CartPage({
 		}
 	};
 
+	const onChangePastResult = async (item: WishlistItem, result: PastResult) => {
+		const current = past_result_from_stage(item.stage);
+		if (current === result) return;
+
+		let nextStage: BidStage = item.stage;
+
+		if (result === "WON") nextStage = "WON";
+		else if (result === "LOST") nextStage = "LOST";
+		else {
+			nextStage = "SUBMITTED";
+		}
+
+		try {
+			const userId = get_user_id();
+			if (userId === null) {
+				showToast("userId가 없습니다. 다시 로그인 해주세요.", "error");
+				return;
+			}
+			setGlobalLoading(true);
+
+			const res = await updateWishlist({
+				userId,
+				bidId: item.bidId,
+				wishlistId: item.id,
+				stage: nextStage,
+			});
+
+			setWishlist((prev) =>
+				prev.map((it) =>
+					it.bidId === item.bidId ? { ...it, stage: nextStage } : it,
+				),
+			);
+
+			showToast(res.message || "지난 공고 상태가 변경되었습니다.", "success");
+		} catch (e: any) {
+			showToast(e?.message || "상태 변경 실패", "error");
+		} finally {
+			setGlobalLoading(false);
+		}
+	};
+
+	function PastSection({
+		title,
+		count,
+		items,
+		badgeClass,
+	}: {
+		title: string;
+		count: number;
+		items: WishlistItem[];
+		badgeClass: string;
+	}) {
+		return (
+			<div className="border rounded-xl overflow-hidden">
+				<div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b">
+					<div className="flex items-center gap-2">
+						<span className="font-semibold text-slate-900">{title}</span>
+						<span
+							className={[
+								"inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
+								badgeClass,
+							].join(" ")}
+						>
+							{count}건
+						</span>
+					</div>
+				</div>
+
+				{items.length === 0 ? (
+					<div className="px-4 py-5 text-sm text-slate-500">해당 항목이 없습니다.</div>
+				) : (
+					<div className="divide-y">
+						{items.map((w) => {
+							const amountText = w.baseAmount ? `${formatAmount(w.baseAmount)}원` : "";
+							const endText = w.bidEnd
+								? `마감 ${formatDateTimeOneLine(String(w.bidEnd))}`
+								: "";
+							const value = past_result_from_stage(w.stage);
+
+							return (
+								<div
+									key={`past:${w.id}:${w.bidId}`}
+									className="px-4 sm:px-5 py-4 hover:bg-slate-50 transition-colors"
+								>
+									<div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 sm:gap-4 items-start">
+										<button
+											type="button"
+											className="text-left min-w-0"
+											onClick={() => navigate(`/bids/${w.bidId}`)}
+										>
+											<div className="font-semibold text-slate-900 truncate">
+												{w.title}
+											</div>
+
+											<div className="mt-1 text-sm text-slate-500 flex flex-wrap gap-x-2 gap-y-1">
+												<span>{w.agency}</span>
+												{w.baseAmount ? (
+													<>
+														<span className="text-slate-300">·</span>
+														<span>{amountText}</span>
+													</>
+												) : null}
+												{w.bidEnd ? (
+													<>
+														<span className="text-slate-300">·</span>
+														<span>{endText}</span>
+													</>
+												) : null}
+											</div>
+										</button>
+
+										<div className="flex items-center justify-end gap-2">
+											<select
+												className="h-9 rounded-full border bg-white px-3 text-sm"
+												value={value}
+												onClick={(e) => e.stopPropagation()}
+												onChange={(e) => {
+													e.stopPropagation();
+													void onChangePastResult(w, e.target.value as PastResult);
+												}}
+											>
+												{PAST_RESULT_OPTIONS.map((opt) => (
+													<option key={opt.value} value={opt.value}>
+														{opt.label}
+													</option>
+												))}
+											</select>
+
+											<button
+												type="button"
+												className="h-9 w-9 inline-flex items-center justify-center rounded-full border bg-white hover:bg-red-50 hover:border-red-200 transition-colors"
+												onClick={(e) => {
+													e.stopPropagation();
+													void onDelete(w.bidId);
+												}}
+												aria-label="삭제"
+												title="삭제"
+											>
+												<Trash2 className="h-4 w-4 text-red-500" />
+											</button>
+										</div>
+									</div>
+								</div>
+							);
+						})}
+					</div>
+				)}
+			</div>
+		);
+	}
+
 	return (
 		<div className="w-full">
 			<div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 space-y-5">
 				<div>
 					<h2 className="text-2xl font-bold">장바구니</h2>
-					<div className="text-sm text-slate-500">
-						장바구니에 담은 공고를 관리하세요
-					</div>
+					<div className="text-sm text-slate-500">장바구니에 담은 공고를 관리하세요</div>
 				</div>
 
 				<div className="bg-white border rounded-2xl p-4 sm:p-5">
-					<div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-						{BID_STAGES.map((st) => {
+					<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+						{ACTIVE_STAGES.map((st) => {
 							const label = stage_label(st);
 							const count = stageCounts[st] ?? 0;
 							const active = activeStage === st;
@@ -242,9 +434,7 @@ export function CartPage({
 									].join(" ")}
 								>
 									<div className="text-xs text-slate-500">{label}</div>
-									<div className="text-lg font-semibold text-slate-900">
-										{count}건
-									</div>
+									<div className="text-lg font-semibold text-slate-900">{count}건</div>
 								</button>
 							);
 						})}
@@ -303,6 +493,9 @@ export function CartPage({
 								const label = daysLeft == null ? null : dday_label(daysLeft);
 								const showBadge = label != null && daysLeft != null && daysLeft <= 7;
 
+								const currentInActive =
+									(ACTIVE_STAGES as readonly string[]).includes(w.stage);
+
 								return (
 									<div
 										key={`${w.id}:${w.bidId}`}
@@ -356,14 +549,19 @@ export function CartPage({
 													<div className="w-[128px] sm:w-[140px]">
 														<select
 															className="h-9 w-full rounded-full border bg-white px-3 text-sm"
-															value={w.stage}
+															value={currentInActive ? w.stage : "SUBMITTED"}
 															onClick={(e) => e.stopPropagation()}
 															onChange={(e) => {
 																e.stopPropagation();
 																void onChangeStage(w, e.target.value as BidStage);
 															}}
 														>
-															{BID_STAGE_OPTIONS.map((opt) => (
+															{currentInActive ? null : (
+																<option value="SUBMITTED">
+																	{`(현재값: ${stage_label(w.stage)})`}
+																</option>
+															)}
+															{ACTIVE_STAGE_OPTIONS.map((opt) => (
 																<option key={opt.value} value={opt.value}>
 																	{opt.label}
 																</option>
@@ -400,70 +598,25 @@ export function CartPage({
 							<div className="text-sm text-slate-500">{pastWishlist.length}건</div>
 						</div>
 
-						<div className="divide-y">
-							{visiblePastItems.map((w) => {
-								const amountText = w.baseAmount
-									? `${formatAmount(w.baseAmount)}원`
-									: "";
-								const endText = w.bidEnd
-									? `마감 ${formatDateTimeOneLine(String(w.bidEnd))}`
-									: "";
-
-								return (
-									<div
-										key={`past:${w.id}:${w.bidId}`}
-										className="px-4 sm:px-5 py-4 hover:bg-slate-50 transition-colors"
-									>
-										<div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 sm:gap-4 items-start">
-											<button
-												type="button"
-												className="text-left min-w-0"
-												onClick={() => navigate(`/bids/${w.bidId}`)}
-											>
-												<div className="flex items-center gap-2 min-w-0">
-													<div className="font-semibold text-slate-900 truncate">
-														{w.title}
-													</div>
-													<span className="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-700">
-														마감됨
-													</span>
-												</div>
-
-												<div className="mt-1 text-sm text-slate-500 flex flex-wrap gap-x-2 gap-y-1">
-													<span>{w.agency}</span>
-													{w.baseAmount ? (
-														<>
-															<span className="text-slate-300">·</span>
-															<span>{amountText}</span>
-														</>
-													) : null}
-													{w.bidEnd ? (
-														<>
-															<span className="text-slate-300">·</span>
-															<span>{endText}</span>
-														</>
-													) : null}
-												</div>
-											</button>
-
-											<div className="flex items-center justify-end">
-												<button
-													type="button"
-													className="h-10 w-10 inline-flex items-center justify-center rounded-full border bg-white hover:bg-red-50 hover:border-red-200 transition-colors"
-													onClick={(e) => {
-														e.stopPropagation();
-														void onDelete(w.bidId);
-													}}
-													aria-label="삭제"
-													title="삭제"
-												>
-													<Trash2 className="h-4 w-4 text-red-500" />
-												</button>
-											</div>
-										</div>
-									</div>
-								);
-							})}
+						<div className="p-4 sm:p-5 space-y-4">
+							<PastSection
+								title="미투찰"
+								count={pastGrouped.none.length}
+								items={pastGrouped.none}
+								badgeClass="bg-slate-100 text-slate-700"
+							/>
+							<PastSection
+								title="낙찰"
+								count={pastGrouped.won.length}
+								items={pastGrouped.won}
+								badgeClass="bg-emerald-100 text-emerald-700"
+							/>
+							<PastSection
+								title="탈락"
+								count={pastGrouped.lost.length}
+								items={pastGrouped.lost}
+								badgeClass="bg-rose-100 text-rose-700"
+							/>
 						</div>
 					</div>
 				) : null}
