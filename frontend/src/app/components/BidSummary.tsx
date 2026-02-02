@@ -292,7 +292,7 @@ function parseKoreanMarkdownReport(text: string): AnalysisStructured {
         kv.get("예상 낙찰가") ??
         kv.get("예상 낙찰가(포인트)") ??
         null;
-
+    
     const conf = kv.get("신뢰도");
     if (conf) {
         const c = conf.trim();
@@ -644,8 +644,8 @@ export function BidSummary() {
 
         if (!bid) return;
 
-        // 이미 분석 데이터 있으면 스킵 (중복 호출 방지)
-        if (analysis?.structured || analysis?.analysisContent || analysis?.predictedPrice) return;
+        // // 이미 분석 데이터 있으면 스킵 (중복 호출 방지)
+        // if (analysis?.structured || analysis?.analysisContent || analysis?.predictedPrice) return;
 
         try {
             setAnalyzing(true);

@@ -337,11 +337,31 @@ export function CommunityPage() {
         if (!authed) return go_login();
 
         try {
+            const inlineIds = draft.inlineAttachmentIds ?? [];
+            const inlineKeySet = new Set(draft.inlineFileKeys ?? []);
+
+            const fileKey = (f: File) => `${f.name}:${f.size}:${f.lastModified}`;
+
+            //  인라인으로 이미 업로드된 파일은 재업로드하지 않기
+            const filesToUpload = (draft.files ?? []).filter((f) => !inlineKeySet.has(fileKey(f)));
+
             let attachment_ids: string[] | undefined;
-            if (draft.files.length > 0) {
-                const uploaded = await uploadCommunityAttachments(draft.files);
-                attachment_ids = uploaded.map((a) => String((a as any).id));
+
+            const combined: string[] = [];
+
+            // 인라인 업로드된 attachmentId 먼저 포함
+            for (const id of inlineIds) {
+                const n = Number(id);
+                if (Number.isFinite(n) && n > 0) combined.push(String(n));
             }
+
+            //  첨부파일 중 인라인 아닌 것만 업로드
+            if (filesToUpload.length > 0) {
+                const uploaded = await uploadCommunityAttachments(filesToUpload);
+                combined.push(...uploaded.map((a) => String((a as any).id)));
+            }
+
+            attachment_ids = combined.length > 0 ? combined : undefined;
 
             const created = await createCommunityPost({
                 title: draft.title,
@@ -366,6 +386,7 @@ export function CommunityPage() {
             alert(e?.message || "게시글 작성에 실패했습니다.");
         }
     };
+
 
     const add_comment = async (post_id: number, content: string) => {
         if (!authed) return go_login();
@@ -644,8 +665,23 @@ export function CommunityPage() {
             ) : null}
 
             {view_mode === "new" ? (
-                <NewPostForm onSubmit={add_post} onCancel={() => set_view_mode("list")} />
+                <NewPostForm
+                    onSubmit={add_post}
+                    onCancel={() => set_view_mode("list")}
+                    onUploadInlineFile={async (file) => {
+                        const uploaded = await uploadCommunityAttachments([file]);
+                        const first = uploaded[0];
+                        const id = Number((first as any)?.id);
+                        const url = (first as any)?.url;
+
+                        if (!Number.isFinite(id) || id <= 0 || !url) {
+                            throw new Error("파일 업로드에 실패했습니다.");
+                        }
+                        return { url, attachmentId: id };
+                    }}
+                />
             ) : null}
+
         </div>
     );
 }
