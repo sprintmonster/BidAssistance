@@ -1,4 +1,4 @@
-import { ChevronRight, Eye, MessageSquare, Paperclip, ThumbsUp } from "lucide-react";
+import { ChevronRight, Eye, MessageSquare, ThumbsUp } from "lucide-react";
 import type { Post } from "../types/community";
 
 import { Badge } from "./ui/badge";
@@ -64,6 +64,37 @@ function formatCreatedAt(input: unknown) {
 	}).format(d);
 }
 
+function to_num(v: unknown): number {
+	const n = typeof v === "number" ? v : Number(v);
+	if (!Number.isFinite(n)) return 0;
+	if (n < 0) return 0;
+	return Math.floor(n);
+}
+
+function get_attachment_count(post: Post): number {
+	const anyPost = post as any;
+	return to_num(
+		post.attachmentCount ??
+			(post.attachments?.length ?? 0) ??
+			anyPost.fileCount ??
+			(anyPost.files?.length ?? 0),
+	);
+}
+
+function AttachmentMark({ count }: { count: number }) {
+	if (count <= 0) return null;
+	return (
+		<span
+			className="shrink-0 inline-flex items-center gap-1 text-xs text-gray-400"
+			aria-label={`첨부파일 ${count}개`}
+			title={`첨부파일 ${count}개`}
+		>
+			<span aria-hidden="true">📎</span>
+			{count > 1 ? <span className="tabular-nums">{count}</span> : null}
+		</span>
+	);
+}
+
 export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 	return (
 		<div className="space-y-3">
@@ -86,7 +117,7 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 						<TableBody>
 							{posts.map((post) => {
 								const commentCount = post.commentCount ?? (post.comments?.length ?? 0);
-								const hasFile = (post.attachmentCount ?? (post.attachments?.length ?? 0)) > 0;
+								const attachmentCount = get_attachment_count(post);
 
 								return (
 									<TableRow
@@ -103,9 +134,7 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 												<div className="font-medium text-gray-900 truncate min-w-0">
 													{post.title}
 												</div>
-												{hasFile ? (
-													<Paperclip className="h-4 w-4 text-gray-400 shrink-0" />
-												) : null}
+												<AttachmentMark count={attachmentCount} />
 											</div>
 											<div className="mt-0.5 text-xs text-gray-500 line-clamp-1">
 												{post.contentPreview ?? post.content ?? ""}
@@ -163,6 +192,8 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 			<div className="md:hidden space-y-3">
 				{posts.map((post) => {
 					const commentCount = post.commentCount ?? (post.comments?.length ?? 0);
+					const attachmentCount = get_attachment_count(post);
+
 					return (
 						<div
 							key={post.id}
@@ -176,7 +207,13 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 								<span className="text-xs text-gray-500">{formatCreatedAt(post.createdAt)}</span>
 							</div>
 
-							<div className="font-semibold text-gray-900 mb-1 line-clamp-1">{post.title}</div>
+							<div className="flex items-center gap-2 min-w-0 mb-1">
+								<div className="font-semibold text-gray-900 line-clamp-1 min-w-0">
+									{post.title}
+								</div>
+								<AttachmentMark count={attachmentCount} />
+							</div>
+
 							<div className="text-sm text-gray-600 line-clamp-2">
 								{post.contentPreview ?? post.content ?? ""}
 							</div>
