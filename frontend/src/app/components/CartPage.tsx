@@ -8,6 +8,7 @@ import type { BidStage } from "../types/bid";
 import { BID_STAGE_OPTIONS } from "../types/bid";
 
 type SortKey = "DEADLINE_ASC" | "DEADLINE_DESC" | "TITLE_ASC";
+type PastSortKey = "DEADLINE_NEAR" | "DEADLINE_OLD" | "TITLE_ASC";
 
 type PastResult = "NONE" | "WON" | "LOST";
 
@@ -110,6 +111,28 @@ function past_result_from_stage(stage: BidStage): PastResult {
 	return "NONE";
 }
 
+function PastBadge({ result }: { result: PastResult }) {
+	const cls =
+		result === "WON"
+			? "bg-emerald-100 text-emerald-700"
+			: result === "LOST"
+				? "bg-rose-100 text-rose-700"
+				: "bg-slate-100 text-slate-700";
+
+	const label = result === "WON" ? "낙찰" : result === "LOST" ? "탈락" : "미투찰";
+
+	return (
+		<span
+			className={[
+				"shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
+				cls,
+			].join(" ")}
+		>
+			{label}
+		</span>
+	);
+}
+
 export function CartPage({
 	setGlobalLoading,
 	showToast,
@@ -122,6 +145,7 @@ export function CartPage({
 	const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
 	const [activeStage, setActiveStage] = useState<BidStage | "ALL">("ALL");
 	const [sortKey, setSortKey] = useState<SortKey>("DEADLINE_ASC");
+	const [pastSortKey, setPastSortKey] = useState<PastSortKey>("DEADLINE_NEAR");
 	const [nowMs, setNowMs] = useState(() => Date.now());
 
 	useEffect(() => {
@@ -188,27 +212,22 @@ export function CartPage({
 		return items;
 	}, [activeWishlist, activeStage, sortKey]);
 
-	const pastGrouped = useMemo(() => {
-		const none: WishlistItem[] = [];
-		const won: WishlistItem[] = [];
-		const lost: WishlistItem[] = [];
+	const visiblePastItems = useMemo(() => {
+		const items = pastWishlist.slice();
 
-		for (const it of pastWishlist) {
-			const r = past_result_from_stage(it.stage);
-			if (r === "WON") won.push(it);
-			else if (r === "LOST") lost.push(it);
-			else none.push(it);
-		}
+		items.sort((a, b) => {
+			if (pastSortKey === "TITLE_ASC")
+				return String(a.title).localeCompare(String(b.title));
 
-		const by_end_desc = (a: WishlistItem, b: WishlistItem) =>
-			parse_time(String(b.bidEnd)) - parse_time(String(a.bidEnd));
+			const ta = parse_time(String(a.bidEnd));
+			const tb = parse_time(String(b.bidEnd));
 
-		none.sort(by_end_desc);
-		won.sort(by_end_desc);
-		lost.sort(by_end_desc);
+			if (pastSortKey === "DEADLINE_NEAR") return tb - ta;
+			return ta - tb;
+		});
 
-		return { none, won, lost };
-	}, [pastWishlist]);
+		return items;
+	}, [pastWishlist, pastSortKey]);
 
 	const onDelete = async (bidId: number) => {
 		try {
@@ -264,9 +283,7 @@ export function CartPage({
 
 		if (result === "WON") nextStage = "WON";
 		else if (result === "LOST") nextStage = "LOST";
-		else {
-			nextStage = "SUBMITTED";
-		}
+		else nextStage = "SUBMITTED";
 
 		try {
 			const userId = get_user_id();
@@ -297,122 +314,14 @@ export function CartPage({
 		}
 	};
 
-	function PastSection({
-		title,
-		count,
-		items,
-		badgeClass,
-	}: {
-		title: string;
-		count: number;
-		items: WishlistItem[];
-		badgeClass: string;
-	}) {
-		return (
-			<div className="border rounded-xl overflow-hidden">
-				<div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b">
-					<div className="flex items-center gap-2">
-						<span className="font-semibold text-slate-900">{title}</span>
-						<span
-							className={[
-								"inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
-								badgeClass,
-							].join(" ")}
-						>
-							{count}건
-						</span>
-					</div>
-				</div>
-
-				{items.length === 0 ? (
-					<div className="px-4 py-5 text-sm text-slate-500">해당 항목이 없습니다.</div>
-				) : (
-					<div className="divide-y">
-						{items.map((w) => {
-							const amountText = w.baseAmount ? `${formatAmount(w.baseAmount)}원` : "";
-							const endText = w.bidEnd
-								? `마감 ${formatDateTimeOneLine(String(w.bidEnd))}`
-								: "";
-							const value = past_result_from_stage(w.stage);
-
-							return (
-								<div
-									key={`past:${w.id}:${w.bidId}`}
-									className="px-4 sm:px-5 py-4 hover:bg-slate-50 transition-colors"
-								>
-									<div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 sm:gap-4 items-start">
-										<button
-											type="button"
-											className="text-left min-w-0"
-											onClick={() => navigate(`/bids/${w.bidId}`)}
-										>
-											<div className="font-semibold text-slate-900 truncate">
-												{w.title}
-											</div>
-
-											<div className="mt-1 text-sm text-slate-500 flex flex-wrap gap-x-2 gap-y-1">
-												<span>{w.agency}</span>
-												{w.baseAmount ? (
-													<>
-														<span className="text-slate-300">·</span>
-														<span>{amountText}</span>
-													</>
-												) : null}
-												{w.bidEnd ? (
-													<>
-														<span className="text-slate-300">·</span>
-														<span>{endText}</span>
-													</>
-												) : null}
-											</div>
-										</button>
-
-										<div className="flex items-center justify-end gap-2">
-											<select
-												className="h-9 rounded-full border bg-white px-3 text-sm"
-												value={value}
-												onClick={(e) => e.stopPropagation()}
-												onChange={(e) => {
-													e.stopPropagation();
-													void onChangePastResult(w, e.target.value as PastResult);
-												}}
-											>
-												{PAST_RESULT_OPTIONS.map((opt) => (
-													<option key={opt.value} value={opt.value}>
-														{opt.label}
-													</option>
-												))}
-											</select>
-
-											<button
-												type="button"
-												className="h-9 w-9 inline-flex items-center justify-center rounded-full border bg-white hover:bg-red-50 hover:border-red-200 transition-colors"
-												onClick={(e) => {
-													e.stopPropagation();
-													void onDelete(w.bidId);
-												}}
-												aria-label="삭제"
-												title="삭제"
-											>
-												<Trash2 className="h-4 w-4 text-red-500" />
-											</button>
-										</div>
-									</div>
-								</div>
-							);
-						})}
-					</div>
-				)}
-			</div>
-		);
-	}
-
 	return (
 		<div className="w-full">
 			<div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 space-y-5">
 				<div>
 					<h2 className="text-2xl font-bold">장바구니</h2>
-					<div className="text-sm text-slate-500">장바구니에 담은 공고를 관리하세요</div>
+					<div className="text-sm text-slate-500">
+						장바구니에 담은 공고를 관리하세요
+					</div>
 				</div>
 
 				<div className="bg-white border rounded-2xl p-4 sm:p-5">
@@ -434,7 +343,9 @@ export function CartPage({
 									].join(" ")}
 								>
 									<div className="text-xs text-slate-500">{label}</div>
-									<div className="text-lg font-semibold text-slate-900">{count}건</div>
+									<div className="text-lg font-semibold text-slate-900">
+										{count}건
+									</div>
 								</button>
 							);
 						})}
@@ -486,10 +397,16 @@ export function CartPage({
 					) : (
 						<div className="divide-y">
 							{visibleItems.map((w) => {
-								const amountText = w.baseAmount ? `${formatAmount(w.baseAmount)}원` : "";
-								const endText = w.bidEnd ? `마감 ${formatDateTimeOneLine(String(w.bidEnd))}` : "";
+								const amountText = w.baseAmount
+									? `${formatAmount(w.baseAmount)}원`
+									: "";
+								const endText = w.bidEnd
+									? `마감 ${formatDateTimeOneLine(String(w.bidEnd))}`
+									: "";
 
-								const daysLeft = w.bidEnd ? days_until(String(w.bidEnd), nowMs) : null;
+								const daysLeft = w.bidEnd
+									? days_until(String(w.bidEnd), nowMs)
+									: null;
 								const label = daysLeft == null ? null : dday_label(daysLeft);
 								const showBadge = label != null && daysLeft != null && daysLeft <= 7;
 
@@ -595,29 +512,111 @@ export function CartPage({
 					<div className="bg-white border rounded-2xl overflow-hidden">
 						<div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b">
 							<div className="font-semibold text-slate-900">지난 공고 목록</div>
-							<div className="text-sm text-slate-500">{pastWishlist.length}건</div>
+
+							<div className="flex items-center gap-2">
+								<div className="text-sm text-slate-500">{pastWishlist.length}건</div>
+								<span className="hidden sm:inline text-sm text-slate-500">정렬</span>
+								<select
+									className="h-9 rounded-lg border bg-white px-3 text-sm shadow-sm"
+									value={pastSortKey}
+									onChange={(e) => setPastSortKey(e.target.value as PastSortKey)}
+								>
+									<option value="DEADLINE_NEAR">마감 가까운순</option>
+									<option value="DEADLINE_OLD">마감 지난순</option>
+									<option value="TITLE_ASC">제목순</option>
+								</select>
+							</div>
 						</div>
 
-						<div className="p-4 sm:p-5 space-y-4">
-							<PastSection
-								title="미투찰"
-								count={pastGrouped.none.length}
-								items={pastGrouped.none}
-								badgeClass="bg-slate-100 text-slate-700"
-							/>
-							<PastSection
-								title="낙찰"
-								count={pastGrouped.won.length}
-								items={pastGrouped.won}
-								badgeClass="bg-emerald-100 text-emerald-700"
-							/>
-							<PastSection
-								title="탈락"
-								count={pastGrouped.lost.length}
-								items={pastGrouped.lost}
-								badgeClass="bg-rose-100 text-rose-700"
-							/>
-						</div>
+						{visiblePastItems.length === 0 ? (
+							<div className="p-5 text-slate-500">지난 공고가 없습니다.</div>
+						) : (
+							<div className="divide-y">
+								{visiblePastItems.map((w) => {
+									const amountText = w.baseAmount
+										? `${formatAmount(w.baseAmount)}원`
+										: "";
+									const endText = w.bidEnd
+										? `마감 ${formatDateTimeOneLine(String(w.bidEnd))}`
+										: "";
+
+									const result = past_result_from_stage(w.stage);
+
+									return (
+										<div
+											key={`past:${w.id}:${w.bidId}`}
+											className="px-4 sm:px-5 py-4 hover:bg-slate-50 transition-colors"
+										>
+											<div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 sm:gap-4 items-start">
+												<button
+													type="button"
+													className="text-left min-w-0"
+													onClick={() => navigate(`/bids/${w.bidId}`)}
+												>
+													<div className="flex items-center gap-2 min-w-0">
+														<div className="font-semibold text-slate-900 truncate">
+															{w.title}
+														</div>
+														<PastBadge result={result} />
+													</div>
+
+													<div className="mt-1 text-sm text-slate-500 flex flex-wrap gap-x-2 gap-y-1">
+														<span>{w.agency}</span>
+														{w.baseAmount ? (
+															<>
+																<span className="text-slate-300">·</span>
+																<span>{amountText}</span>
+															</>
+														) : null}
+														{w.bidEnd ? (
+															<>
+																<span className="text-slate-300">·</span>
+																<span>{endText}</span>
+															</>
+														) : null}
+													</div>
+												</button>
+
+												<div className="flex items-center justify-end">
+													<div className="inline-flex items-center gap-2 rounded-full border bg-slate-50 px-2 py-1 shadow-sm">
+														<div className="w-[128px] sm:w-[140px]">
+															<select
+																className="h-9 w-full rounded-full border bg-white px-3 text-sm"
+																value={result}
+																onClick={(e) => e.stopPropagation()}
+																onChange={(e) => {
+																	e.stopPropagation();
+																	void onChangePastResult(w, e.target.value as PastResult);
+																}}
+															>
+																{PAST_RESULT_OPTIONS.map((opt) => (
+																	<option key={opt.value} value={opt.value}>
+																		{opt.label}
+																	</option>
+																))}
+															</select>
+														</div>
+
+														<button
+															type="button"
+															className="h-9 w-9 inline-flex items-center justify-center rounded-full border bg-white hover:bg-red-50 hover:border-red-200 transition-colors"
+															onClick={(e) => {
+																e.stopPropagation();
+																void onDelete(w.bidId);
+															}}
+															aria-label="삭제"
+															title="삭제"
+														>
+															<Trash2 className="h-4 w-4 text-red-500" />
+														</button>
+													</div>
+												</div>
+											</div>
+										</div>
+									);
+								})}
+							</div>
+						)}
 					</div>
 				) : null}
 			</div>
