@@ -12,6 +12,7 @@ import {
 	type WeeklyTrendPoint,
 } from "./dashboard/MonthlyTrendChart";
 import { RegionPieChart, type RegionDistPoint } from "./dashboard/RegionPieChart";
+import { RecommendedBidsSection } from "./dashboard/RecommendedBidsSection";
 
 type Kpi = {
 	newBidsThisMonth: number;
@@ -290,6 +291,9 @@ export function Dashboard() {
 				<MonthlyTrendChart loading={loading} data={monthlyTrend} />
 				<RegionPieChart loading={loading} data={regionDist} />
 			</div>
+
+            {/* 맞춤 추천 공고 섹션 */}
+            <RecommendedBidsSection />
 		</div>
 	);
 }

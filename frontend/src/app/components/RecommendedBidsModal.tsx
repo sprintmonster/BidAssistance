@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Star, X, Sparkles, ArrowRight } from "lucide-react";
 
-import { fetchBids, type Bid } from "../api/bids";
+import { fetchBids, fetchRecommendedBids, type Bid } from "../api/bids";
 import { toggleWishlist } from "../api/wishlist";
 
 import { Dialog, DialogContent } from "./ui/dialog";
@@ -130,7 +130,16 @@ export function RecommendedBidsModal({
 		const load = async () => {
 			setLoading(true);
 			try {
-				const list = await fetchBids();
+                const userIdRaw = localStorage.getItem("userId");
+                const userId = userIdRaw ? Number(userIdRaw) : NaN;
+
+                let list: Bid[];
+                if (Number.isFinite(userId)) {
+                    list = await fetchRecommendedBids(userId);
+                } else {
+                    list = await fetchBids();
+                }
+
 				if (ignore) return;
 				setBids(Array.isArray(list) ? list : []);
 			} catch (e) {
@@ -219,7 +228,7 @@ export function RecommendedBidsModal({
 								</div>
 								<div className="mt-2 text-sm text-slate-600 flex items-center gap-2">
 									<Sparkles className="w-4 h-4" />
-									관심 조건/활동 흐름 기반으로 공고를 추천합니다. (현재는 데모 데이터)
+									관심 조건/활동 흐름 기반으로 공고를 추천합니다.
 								</div>
 							</div>
 

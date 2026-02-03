@@ -32,3 +32,12 @@ export async function fetchBids(): Promise<Bid[]> {
     const res = await api<any>("/bids");
     return pickBidList(res) as Bid[];
 }
+
+export async function fetchRecommendedBids(userId: number): Promise<Bid[]> {
+    const res = await api<any>(`/bids/recommendations?userId=${userId}`);
+    return pickBidList(res) as Bid[];
+}
+
+export async function logBidView(bidId: number, userId: number): Promise<void> {
+    await api<void>(`/bids/${bidId}/log?userId=${userId}`, { method: 'POST' });
+}

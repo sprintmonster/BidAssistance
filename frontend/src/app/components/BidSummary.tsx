@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { api } from "../api/client";
+import { logBidView } from "../api/bids";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -490,6 +491,18 @@ export function BidSummary() {
             </div>
         );
     };
+
+    const loggedBidIdRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        const userIdStr = localStorage.getItem("userId");
+        const userId = userIdStr ? Number(userIdStr) : NaN;
+
+        if (Number.isFinite(numericBidId) && Number.isFinite(userId) && loggedBidIdRef.current !== numericBidId) {
+            logBidView(numericBidId, userId).catch(console.error);
+            loggedBidIdRef.current = numericBidId;
+        }
+    }, [numericBidId]);
 
     useEffect(() => {
         if (!Number.isFinite(numericBidId)) {
