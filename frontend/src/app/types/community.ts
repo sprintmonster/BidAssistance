@@ -21,6 +21,8 @@ export interface Comment {
 	createdAt: string;
 	likes: number;
 	likedByMe?: boolean;
+	isAdopted?: boolean;      // 채택 여부
+	userExpertLevel?: number; // 작성자 등급 (1~5)
 }
 
 export interface Post {
@@ -34,6 +36,7 @@ export interface Post {
 
 	authorId?: string;
 	authorName: string;
+	authorExpertLevel?: number; // 작성자 등급 (1~5)
 
 	createdAt: string;
 	views: number;
@@ -45,6 +48,8 @@ export interface Post {
 
 	attachmentCount?: number;
 	attachments?: Attachment[];
+
+	adoptedCommentId?: number; // 채택된 댓글 ID
 }
 
 export type SortKey = "latest" | "popular" | "views" | "comments";

@@ -63,9 +63,11 @@ function normalizeComment(raw: any): Comment {
 		authorId: pickAuthorId(raw),
 		authorName: toStr(raw?.authorName ?? raw?.userName ?? raw?.author ?? "—"),
 		content: toStr(raw?.content ?? ""),
-		createdAt: toStr(raw?.createdAt ?? ""),
+		createdAt: toStr(raw?.createdAt ?? raw?.commentCreatedAt ?? ""),
 		likes: toNum(raw?.likes ?? raw?.likeCount ?? 0),
 		likedByMe: !!raw?.likedByMe,
+		isAdopted: !!raw?.isAdopted,
+		userExpertLevel: toNum(raw?.userExpertLevel ?? 1),
 	};
 }
 
@@ -87,6 +89,7 @@ function normalizePostFromDetail(raw: any): Post {
 		category: raw?.category ?? "question",
 		authorId: raw?.authorId != null ? String(raw.authorId) : pickAuthorId(raw),
 		authorName: toStr(raw?.userName ?? raw?.authorName ?? raw?.writerName ?? "—"),
+		authorExpertLevel: toNum(raw?.authorExpertLevel ?? 1),
 		createdAt: toStr(raw?.createdAt),
 		views: toNum(raw?.viewCount ?? raw?.views ?? 0),
 		likes: toNum(raw?.likeCount ?? raw?.likes ?? 0),
@@ -95,6 +98,7 @@ function normalizePostFromDetail(raw: any): Post {
 		commentCount: toNum(raw?.commentCount ?? (raw?.comments?.length ?? 0)),
 		attachmentCount: toNum(raw?.attachmentCount ?? raw?.fileCount ?? attachments.length),
 		attachments,
+		adoptedCommentId: raw?.adoptedCommentId ?? undefined,
 	};
 }
 
@@ -177,6 +181,7 @@ function normalizePostFromList(it: any): Post {
 		category: it?.category ?? "question",
 		authorId: it?.authorId != null ? String(it.authorId) : pickAuthorId(it),
 		authorName: toStr(it?.authorName ?? it?.userName ?? it?.writerName ?? "—"),
+		authorExpertLevel: toNum(it?.authorExpertLevel ?? 1),
 		createdAt: toStr(it?.createdAt),
 		views: toNum(it?.views ?? it?.viewCount ?? 0),
 		likes: toNum(it?.likes ?? it?.likeCount ?? 0),
@@ -187,6 +192,7 @@ function normalizePostFromList(it: any): Post {
 		// 목록에서는 상세 구조가 아닐 수 있으니, 배열이 맞을 때만 넣음
 		attachments: Array.isArray(it?.attachments) ? it.attachments : [],
 		content: it?.content,
+		adoptedCommentId: it?.adoptedCommentId ?? undefined,
 	};
 }
 
@@ -331,3 +337,26 @@ export async function uploadCommunityAttachments(files: File[]) {
 	const rawList = unwrap(json) ?? [];
 	return rawList.map(normalizeAttachment);
 }
+
+/**
+ * 인기글 상위 3개 조회 (좋아요 × 시간 가중치)
+ */
+export async function fetchTrendingPosts(): Promise<Post[]> {
+	const json = await api<ApiResponse<any[]>>("/board/trending");
+	const rawList = unwrap(json) ?? [];
+	return rawList.map(normalizePostFromList);
+}
+
+/**
+ * 답변 채택 API
+ */
+export async function adoptComment(commentId: number): Promise<Comment> {
+	const userId = localStorage.getItem("userId");
+	if (!userId) throw new Error("로그인이 필요합니다.");
+
+	const json = await api<ApiResponse<any>>(`/comments/${commentId}/adopt?userId=${userId}`, {
+		method: "PUT",
+	});
+	return normalizeComment(unwrap(json));
+}
+

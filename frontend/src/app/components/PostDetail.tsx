@@ -8,10 +8,15 @@ import {
     MessageSquare,
     Send,
     ThumbsUp,
+    CheckCircle,
+    Award,
 } from "lucide-react";
 
 import type { Post, PostCategory } from "../types/community";
 import { mask_name } from "../utils/masking";
+import { adoptComment } from "../api/community";
+import { ExpertBadge } from "./ExpertBadge";
+import { Badge } from "./ui/badge";
 
 interface PostDetailProps {
     post: Post;
@@ -30,6 +35,7 @@ interface PostDetailProps {
     canInteract?: boolean;
     onRequireAuth?: () => void;
     currentUserId?: string;
+    onAdopt?: (postId: number, commentId: number) => void;
 }
 
 const category_labels: Record<PostCategory, string> = {
@@ -168,6 +174,7 @@ export function PostDetail({
                                canInteract = false,
                                onRequireAuth,
                                currentUserId,
+                               onAdopt,
                            }: PostDetailProps) {
     const postId = useMemo(() => {
         const n = Number((post as any).id);
@@ -203,6 +210,28 @@ export function PostDetail({
             set_edit_category((post as any).category);
         }
     }, [postId, is_editing, post]);
+
+    // 채택 상태 관리
+    const [adoptedCommentId, setAdoptedCommentId] = useState<number | null>(
+        (post as any).adoptedCommentId ?? null
+    );
+    
+    useEffect(() => {
+        setAdoptedCommentId((post as any).adoptedCommentId ?? null);
+    }, [post]);
+
+    const handleAdopt = async (commentId: number) => {
+        const ok = window.confirm("이 답변을 채택하시겠습니까? 채택 후에는 취소할 수 없습니다.");
+        if (!ok) return;
+        
+        try {
+            await adoptComment(commentId);
+            setAdoptedCommentId(commentId);
+            onAdopt?.(postId, commentId);
+        } catch (e: any) {
+            alert(e?.message || "채택에 실패했습니다.");
+        }
+    };
 
     const submit_comment = () => {
         if (!canInteract) {
@@ -269,6 +298,9 @@ export function PostDetail({
 
     // ✅ TS7053 방지: category를 PostCategory로 확정해서 안전하게 인덱싱
     const categoryKey = ((post as any).category as PostCategory) ?? "question";
+    
+    // 채택 가능 여부: 질문글 + 내가 작성자 + 아직 채택되지 않음
+    const canAdopt = canEdit && categoryKey === "question" && adoptedCommentId === null;
 
     return (
         <div className="space-y-6">
@@ -294,9 +326,16 @@ export function PostDetail({
                             <option value="discussion">토론</option>
                         </select>
                     ) : (
-                        <span className={`px-3 py-1 rounded text-sm font-medium ${category_colors[categoryKey]}`}>
-              {category_labels[categoryKey]}
-            </span>
+                        <div className="flex items-center gap-2">
+                            <span className={`px-3 py-1 rounded text-sm font-medium ${category_colors[categoryKey]}`}>
+                              {category_labels[categoryKey]}
+                            </span>
+                            {adoptedCommentId && (
+                                <Badge variant="outline" className="border-green-500 text-green-600 bg-green-50 gap-1">
+                                    <CheckCircle className="w-3 h-3" /> 해결됨
+                                </Badge>
+                            )}
+                        </div>
                     )}
                 </div>
 
@@ -343,7 +382,10 @@ export function PostDetail({
                 </div>
 
                 <div className="flex items-center gap-4 text-sm text-gray-500 mb-6 pb-6 border-b border-gray-200">
-                    <span className="font-medium text-gray-700">{mask_name(author_name)}</span>
+                    <span className="font-medium text-gray-700 flex items-center gap-1.5">
+                        {mask_name(author_name)}
+                        <ExpertBadge level={(post as any).authorExpertLevel ?? 1} />
+                    </span>
                     <span>·</span>
                     <span>{formatCreatedAt((post as any).createdAt)}</span>
                     <span>·</span>
@@ -471,42 +513,65 @@ export function PostDetail({
                 </div>
 
                 <div className="space-y-6">
-                    {comments.map((comment: any) => {
+                {comments.map((comment: any) => {
                         const comment_author_name = comment.authorName ?? comment.author ?? "—";
                         const comment_author_id = comment.authorId != null ? String(comment.authorId) : undefined;
                         const me = currentUserId != null ? String(currentUserId) : undefined;
 
                         const can_delete_this_comment =
                             !!canInteract && (!!canEdit || (!!comment_author_id && !!me && comment_author_id === me));
+                        
+                        const isAdopted = Number(comment.id) === adoptedCommentId;
+                        const canNotAdoptSelf = comment_author_id !== me;
 
                         return (
-                            <div key={comment.id} className="border-b border-gray-100 pb-6 last:border-b-0 last:pb-0">
+                            <div key={comment.id} className={`border-b border-gray-100 pb-6 last:border-b-0 last:pb-0 ${isAdopted ? "bg-green-50 dark:bg-green-900/20 -mx-4 px-4 py-3 rounded-lg" : ""}`}>
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-3">
-                                        <span className="font-medium text-gray-900">{mask_name(comment_author_name)}</span>
+                                        <span className="font-medium text-gray-900 flex items-center gap-1.5">
+                                            {mask_name(comment_author_name)}
+                                            <ExpertBadge level={comment.userExpertLevel ?? 1} />
+                                        </span>
                                         <span className="text-sm text-gray-500">{formatCreatedAt(comment.createdAt)}</span>
+                                        {isAdopted && (
+                                            <Badge className="bg-green-600 text-white gap-1">
+                                                <Award className="w-3 h-3" /> 채택된 답변
+                                            </Badge>
+                                        )}
                                     </div>
 
-                                    {can_delete_this_comment && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const ok = window.confirm("이 댓글을 삭제할까요?");
-                                                if (!ok) return;
+                                    <div className="flex items-center gap-2">
+                                        {canAdopt && !isAdopted && canNotAdoptSelf && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleAdopt(Number(comment.id))}
+                                                className="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                            >
+                                                <CheckCircle className="w-4 h-4" /> 채택하기
+                                            </button>
+                                        )}
+                                        
+                                        {can_delete_this_comment && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const ok = window.confirm("이 댓글을 삭제할까요?");
+                                                    if (!ok) return;
 
-                                                const cid = Number(comment.id);
-                                                if (!Number.isFinite(cid) || cid <= 0) {
-                                                    alert(`댓글 ID가 올바르지 않습니다. (id=${String(comment.id)})`);
-                                                    return;
-                                                }
+                                                    const cid = Number(comment.id);
+                                                    if (!Number.isFinite(cid) || cid <= 0) {
+                                                        alert(`댓글 ID가 올바르지 않습니다. (id=${String(comment.id)})`);
+                                                        return;
+                                                    }
 
-                                                onDeleteComment(postId, String(cid));
-                                            }}
-                                            className="text-sm text-gray-400 hover:text-red-600"
-                                        >
-                                            삭제
-                                        </button>
-                                    )}
+                                                    onDeleteComment(postId, String(cid));
+                                                }}
+                                                className="text-sm text-gray-400 hover:text-red-600"
+                                            >
+                                                삭제
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <p className="text-gray-700 mb-3 whitespace-pre-wrap">{comment.content}</p>

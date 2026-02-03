@@ -4,6 +4,7 @@ import type { Post } from "../types/community";
 import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { ExpertBadge } from "./ExpertBadge";
 
 import { mask_name } from "../utils/masking";
 import {useEffect} from "react";
@@ -149,7 +150,10 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
                                         </TableCell>
 
                                         <TableCell className="text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis">
-                                            {mask_name(post.authorName)}
+                                            <span className="flex items-center gap-1.5">
+                                                {mask_name(post.authorName)}
+                                                <ExpertBadge level={post.authorExpertLevel} />
+                                            </span>
                                         </TableCell>
 
                                         <TableCell className="text-gray-500 tabular-nums whitespace-nowrap overflow-hidden text-ellipsis">
@@ -209,7 +213,10 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
                         >
                             <div className="flex items-center gap-2 mb-2">
                                 <CategoryBadge category={post.category} />
-                                <span className="text-xs text-gray-500">{mask_name(post.authorName)}</span>
+                                <span className="text-xs text-gray-500 flex items-center gap-1">
+                                    {mask_name(post.authorName)}
+                                    <ExpertBadge level={post.authorExpertLevel} />
+                                </span>
                                 <span className="text-xs text-gray-400">·</span>
                                 <span className="text-xs text-gray-500">{formatCreatedAt(post.createdAt)}</span>
                             </div>

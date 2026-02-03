@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { CommunityBoard } from "./CommunityBoard";
 import { PostDetail } from "./PostDetail";
 import { NewPostForm } from "./NewPostForm";
+import { TrendingPosts } from "./TrendingPosts";
 
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Button } from "./ui/button";
@@ -23,6 +24,7 @@ import {
     deleteCommunityPost,
     fetchCommunityPost,
     fetchCommunityPosts,
+    fetchTrendingPosts,
     likeCommunityPost,
     unlikeCommunityPost,
     updateCommunityPost,
@@ -135,6 +137,9 @@ export function CommunityPage() {
 
     const [authed, set_authed] = useState(() => is_authed_now());
     const [current_user_id, set_current_user_id] = useState(() => safe_user_id());
+
+    /**  인기글 상위 3개 */
+    const [trending_posts, set_trending_posts] = useState<Post[]>([]);
 
     /**  게시글별 좋아요 연타 방지 */
     const [likeBusyByPost, setLikeBusyByPost] = useState<Record<number, boolean>>({});
@@ -293,6 +298,10 @@ export function CommunityPage() {
     useEffect(() => {
         const t = window.setTimeout(() => {
             void load_list();
+            // 인기글 불러오기
+            fetchTrendingPosts()
+                .then(set_trending_posts)
+                .catch(() => {}); // 인기글 에러는 무시
         }, 250);
         return () => window.clearTimeout(t);
     }, [load_list]);
@@ -534,6 +543,21 @@ export function CommunityPage() {
         }
     };
 
+    const on_adopted = (post_id: number, comment_id: number) => {
+        const pid = Number(post_id);
+        const cid = Number(comment_id);
+
+        set_selected_post((prev: any) =>
+            prev && Number(prev.id) === pid ? { ...prev, adoptedCommentId: cid } : prev
+        );
+
+        set_all_posts((prev) =>
+            prev.map((p: any) =>
+                Number(p.id) === pid ? { ...p, adoptedCommentId: cid } : p
+            )
+        );
+    };
+
     return (
         <div className="space-y-4">
             {view_mode === "list" ? (
@@ -636,7 +660,10 @@ export function CommunityPage() {
                 list_loading ? (
                     <div className="text-sm text-gray-500 py-8 text-center">목록을 불러오는 중...</div>
                 ) : (
-                    <CommunityBoard posts={visible_posts} onSelectPost={open_detail} />
+                    <>
+                        <TrendingPosts posts={trending_posts} onClickPost={open_detail} />
+                        <CommunityBoard posts={visible_posts} onSelectPost={open_detail} />
+                    </>
                 )
             ) : null}
 
@@ -660,6 +687,7 @@ export function CommunityPage() {
                         canInteract={authed}
                         onRequireAuth={go_login}
                         currentUserId={current_user_id}
+                        onAdopt={on_adopted}
                     />
                 ) : null
             ) : null}
