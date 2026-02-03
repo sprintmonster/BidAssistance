@@ -202,7 +202,7 @@ export default function App() {
 						path="/notice"
 						element={
 							<PageContainer>
-								<NoticePage canWrite={canManageNotices} />
+								<NoticePage />
 							</PageContainer>
 						}
 					/>

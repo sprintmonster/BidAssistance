@@ -1,742 +1,378 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import {
-	FileText,
-	Image as ImageIcon,
-	Link as LinkIcon,
-	Megaphone,
-	Paperclip,
-	Plus,
-	Search,
-	Trash2,
-	ChevronRight,
+    Bell,
+    Megaphone,
+    Search,
+    Trash2,
+    Settings,
+    MoreHorizontal,
+    Plus,
+    X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import {
+    getUserKeywords,
+    addUserKeyword,
+    deleteUserKeyword,
+    getMyAlarms,
+    deleteAlarm
+} from "../api/community";
+import type { UserKeyword, Alarm } from "../types/community";
+import { useNavigate } from "react-router-dom";
 
-type NoticeCategory = "전체" | "서비스" | "업데이트" | "점검" | "정책";
-type AttachmentKind = "image" | "pdf" | "file" | "link";
+export function NoticePage() {
+    const navigate = useNavigate();
+    const userId = Number(localStorage.getItem("userId") || 0);
 
-export interface NoticeAttachment {
-	id: string;
-	kind: AttachmentKind;
-	name: string;
-	url: string; // DataURL 또는 외부 URL
-	mimeType?: string;
-	size?: number;
+    const [activeTab, setActiveTab] = useState("all");
+    const [alarms, setAlarms] = useState<Alarm[]>([]);
+    const [keywords, setKeywords] = useState<UserKeyword[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    // Form states for adding keyword
+    const [newKeyword, setNewKeyword] = useState("");
+    const [minPrice, setMinPrice] = useState("");
+    const [maxPrice, setMaxPrice] = useState("");
+
+    useEffect(() => {
+        if (!userId) return;
+        loadData();
+    }, [userId, activeTab]);
+
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            if (activeTab === "settings") {
+                const data = await getUserKeywords(userId);
+                setKeywords(data);
+            } else {
+                const data = await getMyAlarms(userId);
+                setAlarms(data);
+            }
+        } catch (error) {
+            console.error(error);
+            // toast.error("데이터를 불러오지 못했습니다.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAddKeyword = async () => {
+        if (!newKeyword.trim()) {
+            toast.error("키워드를 입력해주세요.");
+            return;
+        }
+
+        try {
+            await addUserKeyword({
+                userId,
+                keyword: newKeyword.trim(),
+                minPrice: minPrice ? Number(minPrice) : null,
+                maxPrice: maxPrice ? Number(maxPrice) : null,
+            });
+            toast.success("키워드가 추가되었습니다.");
+            setNewKeyword("");
+            setMinPrice("");
+            setMaxPrice("");
+            loadData();
+        } catch (e) {
+            toast.error("키워드 추가 실패");
+        }
+    };
+
+    const handleDeleteKeyword = async (id: number) => {
+        if (!confirm("이 키워드를 삭제하시겠습니까?")) return;
+        try {
+            await deleteUserKeyword(id);
+            toast.success("삭제되었습니다.");
+            loadData();
+        } catch (e) {
+            toast.error("삭제 실패");
+        }
+    };
+
+    const handleDeleteAlarm = async (id: number) => {
+        try {
+            await deleteAlarm(id);
+            setAlarms((prev) => prev.filter((a) => a.alarmId !== id));
+            toast.success("알림이 삭제되었습니다.");
+        } catch (e) {
+            toast.error("삭제 실패");
+        }
+    };
+
+    const handleAlarmClick = (alarm: Alarm) => {
+        if (alarm.bidId) {
+            navigate(`/bids/${alarm.bidId}`);
+        }
+    };
+
+    const filteredAlarms = useMemo(() => {
+        if (activeTab === "keyword") {
+            return alarms.filter((a) => a.alarmType === "KEYWORD");
+        }
+        return alarms;
+    }, [alarms, activeTab]);
+
+    const formatPrice = (price: number | null) => {
+        if (price === null) return "제한 없음";
+        return new Intl.NumberFormat("ko-KR", {
+            style: "currency",
+            currency: "KRW",
+            maximumFractionDigits: 0
+        }).format(price);
+    };
+
+    if (!userId) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 bg-slate-50 rounded-lg">
+                <Bell className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">로그인이 필요합니다</h3>
+                <p className="text-muted-foreground mb-6">알림을 확인하려면 먼저 로그인해주세요.</p>
+                <Button onClick={() => navigate("/")}>로그인하러 가기</Button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="max-w-4xl mx-auto space-y-6">
+            <div>
+                <h2 className="text-3xl font-bold tracking-tight mb-2">알림 센터</h2>
+                <p className="text-muted-foreground">
+                    키워드 알림과 시스템 공지를 한눈에 확인하세요.
+                </p>
+            </div>
+
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+                <TabsList>
+                    <TabsTrigger value="all">전체</TabsTrigger>
+                    <TabsTrigger value="keyword">키워드</TabsTrigger>
+                    <TabsTrigger value="settings">설정</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="all" className="space-y-4">
+                    <AlarmList
+                        alarms={filteredAlarms}
+                        loading={loading}
+                        onDelete={handleDeleteAlarm}
+                        onClick={handleAlarmClick}
+                        emptyMessage="도착한 알림이 없습니다."
+                    />
+                </TabsContent>
+
+                <TabsContent value="keyword" className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <Search className="h-4 w-4" />
+                                키워드 알림
+                            </CardTitle>
+                            <CardDescription>
+                                설정한 키워드와 가격 조건에 맞는 공고 알림만 모아봅니다.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <AlarmList
+                                alarms={filteredAlarms}
+                                loading={loading}
+                                onDelete={handleDeleteAlarm}
+                                onClick={handleAlarmClick}
+                                emptyMessage="키워드 알림이 없습니다."
+                            />
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="settings" className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">키워드 설정</CardTitle>
+                            <CardDescription>
+                                관심 있는 단어와 가격 범위를 등록하면 알림을 보내드립니다.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            {/* 입력 폼 */}
+                            <div className="grid gap-4 p-4 border rounded-lg bg-slate-50">
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                                    <div className="space-y-2 md:col-span-2">
+                                        <Label>키워드</Label>
+                                        <Input
+                                            placeholder="예: 서버, AI, 유지보수"
+                                            value={newKeyword}
+                                            onChange={(e) => setNewKeyword(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>최소 금액 (원)</Label>
+                                        <Input
+                                            type="number"
+                                            placeholder="0"
+                                            value={minPrice}
+                                            onChange={(e) => setMinPrice(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>최대 금액 (원)</Label>
+                                        <Input
+                                            type="number"
+                                            placeholder="제한 없음"
+                                            value={maxPrice}
+                                            onChange={(e) => setMaxPrice(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex justify-end">
+                                    <Button onClick={handleAddKeyword} className="gap-2">
+                                        <Plus className="h-4 w-4" />
+                                        키워드 추가
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* 목록 */}
+                            <div className="space-y-4">
+                                <h4 className="font-semibold text-sm text-foreground">
+                                    등록된 키워드 ({keywords.length})
+                                </h4>
+                                {loading && <div className="text-sm text-muted-foreground">로드 중...</div>}
+                                {!loading && keywords.length === 0 && (
+                                    <div className="text-center py-8 text-sm text-muted-foreground border rounded-md border-dashed">
+                                        등록된 키워드가 없습니다.
+                                    </div>
+                                )}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    {keywords.map((k) => (
+                                        <div
+                                            key={k.id}
+                                            className="flex items-center justify-between p-3 border rounded-md bg-white shadow-sm"
+                                        >
+                                            <div className="min-w-0">
+                                                <div className="font-medium truncate text-blue-700">
+                                                    {k.keyword}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground mt-1">
+                                                    {k.minPrice != null || k.maxPrice != null ? (
+                                                        <span>
+                                                            {formatPrice(k.minPrice)} ~ {formatPrice(k.maxPrice)}
+                                                        </span>
+                                                    ) : (
+                                                        "가격 제한 없음"
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleDeleteKeyword(k.id)}
+                                                className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
+        </div>
+    );
 }
 
-export interface NoticeItem {
-	id: number;
-	title: string;
-	category: Exclude<NoticeCategory, "전체">;
-	date: string; // YYYY-MM-DD
-	author: string;
-	pinned?: boolean;
-	content: string;
-	attachments?: NoticeAttachment[];
-}
-
-const STORAGE_KEY = "notices.v1";
-
-const DEFAULT_NOTICES: NoticeItem[] = [
-	{
-		id: 1,
-		title: "서비스 점검 안내 (01/10 02:00~04:00)",
-		category: "점검",
-		date: "2026-01-10",
-		author: "관리자",
-		pinned: true,
-		content:
-			"안정적인 서비스 제공을 위해 시스템 점검이 진행됩니다.\n점검 시간 동안 일부 기능이 제한될 수 있습니다.\n\n- 점검 일시: 2026-01-10 02:00 ~ 04:00\n- 영향 범위: 로그인, 알림 일부 지연 가능\n\n이용에 불편을 드려 죄송합니다.",
-		attachments: [
-			{
-				id: "seed-link-1",
-				kind: "link",
-				name: "점검 상세 안내(외부 링크)",
-				url: "https://example.com/maintenance",
-			},
-		],
-	},
-	{
-		id: 2,
-		title: "입찰 알림 필터 기능 업데이트",
-		category: "업데이트",
-		date: "2026-01-08",
-		author: "Product Team",
-		content:
-			"알림 필터가 개선되었습니다.\n\n- 알림 유형별(마감/정정/재공고 등) 필터\n- 관심 지역 기반 우선순위\n- 읽지 않음만 보기\n\n설정은 [알림] 페이지에서 확인할 수 있습니다.",
-	},
-	{
-		id: 3,
-		title: "개인정보 처리방침 변경 안내",
-		category: "정책",
-		date: "2026-01-05",
-		author: "법무/정책",
-		content:
-			"개인정보 처리방침이 일부 개정되었습니다.\n\n- 수집 항목 문구 정비\n- 보관 및 파기 절차 보완\n\n자세한 내용은 [개인정보처리방침]을 참고해 주세요.",
-	},
-];
-
-interface NoticePageProps {
-	notices?: NoticeItem[];
-	canWrite?: boolean; // 운영자만 true 권장 (기본 false)
-}
-
-function safeParseNotices(raw: string | null): NoticeItem[] | null {
-	if (!raw) return null;
-	try {
-		const parsed = JSON.parse(raw) as unknown;
-		if (!Array.isArray(parsed)) return null;
-		return parsed as NoticeItem[];
-	} catch {
-		return null;
-	}
-}
-
-function formatLocalDateYYYYMMDD(d: Date) {
-	const yyyy = d.getFullYear();
-	const mm = String(d.getMonth() + 1).padStart(2, "0");
-	const dd = String(d.getDate()).padStart(2, "0");
-	return `${yyyy}-${mm}-${dd}`;
-}
-
-function makeId() {
-	if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-		return crypto.randomUUID();
-	}
-	return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function kindFromFile(file: File): AttachmentKind {
-	if (file.type.startsWith("image/")) return "image";
-	if (file.type === "application/pdf") return "pdf";
-	return "file";
-}
-
-function fileToDataURL(file: File) {
-	return new Promise<string>((resolve, reject) => {
-		const reader = new FileReader();
-		reader.onerror = () => reject(new Error("파일을 읽는 중 오류가 발생했습니다."));
-		reader.onload = () => resolve(String(reader.result));
-		reader.readAsDataURL(file);
-	});
-}
-
-const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
-const MAX_TOTAL_ATTACH_BYTES = 6 * 1024 * 1024; // 6MB
-
-export function NoticePage({
-	notices: externalNotices,
-	canWrite = false,
-}: NoticePageProps) {
-	const [notices, setNotices] = useState<NoticeItem[]>(() => {
-		if (externalNotices) return externalNotices;
-		const saved = safeParseNotices(localStorage.getItem(STORAGE_KEY));
-		return saved && saved.length > 0 ? saved : DEFAULT_NOTICES;
-	});
-
-	useEffect(() => {
-		if (externalNotices) return;
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(notices));
-	}, [notices, externalNotices]);
-
-	// 목록/검색
-	const [category, setCategory] = useState<NoticeCategory>("전체");
-	const [query, setQuery] = useState("");
-	const [selectedId, setSelectedId] = useState<number | null>(null);
-
-	// 작성 폼
-	const [composeOpen, setComposeOpen] = useState(false);
-	const [formTitle, setFormTitle] = useState("");
-	const [formAuthor, setFormAuthor] = useState("관리자");
-	const [formDate, setFormDate] = useState(formatLocalDateYYYYMMDD(new Date()));
-	const [formCategory, setFormCategory] =
-		useState<Exclude<NoticeCategory, "전체">>("서비스");
-	const [formPinned, setFormPinned] = useState(false);
-	const [formContent, setFormContent] = useState("");
-	const [formAttachments, setFormAttachments] = useState<NoticeAttachment[]>([]);
-	const [linkName, setLinkName] = useState("");
-	const [linkUrl, setLinkUrl] = useState("");
-
-	const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-	const categories: NoticeCategory[] = ["전체", "서비스", "업데이트", "점검", "정책"];
-
-	const filtered = useMemo(() => {
-		const q = query.trim().toLowerCase();
-		const base = notices
-			.slice()
-			.sort((a, b) => {
-				const pa = a.pinned ? 1 : 0;
-				const pb = b.pinned ? 1 : 0;
-				if (pa !== pb) return pb - pa;
-				return b.date.localeCompare(a.date);
-			});
-
-		return base.filter((n) => {
-			const catOk = category === "전체" ? true : n.category === category;
-			const qOk =
-				!q ||
-				n.title.toLowerCase().includes(q) ||
-				n.content.toLowerCase().includes(q) ||
-				n.author.toLowerCase().includes(q);
-			return catOk && qOk;
-		});
-	}, [notices, category, query]);
-
-	const selected = useMemo(() => {
-		if (selectedId == null) return null;
-		return notices.find((n) => n.id === selectedId) ?? null;
-	}, [selectedId, notices]);
-
-	const totalAttachBytes = useMemo(() => {
-		return formAttachments.reduce((sum, a) => sum + (a.size ?? 0), 0);
-	}, [formAttachments]);
-
-	const resetCompose = () => {
-		setFormTitle("");
-		setFormAuthor("관리자");
-		setFormDate(formatLocalDateYYYYMMDD(new Date()));
-		setFormCategory("서비스");
-		setFormPinned(false);
-		setFormContent("");
-		setFormAttachments([]);
-		setLinkName("");
-		setLinkUrl("");
-		if (fileInputRef.current) fileInputRef.current.value = "";
-	};
-
-	const openCompose = () => {
-		resetCompose();
-		setComposeOpen(true);
-	};
-
-	const addLinkAttachment = () => {
-		const name = linkName.trim();
-		const url = linkUrl.trim();
-
-		if (!name || !url) return toast.info("링크 이름과 URL을 입력해 주세요.");
-		if (!/^https?:\/\//i.test(url)) {
-			return toast.error("링크 URL은 http:// 또는 https://로 시작해야 합니다.");
-		}
-
-		setFormAttachments((prev) => [
-			...prev,
-			{ id: makeId(), kind: "link", name, url },
-		]);
-		setLinkName("");
-		setLinkUrl("");
-	};
-
-	const removeAttachment = (id: string) => {
-		setFormAttachments((prev) => prev.filter((a) => a.id !== id));
-	};
-
-	const handleFilesSelected = async (files: FileList | null) => {
-		if (!files || files.length === 0) return;
-
-		const next: NoticeAttachment[] = [];
-		let addedBytes = 0;
-
-		for (const f of Array.from(files)) {
-			if (f.size > MAX_FILE_SIZE_BYTES) {
-				toast.error(`파일이 너무 큽니다: ${f.name} (최대 2MB)`);
-				continue;
-			}
-			if (totalAttachBytes + addedBytes + f.size > MAX_TOTAL_ATTACH_BYTES) {
-				toast.error("첨부파일 총 용량이 너무 큽니다. (최대 6MB)");
-				break;
-			}
-
-			try {
-				const url = await fileToDataURL(f);
-				next.push({
-					id: makeId(),
-					kind: kindFromFile(f),
-					name: f.name,
-					url,
-					mimeType: f.type,
-					size: f.size,
-				});
-				addedBytes += f.size;
-			} catch {
-				toast.error(`파일을 처리할 수 없습니다: ${f.name}`);
-			}
-		}
-
-		if (next.length > 0) setFormAttachments((prev) => [...prev, ...next]);
-	};
-
-	const createNotice = () => {
-		if (!canWrite) return toast.error("운영자만 공지를 작성할 수 있습니다.");
-
-		const title = formTitle.trim();
-		const author = formAuthor.trim();
-		const date = formDate.trim();
-		const content = formContent.trim();
-
-		if (!title) return toast.error("제목을 입력해 주세요.");
-		if (!author) return toast.error("작성자를 입력해 주세요.");
-		if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-			return toast.error("날짜 형식이 올바르지 않습니다. (YYYY-MM-DD)");
-		}
-		if (!content) return toast.error("내용을 입력해 주세요.");
-
-		const nextId = notices.reduce((max, n) => Math.max(max, n.id), 0) + 1;
-
-		const newItem: NoticeItem = {
-			id: nextId,
-			title,
-			author,
-			date,
-			category: formCategory,
-			pinned: formPinned,
-			content,
-			attachments: formAttachments.length > 0 ? formAttachments : undefined,
-		};
-
-		setNotices((prev) => [newItem, ...prev]);
-		setComposeOpen(false);
-		toast.success("공지사항이 등록되었습니다.");
-	};
-
-	const deleteNotice = (id: number) => {
-		if (!canWrite) return toast.error("운영자만 삭제할 수 있습니다.");
-		const ok = window.confirm("이 공지사항을 삭제할까요?");
-		if (!ok) return;
-
-		setNotices((prev) => prev.filter((n) => n.id !== id));
-		setSelectedId((prev) => (prev === id ? null : prev));
-		toast.success("삭제되었습니다.");
-	};
-
-	const onSearchSubmit = (e: React.FormEvent) => {
-		e.preventDefault();
-		// 로컬 필터링이라 추가 동작 없음 (추후 서버 검색이면 여기서 fetch)
-	};
-
-	const AttachmentIcon = ({ kind }: { kind: AttachmentKind }) => {
-		if (kind === "image") return <ImageIcon className="h-4 w-4" />;
-		if (kind === "pdf") return <FileText className="h-4 w-4" />;
-		if (kind === "link") return <LinkIcon className="h-4 w-4" />;
-		return <Paperclip className="h-4 w-4" />;
-	};
-
-	const renderAttachment = (a: NoticeAttachment) => {
-		if (a.kind === "image") {
-			return (
-				<div key={a.id} className="space-y-2">
-					<div className="text-sm font-medium flex items-center gap-2">
-						<AttachmentIcon kind={a.kind} />
-						<span className="truncate">{a.name}</span>
-					</div>
-					<a href={a.url} target="_blank" rel="noreferrer">
-						<img
-							src={a.url}
-							alt={a.name}
-							className="w-full max-h-64 object-contain rounded-md border bg-white"
-						/>
-					</a>
-					<a className="text-sm underline text-blue-600" href={a.url} download={a.name}>
-						다운로드
-					</a>
-				</div>
-			);
-		}
-
-		if (a.kind === "pdf") {
-			return <PdfAttachment key={a.id} name={a.name} url={a.url} />;
-		}
-
-		return (
-			<div
-				key={a.id}
-				className="flex items-center justify-between gap-3 border rounded-md p-3 bg-white"
-			>
-				<div className="flex items-center gap-2 min-w-0">
-					<AttachmentIcon kind={a.kind} />
-					<div className="min-w-0">
-						<div className="text-sm font-medium truncate">{a.name}</div>
-						<div className="text-xs text-muted-foreground truncate">{a.url}</div>
-					</div>
-				</div>
-				<div className="shrink-0">
-					<a
-						className="text-sm underline text-blue-600"
-						href={a.url}
-						target={a.kind === "link" ? "_blank" : undefined}
-						rel={a.kind === "link" ? "noreferrer" : undefined}
-						download={a.kind === "file" ? a.name : undefined}
-					>
-						{a.kind === "link" ? "열기" : "다운로드"}
-					</a>
-				</div>
-			</div>
-		);
-	};
-
-	const goList = () => {
-		setSelectedId(null);
-		setComposeOpen(false);
-	};
-
-	return (
-		<div className="space-y-4">
-			{/* ===== Detail View ===== */}
-			{selected ? (
-				<div className="space-y-3">
-					<div className="flex items-center gap-2 text-sm text-muted-foreground">
-						<button type="button" onClick={goList} className="hover:text-slate-900 transition">
-							공지사항
-						</button>
-						<ChevronRight className="h-4 w-4" />
-						<span className="text-slate-900 font-medium">상세</span>
-					</div>
-
-					<Card>
-						<CardHeader className="pb-3">
-							<div className="flex items-start justify-between gap-3">
-								<div className="space-y-2">
-									<div className="flex items-center gap-2 flex-wrap">
-										{selected.pinned && <Badge>고정</Badge>}
-										<Badge variant="secondary">{selected.category}</Badge>
-										<span className="text-xs text-muted-foreground">{selected.date}</span>
-										<span className="text-xs text-muted-foreground">·</span>
-										<span className="text-xs text-muted-foreground">{selected.author}</span>
-										{selected.attachments && selected.attachments.length > 0 && (
-											<span className="text-xs text-muted-foreground">
-												· 첨부 {selected.attachments.length}개
-											</span>
-										)}
-									</div>
-									<CardTitle className="text-lg leading-snug">{selected.title}</CardTitle>
-								</div>
-
-								<div className="flex gap-2">
-									<Button size="sm" variant="outline" onClick={goList}>
-										목록으로
-									</Button>
-									{canWrite && (
-										<Button
-											size="sm"
-											variant="destructive"
-											onClick={() => deleteNotice(selected.id)}
-											className="gap-2"
-										>
-											<Trash2 className="h-4 w-4" />
-											삭제
-										</Button>
-									)}
-								</div>
-							</div>
-						</CardHeader>
-
-						<CardContent className="space-y-6">
-							<div className="whitespace-pre-line text-sm text-gray-700 leading-6">
-								{selected.content}
-							</div>
-
-							{selected.attachments && selected.attachments.length > 0 && (
-								<div className="space-y-3">
-									<div className="text-sm font-semibold flex items-center gap-2">
-										<Paperclip className="h-4 w-4" />
-										첨부파일
-									</div>
-
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-										{selected.attachments.map(renderAttachment)}
-									</div>
-								</div>
-							)}
-						</CardContent>
-					</Card>
-				</div>
-			) : (
-				<>
-					{/* ===== Header + Search/Filter : 한 박스에 합침 ===== */}
-					<Card className="border bg-white">
-						<CardHeader className="space-y-1">
-							<div className="flex items-start justify-between gap-4">
-								<div>
-									<div className="flex items-center gap-2">
-										<Megaphone className="h-5 w-5 text-slate-900" />
-										<CardTitle className="text-xl">공지사항</CardTitle>
-									</div>
-									<CardDescription>
-										서비스 업데이트, 점검, 정책 변경 소식을 확인하세요.
-									</CardDescription>
-								</div>
-
-								{canWrite ? (
-									<Button className="gap-2" onClick={openCompose}>
-										<Plus className="h-4 w-4" />
-										공지 작성
-									</Button>
-								) : null}
-							</div>
-						</CardHeader>
-
-						<CardContent className="space-y-4 pt-0">
-							{/* ✅ “검색” 라벨 제거 + 검색 버튼 추가 */}
-							<form onSubmit={onSearchSubmit} className="space-y-3">
-								<div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-									<div className="relative flex-1">
-										<Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-										<Input
-											placeholder="예: 점검, 업데이트, 정책, 관리자"
-											value={query}
-											onChange={(e) => setQuery(e.target.value)}
-											className="pl-9"
-										/>
-									</div>
-
-									<Button type="submit" className="sm:w-auto w-full">
-										검색
-									</Button>
-								</div>
-
-								<div className="flex flex-wrap gap-2">
-									{categories.map((c) => (
-										<Button
-											key={c}
-											size="sm"
-											variant={category === c ? "default" : "outline"}
-											onClick={() => setCategory(c)}
-											type="button"
-										>
-											{c}
-										</Button>
-									))}
-								</div>
-							</form>
-						</CardContent>
-					</Card>
-
-					{/* 작성 폼: 운영자만 */}
-					{composeOpen && canWrite && (
-						<Card>
-							<CardHeader>
-								<CardTitle className="text-base">공지 작성</CardTitle>
-								<CardDescription>
-									제목/내용/첨부파일을 등록합니다. (데모 모드: localStorage 저장)
-								</CardDescription>
-							</CardHeader>
-							<CardContent className="space-y-4">
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-									<div className="space-y-2">
-										<Label>제목</Label>
-										<Input
-											value={formTitle}
-											onChange={(e) => setFormTitle(e.target.value)}
-											placeholder="제목 입력"
-										/>
-									</div>
-									<div className="space-y-2">
-										<Label>작성자</Label>
-										<Input
-											value={formAuthor}
-											onChange={(e) => setFormAuthor(e.target.value)}
-											placeholder="예: 관리자"
-										/>
-									</div>
-									<div className="space-y-2">
-										<Label>날짜 (YYYY-MM-DD)</Label>
-										<Input value={formDate} onChange={(e) => setFormDate(e.target.value)} />
-									</div>
-									<div className="space-y-2">
-										<Label>카테고리</Label>
-										<div className="flex flex-wrap gap-2">
-											{(["서비스", "업데이트", "점검", "정책"] as const).map((c) => (
-												<Button
-													key={c}
-													size="sm"
-													variant={formCategory === c ? "default" : "outline"}
-													onClick={() => setFormCategory(c)}
-													type="button"
-												>
-													{c}
-												</Button>
-											))}
-										</div>
-									</div>
-								</div>
-
-								<div className="flex items-center gap-2">
-									<Button
-										type="button"
-										size="sm"
-										variant={formPinned ? "default" : "outline"}
-										onClick={() => setFormPinned((v) => !v)}
-									>
-										{formPinned ? "고정됨" : "고정하기"}
-									</Button>
-									<span className="text-xs text-muted-foreground">
-										고정 공지는 목록 최상단에 노출됩니다.
-									</span>
-								</div>
-
-								<div className="space-y-2">
-									<Label>내용</Label>
-									<textarea
-										value={formContent}
-										onChange={(e) => setFormContent(e.target.value)}
-										placeholder="내용 입력"
-										className="w-full min-h-40 rounded-md border px-3 py-2 text-sm bg-white"
-									/>
-								</div>
-
-								<div className="space-y-2">
-									<Label>첨부파일 (이미지/PDF/일반파일)</Label>
-									<Input
-										ref={fileInputRef}
-										type="file"
-										multiple
-										onChange={(e) => void handleFilesSelected(e.target.files)}
-									/>
-									<div className="text-xs text-muted-foreground">
-										데모 모드(localStorage 저장): 파일 1개 최대 2MB, 총 6MB 제한
-									</div>
-
-									{formAttachments.length > 0 && (
-										<div className="space-y-2">
-											<div className="text-sm font-medium">
-												첨부 목록 ({formAttachments.length}개)
-											</div>
-											<div className="space-y-2">
-												{formAttachments.map((a) => (
-													<div
-														key={a.id}
-														className="flex items-center justify-between gap-3 border rounded-md p-3 bg-white"
-													>
-														<div className="flex items-center gap-2 min-w-0">
-															<AttachmentIcon kind={a.kind} />
-															<div className="min-w-0">
-																<div className="text-sm font-medium truncate">{a.name}</div>
-																<div className="text-xs text-muted-foreground">
-																	{a.kind.toUpperCase()}
-																	{typeof a.size === "number"
-																		? ` · ${(a.size / 1024).toFixed(0)}KB`
-																		: ""}
-																</div>
-															</div>
-														</div>
-														<Button variant="ghost" size="sm" onClick={() => removeAttachment(a.id)}>
-															<Trash2 className="h-4 w-4" />
-														</Button>
-													</div>
-												))}
-											</div>
-										</div>
-									)}
-								</div>
-
-								<div className="space-y-2">
-									<Label>외부 링크 첨부(선택)</Label>
-									<div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-										<Input value={linkName} onChange={(e) => setLinkName(e.target.value)} placeholder="링크 이름" />
-										<Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." />
-										<Button variant="outline" onClick={addLinkAttachment} type="button">
-											링크 추가
-										</Button>
-									</div>
-								</div>
-
-								<div className="flex gap-2 justify-end pt-2">
-									<Button variant="outline" onClick={() => setComposeOpen(false)} type="button">
-										취소
-									</Button>
-									<Button onClick={createNotice} type="button">
-										등록
-									</Button>
-								</div>
-							</CardContent>
-						</Card>
-					)}
-
-					{/* 목록 */}
-					<div className="space-y-3">
-						{filtered.length === 0 && (
-							<Card>
-								<CardContent className="py-8 text-center text-sm text-muted-foreground">
-									검색 결과가 없습니다.
-								</CardContent>
-							</Card>
-						)}
-
-						{filtered.map((n) => {
-							const attachCount = n.attachments?.length ?? 0;
-							return (
-								<Card key={n.id} className={n.pinned ? "border-blue-200" : ""}>
-									<CardHeader className="pb-3">
-										<div className="flex items-start justify-between gap-3">
-											<div className="space-y-1 min-w-0">
-												<div className="flex items-center gap-2 flex-wrap">
-													{n.pinned && <Badge>고정</Badge>}
-													<Badge variant="secondary">{n.category}</Badge>
-													<span className="text-xs text-muted-foreground">{n.date}</span>
-													<span className="text-xs text-muted-foreground">·</span>
-													<span className="text-xs text-muted-foreground">{n.author}</span>
-													{attachCount > 0 && (
-														<span className="text-xs text-muted-foreground">· 첨부 {attachCount}개</span>
-													)}
-												</div>
-
-												<CardTitle className="text-lg truncate">{n.title}</CardTitle>
-											</div>
-
-											<Button size="sm" variant="outline" onClick={() => setSelectedId(n.id)}>
-												상세
-											</Button>
-										</div>
-									</CardHeader>
-								</Card>
-							);
-						})}
-					</div>
-				</>
-			)}
-		</div>
-	);
-}
-
-function PdfAttachment({ name, url }: { name: string; url: string }) {
-	const [open, setOpen] = useState(false);
-
-	return (
-		<div className="space-y-2">
-			<div className="flex items-center justify-between gap-2 border rounded-md p-3 bg-white">
-				<div className="flex items-center gap-2 min-w-0">
-					<FileText className="h-4 w-4" />
-					<div className="min-w-0">
-						<div className="text-sm font-medium truncate">{name}</div>
-						<div className="text-xs text-muted-foreground truncate">PDF</div>
-					</div>
-				</div>
-				<div className="flex gap-2 shrink-0">
-					<Button size="sm" variant="outline" onClick={() => setOpen((v) => !v)}>
-						{open ? "미리보기 닫기" : "미리보기"}
-					</Button>
-					<a className="text-sm underline text-blue-600 self-center" href={url} download={name}>
-						다운로드
-					</a>
-				</div>
-			</div>
-
-			{open && (
-				<div className="border rounded-md overflow-hidden bg-white">
-					<iframe title={name} src={url} className="w-full h-[520px]" />
-				</div>
-			)}
-		</div>
-	);
+function AlarmList({
+    alarms,
+    loading,
+    onDelete,
+    onClick,
+    emptyMessage,
+}: {
+    alarms: Alarm[];
+    loading: boolean;
+    onDelete: (id: number) => void;
+    onClick: (alarm: Alarm) => void;
+    emptyMessage: string;
+}) {
+    if (loading) {
+        return <div className="py-8 text-center text-muted-foreground">불러오는 중...</div>;
+    }
+
+    if (alarms.length === 0) {
+        return (
+            <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                    <Bell className="h-8 w-8 mx-auto mb-3 opacity-20" />
+                    {emptyMessage}
+                </CardContent>
+            </Card>
+        );
+    }
+
+    return (
+        <div className="space-y-3">
+            {alarms.map((alarm) => (
+                <Card
+                    key={alarm.alarmId}
+                    className="hover:shadow-md transition cursor-pointer group"
+                    onClick={() => onClick(alarm)}
+                >
+                    <CardContent className="p-4 flex items-start gap-3">
+                        <div className="mt-1">
+                            {alarm.alarmType === "KEYWORD" ? (
+                                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                                    <Search className="h-4 w-4" />
+                                </div>
+                            ) : (
+                                <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
+                                    <Bell className="h-4 w-4" />
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Badge variant={alarm.alarmType === "KEYWORD" ? "default" : "secondary"}>
+                                    {alarm.alarmType === "KEYWORD" ? "키워드" : "알림"}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                    {new Date(alarm.date).toLocaleString()}
+                                </span>
+                            </div>
+                            <p className="text-sm font-medium text-foreground line-clamp-2">
+                                {alarm.content}
+                            </p>
+                            {alarm.bidName && (
+                                <p className="text-xs text-muted-foreground mt-1 truncate">
+                                    공고명: {alarm.bidName}
+                                </p>
+                            )}
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(alarm.alarmId);
+                            }}
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+    );
 }

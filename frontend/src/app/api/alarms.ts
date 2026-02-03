@@ -13,6 +13,8 @@ export interface AlarmItem {
 	userId: number;
 	bidId: number;
 	content: string;
+	alarmType?: string; // KEYWORD | SYSTEM | etc.
+	bidName?: string;
 	date: string; // LocalDateTime -> string(ISO)로 받는다고 가정
 }
 

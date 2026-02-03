@@ -7,6 +7,8 @@ import type {
 	PostCategory,
 	Comment,
 	Attachment,
+	UserKeyword,
+	Alarm,
 } from "../types/community";
 
 function toNum(v: any, fallback = 0) {
@@ -360,3 +362,46 @@ export async function adoptComment(commentId: number): Promise<Comment> {
 	return normalizeComment(unwrap(json));
 }
 
+
+/**
+ * 키워드 관련 API
+ */
+export async function getUserKeywords(userId: number): Promise<UserKeyword[]> {
+	const json = await api<ApiResponse<UserKeyword[]>>(`/keywords/${userId}`);
+	return unwrap(json) ?? [];
+}
+
+export async function addUserKeyword(payload: {
+	userId: number;
+	keyword: string;
+	minPrice?: number | null;
+	maxPrice?: number | null;
+}): Promise<string> {
+	const json = await api<ApiResponse<string>>("/keywords", {
+		method: "POST",
+		body: JSON.stringify(payload),
+	});
+	return unwrap(json);
+}
+
+export async function deleteUserKeyword(id: number): Promise<string> {
+	const json = await api<ApiResponse<string>>(`/keywords/${id}`, {
+		method: "DELETE",
+	});
+	return unwrap(json);
+}
+
+/**
+ * 알림 관련 API
+ */
+export async function getMyAlarms(userId: number): Promise<Alarm[]> {
+	const json = await api<ApiResponse<Alarm[]>>(`/alarms/${userId}`);
+	return unwrap(json) ?? [];
+}
+
+export async function deleteAlarm(alarmId: number): Promise<string> {
+	const json = await api<ApiResponse<string>>(`/alarms/${alarmId}`, {
+		method: "DELETE",
+	});
+	return unwrap(json);
+}

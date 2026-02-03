@@ -67,3 +67,22 @@ export interface ApiResponse<T> {
 	message?: string;
 	data: T;
 }
+
+export interface UserKeyword {
+	id: number;
+	userId?: number;
+	keyword: string;
+	minPrice: number | null; // backend sends BigInteger/Long -> number (if safe) or string? Usually string for big ints but let's assume safe for now or string
+	maxPrice: number | null;
+}
+
+export interface Alarm {
+	alarmId: number;
+	userId: number;
+	bidId: number | null;
+	bidName: string | null;
+	content: string;
+	alarmType: string;
+	date: string; // ISO string
+}
+

@@ -11,13 +11,38 @@ import {
 	Settings,
 	CheckCheck,
 	Trash2,
+    Search,
+    Plus,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Switch } from "./ui/switch";
 import { Label } from "./ui/label";
+import { Input } from "./ui/input";
+import { toast } from "sonner";
+
+// Helper for generic local storage
+function useStickyState<T>(defaultValue: T, key: string): [T, (v: T) => void] {
+    const [value, setValue] = useState<T>(() => {
+        const stickyValue = localStorage.getItem(key);
+        return stickyValue !== null ? JSON.parse(stickyValue) : defaultValue;
+    });
+    useEffect(() => {
+        localStorage.setItem(key, JSON.stringify(value));
+    }, [key, value]);
+    return [value, setValue];
+}
+
+const SETTINGS_KEY = "notifications.settings.v1";
+
+type NotificationSettings = {
+    deadline: boolean;
+    correction: boolean;
+};
 
 import { fetchWishlist } from "../api/wishlist";
 import { deleteAlarm, fetchAlarms, type AlarmItem } from "../api/alarms";
+import { getUserKeywords, addUserKeyword, deleteUserKeyword } from "../api/community";
+import type { UserKeyword } from "../types/community";
 
 export type NotificationItem = {
 	id: number;
@@ -73,9 +98,12 @@ function to_relative_time(iso: string): string {
 	return new Date(iso).toLocaleDateString();
 }
 
-function infer_type_and_title(content: string): { type: string; title: string; urgent: boolean } {
+function infer_type_and_title(content: string, alarmType?: string): { type: string; title: string; urgent: boolean } {
+    if (alarmType === "KEYWORD") {
+        return { type: "KEYWORD", title: "키워드 알림", urgent: false };
+    }
+
 	const c = content ?? "";
-	// 백엔드가 content만 내려주는 형태를 가정하여 키워드 기반으로 분류
 	if (/(마감|마감임박|마감 임박|D-?\d+)/i.test(c)) {
 		return { type: "deadline", title: "마감 임박", urgent: true };
 	}
@@ -108,7 +136,7 @@ function to_notification_items(alarms: AlarmItem[], read_map: Record<string, boo
 			return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0);
 		})
 		.map((a) => {
-			const meta = infer_type_and_title(a.content);
+			const meta = infer_type_and_title(a.content, a.alarmType);
 			return {
 				id: Number(a.alarmId),
 				bidId: Number(a.bidId),
@@ -134,11 +162,6 @@ function ms_until(iso: string): number | null {
     return t - Date.now();
 }
 
-/**
- * wishlist 기반으로 프론트에서 마감 알림 생성
- * - D-7 이내: "마감 임박" (긴급)
- * - 마감 지남: "마감됨" (긴급)
- */
 function build_deadline_notifications_from_wishlist(
     wishlist: any[],
     read_map: Record<string, boolean>,
@@ -162,7 +185,6 @@ function build_deadline_notifications_from_wishlist(
         if (!isExpired && !isImminent) continue;
 
         // 로컬 알림 고유 ID(서버 alarmId랑 충돌 안 나게 큰 값으로)
-        // bidId + 타입(1=임박, 2=마감됨)
         const localId = Number(`9${bidId}${isExpired ? 2 : 1}`);
 
         out.push({
@@ -174,11 +196,10 @@ function build_deadline_notifications_from_wishlist(
                 ? `[장바구니] "${w?.title ?? "공고"}" 공고가 마감되었습니다. (마감: ${new Date(endIso).toLocaleString("ko-KR")})`
                 : `[장바구니] "${w?.title ?? "공고"}" 공고가 곧 마감됩니다. (마감: ${new Date(endIso).toLocaleString("ko-KR")})`,
             time: isExpired ? "방금/최근" : "곧",
-            read: !!read_map[String(localId)],   //  기존 markRead 로직 그대로 사용 가능
+            read: !!read_map[String(localId)],
             urgent: true,
         });
     }
-
     return out;
 }
 
@@ -187,8 +208,18 @@ export function NotificationsPage() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
+	// Keyword Mgmt State
+    const [keywords, setKeywords] = useState<UserKeyword[]>([]);
+    const [newKeyword, setNewKeyword] = useState("");
+    const [minPrice, setMinPrice] = useState("");
+    const [maxPrice, setMaxPrice] = useState("");
+    
+    // [NEW] Settings State (Persisted)
+    const [settings, setSettings] = useStickyState<NotificationSettings>({ deadline: true, correction: true }, SETTINGS_KEY);
+
+    const userId = get_user_id();
+
 	const refresh = async () => {
-		const userId = get_user_id();
 		if (!userId) {
 			setItems([]);
 			setError("로그인이 필요합니다.");
@@ -199,27 +230,36 @@ export function NotificationsPage() {
 		setError(null);
 
 		try {
-			// 1) 장바구니(위시리스트) 공고 id 목록
+			// 1) Wishlist & Alarms
 			const wishlist = await fetchWishlist(userId);
 			const bid_ids = new Set(wishlist.map((w) => Number(w.bidId)).filter((n) => Number.isFinite(n)));
-
-			// 2) 서버 알림 전체 조회 후, 장바구니 공고만 필터
 			const alarms = await fetchAlarms(userId);
-			const cart_scoped = alarms.filter((a) => bid_ids.has(Number(a.bidId)));
 
-			// 3) 읽음 상태 merge
+            // [NEW] Keyword Alarms (unrestricted)
+            const keywordAlarms = alarms.filter(a => a.alarmType === "KEYWORD");
+            
+            // [OLD] Wishlist Alarms (restricted)
+			const cart_scoped = alarms.filter((a) => bid_ids.has(Number(a.bidId)) && a.alarmType !== "KEYWORD");
+
+			// Merge
             const read_map = load_read_map();
-
-            const serverItems = to_notification_items(cart_scoped, read_map);
+            const serverItems = to_notification_items([...keywordAlarms, ...cart_scoped], read_map);
             const localDeadlineItems = build_deadline_notifications_from_wishlist(wishlist as any[], read_map);
 
             const merged = [...localDeadlineItems, ...serverItems].sort((a, b) => {
+                // Urgent first
                 if (a.urgent !== b.urgent) return a.urgent ? -1 : 1;
-                // 시간 정렬이 어려우니 id 기준이라도 정렬(로컬은 큰 값이라 위로 올 수도 있음)
+                // Unread first
+                if (a.read !== b.read) return a.read ? 1 : -1;
+                // Latest first (approx by ID if time parsing fails, but relative time logic is fine for display)
                 return b.id - a.id;
             });
 
             setItems(merged);
+
+            // Load Keywords
+            const ks = await getUserKeywords(userId);
+            setKeywords(ks);
 
         } catch (e) {
 			const msg = e instanceof Error ? e.message : "알림을 불러오지 못했습니다.";
@@ -235,7 +275,16 @@ export function NotificationsPage() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	const unreadCount = useMemo(() => items.filter((n) => !n.read).length, [items]);
+    // [NEW] Filter items based on settings
+    const visibleItems = useMemo(() => {
+        return items.filter(item => {
+            if (item.type === "deadline" && !settings.deadline) return false;
+            if ((item.type === "correction" || item.type === "reannouncement") && !settings.correction) return false;
+            return true;
+        });
+    }, [items, settings]);
+
+	const unreadCount = useMemo(() => visibleItems.filter((n) => !n.read).length, [visibleItems]);
 
 	const getIcon = (type: string) => {
 		switch (type) {
@@ -247,10 +296,16 @@ export function NotificationsPage() {
 				return <RefreshCw className="h-5 w-5 text-purple-600" />;
 			case "result":
 				return <XCircle className="h-5 w-5 text-red-600" />;
+            case "KEYWORD":
+                return <Search className="h-5 w-5 text-blue-600" />;
 			default:
 				return <Bell className="h-5 w-5 text-green-600" />;
 		}
 	};
+
+    // ... (markRead, markAllRead, removeOne same as before but use visibleItems where needed ?? actually handlers act on ID so fine)
+    // BUT markAllRead needs to only mark VISIBLE ones? 
+    // Usually mark all read means all visible ones.
 
 	const markRead = (id: number) => {
 		setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
@@ -260,27 +315,58 @@ export function NotificationsPage() {
 	};
 
 	const markAllRead = () => {
-		setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+        // Only mark visible items as read? Or all? User usually expects what they see.
+        const visibleIds = new Set(visibleItems.map(n => n.id));
+		setItems((prev) => prev.map((n) => visibleIds.has(n.id) ? { ...n, read: true } : n));
 		const map = load_read_map();
-		items.forEach((n) => {
+		visibleItems.forEach((n) => {
 			map[String(n.id)] = true;
 		});
 		save_read_map(map);
 	};
 
-	const removeOne = async (alarmId: number) => {
+    // ... handlers ...
+
+    const removeOne = async (alarmId: number) => {
 		try {
 			await deleteAlarm(alarmId);
 			setItems((prev) => prev.filter((n) => n.id !== alarmId));
-			// 읽음 상태도 함께 정리
 			const map = load_read_map();
 			delete map[String(alarmId)];
 			save_read_map(map);
+            toast.success("알림이 삭제되었습니다.");
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : "알림 삭제에 실패했습니다.";
 			setError(msg);
 		}
 	};
+
+    const handleAddKeyword = async () => {
+        if (!userId) { toast.error("로그인이 필요합니다."); return; }
+        if (!newKeyword.trim()) { toast.error("키워드를 입력해주세요."); return; }
+        try {
+            await addUserKeyword({
+                userId,
+                keyword: newKeyword.trim(),
+                minPrice: minPrice ? Number(minPrice) : null,
+                maxPrice: maxPrice ? Number(maxPrice) : null,
+            });
+            toast.success("키워드가 추가되었습니다.");
+            setNewKeyword(""); setMinPrice(""); setMaxPrice("");
+            getUserKeywords(userId).then(setKeywords);
+        } catch(e) { toast.error("키워드 추가 실패"); }
+    };
+
+    const handleDeleteKeyword = async (id: number) => {
+        if(!confirm("삭제하시겠습니까?")) return;
+        try {
+            await deleteUserKeyword(id);
+            if(userId) getUserKeywords(userId).then(setKeywords);
+            toast.success("삭제되었습니다.");
+        } catch(e) { toast.error("삭제 실패"); }
+    };
+
+    const formatPrice = (p: number | null) => p ? new Intl.NumberFormat("ko-KR").format(p) : "제한없음";
 
 	return (
 		<div className="space-y-6">
@@ -289,11 +375,11 @@ export function NotificationsPage() {
 					<div>
 						<CardTitle className="flex items-center gap-2">
 							<Bell className="h-5 w-5" />
-							알림
+							알림 센터
 							{unreadCount > 0 && <Badge variant="secondary">{unreadCount}</Badge>}
 						</CardTitle>
 						<CardDescription>
-							장바구니(관심 공고)에 담긴 공고에 대해서만 알림이 표시됩니다.
+							관심 공고(장바구니) 및 키워드 알림을 모아볼 수 있습니다.
 						</CardDescription>
 					</div>
 
@@ -302,7 +388,7 @@ export function NotificationsPage() {
 							<RefreshCw className={["h-4 w-4", loading ? "animate-spin" : ""].join(" ")} />
 							새로고침
 						</Button>
-						<Button variant="outline" onClick={markAllRead} disabled={items.length === 0}>
+						<Button variant="outline" onClick={markAllRead} disabled={visibleItems.length === 0}>
 							<CheckCheck className="h-4 w-4" />
 							모두 읽음
 						</Button>
@@ -319,104 +405,102 @@ export function NotificationsPage() {
 						<TabsList>
 							<TabsTrigger value="all">전체</TabsTrigger>
 							<TabsTrigger value="urgent">긴급</TabsTrigger>
+                            <TabsTrigger value="keyword">키워드</TabsTrigger>
 							<TabsTrigger value="settings">설정</TabsTrigger>
 						</TabsList>
 
 						<TabsContent value="all" className="mt-4 space-y-3">
-							{loading && (
-								<div className="text-sm text-gray-500">알림을 불러오는 중입니다...</div>
+							{loading && <div className="text-sm text-gray-500">로딩 중...</div>}
+							{!loading && visibleItems.length === 0 && (
+								<div className="text-sm text-gray-500">표시할 알림이 없습니다.</div>
 							)}
-							{!loading && items.length === 0 && (
-								<div className="text-sm text-gray-500">
-									표시할 알림이 없습니다. (장바구니에 담긴 공고 기준)
-								</div>
-							)}
-							{items.map((n) => (
-								<div
-									key={n.id}
-									className={[
-										"w-full rounded-xl border bg-white p-4 transition",
-										n.read ? "opacity-80" : "border-blue-200",
-									].join(" ")}
-								>
-									<div className="flex items-start justify-between gap-4">
-										<button
-											onClick={() => markRead(n.id)}
-											className="flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rounded-lg"
-											type="button"
-										>
-											<div className="flex items-start gap-3">
-												<div className="mt-0.5">{getIcon(n.type)}</div>
-												<div>
-													<div className="flex items-center gap-2">
-														<div className="font-semibold">{n.title}</div>
-														{n.urgent && <Badge>긴급</Badge>}
-														{!n.read && <Badge variant="secondary">NEW</Badge>}
-													</div>
-													<div className="text-sm text-gray-600 mt-1">{n.message}</div>
-												</div>
-											</div>
-										</button>
-
-										<div className="flex items-center gap-2 shrink-0">
-											<div className="text-xs text-gray-500 whitespace-nowrap">{n.time}</div>
-											<Button
-												size="icon"
-												variant="ghost"
-												aria-label="알림 삭제"
-												onClick={() => removeOne(n.id)}
-											>
-												<Trash2 className="h-4 w-4" />
-											</Button>
-										</div>
-									</div>
-								</div>
+							{visibleItems.map((n) => (
+								<NotificationCard key={n.id} item={n} onMarkRead={markRead} onDelete={removeOne} getIcon={getIcon} />
 							))}
 						</TabsContent>
 
 						<TabsContent value="urgent" className="mt-4 space-y-3">
-							{items
-								.filter((n) => n.urgent)
-								.map((n) => (
-									<div key={n.id} className="rounded-xl border bg-white p-4">
-										<div className="flex items-start justify-between gap-4">
-											<div className="flex items-start gap-3">
-												<div className="mt-0.5">{getIcon(n.type)}</div>
-												<div>
-													<div className="font-semibold">{n.title}</div>
-													<div className="text-sm text-gray-600 mt-1">{n.message}</div>
-												</div>
-											</div>
-											<div className="text-xs text-gray-500 whitespace-nowrap">{n.time}</div>
-										</div>
-									</div>
-								))}
-							{!loading && items.filter((n) => n.urgent).length === 0 && (
+							{visibleItems.filter((n) => n.urgent).map((n) => (
+                                <NotificationCard key={n.id} item={n} onMarkRead={markRead} onDelete={removeOne} getIcon={getIcon} />
+							))}
+							{!loading && visibleItems.filter((n) => n.urgent).length === 0 && (
 								<div className="text-sm text-gray-500">긴급 알림이 없습니다.</div>
 							)}
 						</TabsContent>
 
-						<TabsContent value="settings" className="mt-4">
+                        <TabsContent value="keyword" className="mt-4 space-y-3">
+                            {visibleItems.filter((n) => n.type === "KEYWORD").map((n) => (
+                                <NotificationCard key={n.id} item={n} onMarkRead={markRead} onDelete={removeOne} getIcon={getIcon} />
+                            ))}
+                            {!loading && visibleItems.filter((n) => n.type === "KEYWORD").length === 0 && (
+                                <div className="text-sm text-gray-500">키워드 알림이 없습니다.</div>
+                            )}
+                        </TabsContent>
+
+						<TabsContent value="settings" className="mt-4 space-y-6">
+                            {/* [Keyword Settings] */}
+                            <div className="rounded-xl border bg-white p-4 space-y-4">
+                                <Label className="text-base font-semibold">관심 키워드 등록</Label>
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
+                                    <div className="md:col-span-2 space-y-1">
+                                        <Label className="text-xs text-gray-500">키워드</Label>
+                                        <Input value={newKeyword} onChange={e=>setNewKeyword(e.target.value)} placeholder="예: 서버, AI" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-gray-500">최소 가격</Label>
+                                        <Input type="number" value={minPrice} onChange={e=>setMinPrice(e.target.value)} placeholder="0" />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <div className="space-y-1 flex-1">
+                                            <Label className="text-xs text-gray-500">최대 가격</Label>
+                                            <Input type="number" value={maxPrice} onChange={e=>setMaxPrice(e.target.value)} placeholder="제한없음" />
+                                        </div>
+                                        <Button onClick={handleAddKeyword} size="icon" className="shrink-0 mb-[2px]">
+                                            <Plus className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                                    {keywords.map(k => (
+                                        <div key={k.id} className="flex justify-between items-center p-2 bg-slate-50 rounded border text-sm">
+                                            <div>
+                                                <div className="font-medium">{k.keyword}</div>
+                                                <div className="text-xs text-gray-500">{formatPrice(k.minPrice)} ~ {formatPrice(k.maxPrice)}</div>
+                                            </div>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-red-500" onClick={()=>handleDeleteKeyword(k.id)}>
+                                                <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                    {keywords.length === 0 && <div className="text-xs text-gray-400 p-2">등록된 키워드가 없습니다.</div>}
+                                </div>
+                            </div>
+
+                            {/* [Legacy Settings: Wishlist/Correction] */}
 							<div className="rounded-xl border bg-white p-4 space-y-4">
 								<div className="flex items-center justify-between">
 									<div className="flex items-center gap-2">
 										<Settings className="h-4 w-4 text-gray-600" />
-										<Label>마감 임박 알림</Label>
+										<Label>마감 임박 알림 / 마감 알림</Label>
 									</div>
-									<Switch defaultChecked />
+									<Switch 
+                                        checked={settings.deadline} 
+                                        onCheckedChange={(c) => setSettings({...settings, deadline: c})} 
+                                    />
 								</div>
-
-								<div className="flex items-center justify-between">
+                                <div className="flex items-center justify-between">
 									<div className="flex items-center gap-2">
 										<Settings className="h-4 w-4 text-gray-600" />
-										<Label>정정/재공고 알림</Label>
+										<Label>정정 / 재공고 알림</Label>
 									</div>
-									<Switch defaultChecked />
+									<Switch 
+                                        checked={settings.correction} 
+                                        onCheckedChange={(c) => setSettings({...settings, correction: c})} 
+                                    />
 								</div>
-
-								<div className="text-sm text-gray-500">
-									* 실제 운영에서는 사용자 설정을 서버에 저장하도록 연결하세요.
-								</div>
+                                <div className="text-xs text-gray-400">
+                                    * 위 설정은 브라우저에 저장되어 재방문 시에도 유지됩니다.
+                                </div>
 							</div>
 						</TabsContent>
 					</Tabs>
@@ -424,4 +508,47 @@ export function NotificationsPage() {
 			</Card>
 		</div>
 	);
+}
+
+function NotificationCard({ item, onMarkRead, onDelete, getIcon }: { item: NotificationItem, onMarkRead: (id:number)=>void, onDelete: (id:number)=>void, getIcon: (t:string)=>any }) {
+    return (
+        <div
+            className={[
+                "w-full rounded-xl border bg-white p-4 transition",
+                item.read ? "opacity-80" : "border-blue-200",
+            ].join(" ")}
+        >
+            <div className="flex items-start justify-between gap-4">
+                <button
+                    onClick={() => onMarkRead(item.id)}
+                    className="flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rounded-lg"
+                    type="button"
+                >
+                    <div className="flex items-start gap-3">
+                        <div className="mt-0.5">{getIcon(item.type)}</div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <div className="font-semibold">{item.title}</div>
+                                {item.urgent && <Badge>긴급</Badge>}
+                                {!item.read && <Badge variant="secondary">NEW</Badge>}
+                            </div>
+                            <div className="text-sm text-gray-600 mt-1">{item.message}</div>
+                        </div>
+                    </div>
+                </button>
+
+                <div className="flex items-center gap-2 shrink-0">
+                    <div className="text-xs text-gray-500 whitespace-nowrap">{item.time}</div>
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label="알림 삭제"
+                        onClick={() => onDelete(item.id)}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
 }
