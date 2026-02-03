@@ -253,24 +253,39 @@ export function AppLayout() {
         </div>
       )}
 
-      <footer className="border-t bg-white py-3 text-sm text-gray-500">
-        <div className="w-full px-5 flex items-center justify-between">
-          <div>© 2026 입찰인사이트. All rights reserved.</div>
-          <div className="flex gap-4 text-xs">
-            <button onClick={() => navigate("/terms")} className="hover:text-gray-500">
-              이용약관
-            </button>
-            <button onClick={() => navigate("/privacy")} className="hover:text-gray-500">
-              개인정보처리방침
-            </button>
-            <button onClick={() => navigate("/support")} className="hover:text-gray-500">
-              고객지원
-            </button>
-          </div>
-        </div>
-      </footer>
+        <footer className="border-t bg-white py-4 text-sm text-gray-500">
+            <div className="w-full px-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                {/* 회사 정보 */}
+                <div className="flex flex-col gap-1 text-xs">
+                    <div>
+                        (주)입찰인사이트 | 대표 김도현 | 사업자등록번호 412-86-01927
+                    </div>
+                    <div>
+                        서울특별시 강남구 테헤란로 152, 8층 (역삼동)
+                    </div>
+                    <div>
+                        고객센터 02-6956-1042 | support@bidsight.co.kr
+                    </div>
+                </div>
 
-      <ChatbotFloatingButton />
+                {/* 링크 */}
+                <div className="flex gap-4 text-xs">
+                    <button onClick={() => navigate("/terms")} className="hover:text-gray-600">
+                        이용약관
+                    </button>
+                    <button onClick={() => navigate("/privacy")} className="hover:text-gray-600">
+                        개인정보처리방침
+                    </button>
+                    <button onClick={() => navigate("/support")} className="hover:text-gray-600">
+                        고객지원
+                    </button>
+                </div>
+            </div>
+        </footer>
+
+
+
+        <ChatbotFloatingButton />
       <RecommendedBidsModal open={recoOpen} onOpenChange={setRecoOpen} />
     </div>
   );
