@@ -14,6 +14,12 @@ export interface Bid {
     bidReportURL: string;
     estimatePrice : bigint;
 
+    // Additional fields for comparison
+    budget?: string; // 기초금액 (basicPrice alias)
+    basicPrice?: bigint;
+    agency?: string; // 발주기관 (organization alias)
+    bidRange?: number; // 투찰범위
+
     minimumBidRate?: number | null;
     analysisResult?: string | null;
     bidDetail?: any | null;
@@ -40,4 +46,10 @@ export async function fetchRecommendedBids(userId: number): Promise<Bid[]> {
 
 export async function logBidView(bidId: number, userId: number): Promise<void> {
     await api<void>(`/bids/${bidId}/log?userId=${userId}`, { method: 'POST' });
+}
+
+export async function fetchBidsBatch(ids: number[]): Promise<Bid[]> {
+    if (ids.length === 0) return [];
+    const res = await api<any>(`/bids/batch?ids=${ids.join(',')}`);
+    return pickBidList(res) as Bid[];
 }

@@ -32,8 +32,10 @@ function assertSuccess<T>(res: ApiResponse<T>, fallbackMsg: string): T {
  * response: { status:"success", data:{ items:[...] } }
  */
 export async function fetchAlarms(userId: number | string): Promise<AlarmItem[]> {
-	const res = await api<ApiResponse<AlarmListData>>(`/alarms/${userId}`);
+	const res = await api<ApiResponse<AlarmItem[] | AlarmListData>>(`/alarms/${userId}`);
 	const data = assertSuccess(res, "알림 목록을 불러오지 못했습니다.");
+	// Handle both direct array and items wrapper
+	if (Array.isArray(data)) return data;
 	return data?.items ?? [];
 }
 

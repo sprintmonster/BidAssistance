@@ -108,6 +108,7 @@ export function BidDiscovery({
 
 	const [addingId, setAddingId] = useState<number | null>(null);
 	const [addedIds, setAddedIds] = useState<Set<number>>(() => new Set());
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
 	const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -469,18 +470,53 @@ export function BidDiscovery({
 						</div>
 					</div>
 
-					<div className="rounded-lg border bg-white shadow-sm">
-						<Table>
-							<TableHeader className="bg-slate-50/60">
-								<TableRow className="hover:bg-transparent">
-									<TableHead className="w-[120px] pl-6">마감</TableHead>
-									<TableHead>공고명</TableHead>
-									<TableHead className="w-[220px]">발주기관</TableHead>
-									<TableHead className="w-[160px] pr-6 text-center">예산</TableHead>
-									<TableHead className="w-[140px] text-center">상태</TableHead>
-									<TableHead className="w-[180px] pr-6 text-center">액션</TableHead>
-								</TableRow>
-							</TableHeader>
+                            <div className="rounded-lg border bg-white shadow-sm">
+                        <div className="p-2 border-b flex items-center justify-between bg-slate-50/50">
+                            <div className="flex items-center gap-2 pl-2">
+                                <span className="text-sm text-muted-foreground">
+                                    {selectedIds.size}개 선택됨
+                                </span>
+                                {selectedIds.size > 0 && (
+                                    <Button
+                                        size="sm"
+                                        variant="default"
+                                        className="h-8"
+                                        onClick={() => {
+                                            const ids = Array.from(selectedIds).join(",");
+                                            navigate(`/compare?ids=${ids}`);
+                                        }}
+                                    >
+                                        비교하기 ({selectedIds.size})
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                        <Table>
+                            <TableHeader className="bg-slate-50/60">
+                                <TableRow className="hover:bg-transparent">
+                                    <TableHead className="w-[40px] pl-4">
+                                        <input
+                                            type="checkbox"
+                                            className="rounded border-gray-300"
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    const allIds = paged.map(b => b.bidId);
+                                                    setSelectedIds(prev => new Set([...prev, ...allIds]));
+                                                } else {
+                                                    setSelectedIds(new Set());
+                                                }
+                                            }}
+                                            checked={paged.length > 0 && paged.every(b => selectedIds.has(b.bidId))}
+                                        />
+                                    </TableHead>
+                                    <TableHead className="w-[120px]">마감</TableHead>
+                                    <TableHead>공고명</TableHead>
+                                    <TableHead className="w-[220px]">발주기관</TableHead>
+                                    <TableHead className="w-[160px] pr-6 text-center">예산</TableHead>
+                                    <TableHead className="w-[140px] text-center">상태</TableHead>
+                                    <TableHead className="w-[180px] pr-6 text-center">액션</TableHead>
+                                </TableRow>
+                            </TableHeader>
 
 							<TableBody>
 								{paged.length === 0 ? (
@@ -504,7 +540,23 @@ export function BidDiscovery({
 												className="cursor-pointer"
 												onClick={() => navigate(`/bids/${b.bidId}`)}
 											>
-												<TableCell className="whitespace-normal pl-6">
+                                                <TableCell className="pl-4" onClick={(e) => e.stopPropagation()}>
+                                                    <input
+                                                        type="checkbox"
+                                                        className="rounded border-gray-300"
+                                                        checked={selectedIds.has(b.bidId)}
+                                                        onChange={(e) => {
+                                                            const checked = e.target.checked;
+                                                            setSelectedIds(prev => {
+                                                                const next = new Set(prev);
+                                                                if (checked) next.add(b.bidId);
+                                                                else next.delete(b.bidId);
+                                                                return next;
+                                                            });
+                                                        }}
+                                                    />
+                                                </TableCell>
+												<TableCell className="whitespace-normal">
 													<div className="flex flex-col">
 														{(() => {
 															const { dateLine, timeLine } = formatDateTimeLines(b.deadline);

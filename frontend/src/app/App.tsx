@@ -12,6 +12,7 @@ import { ResetPasswordPage } from "./components/ResetPasswordPage";
 
 import { Dashboard } from "./components/Dashboard";
 import { BidDiscovery } from "./components/BidDiscovery";
+import { ComparePage } from "./components/ComparePage";
 import { CartPage } from "./components/CartPage";
 import { CommunityPage } from "./components/CommunityPage";
 import { NoticePage } from "./components/NoticePage";
@@ -162,6 +163,14 @@ export default function App() {
                         element={
                             <PageContainer>
                                 <BidSummary />
+                            </PageContainer>
+                        }
+                    />
+                    <Route
+                        path="/compare"
+                        element={
+                            <PageContainer>
+                                <ComparePage />
                             </PageContainer>
                         }
                     />
