@@ -470,7 +470,7 @@ export function BidDiscovery({
 						</div>
 					</div>
 
-                            <div className="rounded-lg border bg-white shadow-sm">
+                            <div className="rounded-lg border dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
                         <div className="p-2 border-b flex items-center justify-between bg-slate-50/50">
                             <div className="flex items-center gap-2 pl-2">
                                 <span className="text-sm text-muted-foreground">

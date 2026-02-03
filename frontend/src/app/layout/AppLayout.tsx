@@ -135,7 +135,7 @@ export function AppLayout() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900">
       <header className="border-b bg-slate-900 text-white">
         <div className="h-16 w-full flex items-center">
           <div className="flex items-center gap-3 h-16 md:w-[260px] w-auto pl-5">
@@ -191,7 +191,7 @@ export function AppLayout() {
       )}
 
       {isHome && (
-        <section className="bg-white text-slate-900 border-b border-slate-200">
+        <section className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-700">
           <div className="w-full px-5 py-6">
             <form onSubmit={onSubmitSearch} className="w-full max-w-[760px] mx-auto">
               <div className="relative">
@@ -243,7 +243,7 @@ export function AppLayout() {
             />
           </aside>
 
-          <main className="flex-1 min-w-0 min-h-0 bg-slate-50">
+          <main className="flex-1 min-w-0 min-h-0 bg-slate-50 dark:bg-slate-900">
             <div className="h-full min-h-0 pl-0 pr-6 py-6">
               <div className="w-full max-w-[1280px] pl-8">
                 <Outlet />
@@ -253,7 +253,7 @@ export function AppLayout() {
         </div>
       )}
 
-        <footer className="border-t bg-white py-4 text-sm text-gray-500">
+        <footer className="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-4 text-sm text-gray-500 dark:text-gray-400">
             <div className="w-full px-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 {/* 회사 정보 */}
                 <div className="flex flex-col gap-1 text-xs">

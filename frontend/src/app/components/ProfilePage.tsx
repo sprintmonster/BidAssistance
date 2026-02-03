@@ -12,6 +12,9 @@ import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Separator } from "./ui/separator";
 import { Badge } from "./ui/badge";
+import { Switch } from "./ui/switch";
+
+import { useTheme } from "../context/ThemeContext";
 
 import {
 	ACCESS_CONTROL,
@@ -73,6 +76,7 @@ function days_until_expiry(user_id: string) {
 export function ProfilePage({ userEmail }: ProfilePageProps) {
 	const navigate = useNavigate();
 	const location = useLocation() as any;
+	const { theme, setTheme, resolvedTheme } = useTheme();
 
 	const passwordExpiredFromRoute = Boolean(location?.state?.passwordExpired);
 	const fromAfterChange = String(location?.state?.fromAfterChange || "");
@@ -407,6 +411,27 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 								<Button onClick={onSaveProfile} disabled={saving || loading}>
 									{saving ? "저장 중..." : "변경사항 저장"}
 								</Button>
+							</div>
+						</CardContent>
+					</Card>
+
+					<Card>
+						<CardHeader>
+							<CardTitle>화면 설정</CardTitle>
+							<CardDescription>앱의 표시 설정을 관리합니다</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<div className="flex items-center justify-between">
+								<div>
+									<Label>야간 모드 (다크 모드)</Label>
+									<p className="text-sm text-muted-foreground">
+										눈이 편안한 어두운 테마를 사용합니다
+									</p>
+								</div>
+								<Switch
+									checked={resolvedTheme === "dark"}
+									onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+								/>
 							</div>
 						</CardContent>
 					</Card>

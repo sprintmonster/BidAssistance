@@ -1,6 +1,7 @@
 import { HashRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { useState } from "react";
 
+import { ThemeProvider } from "./context/ThemeContext";
 import { AppLayout } from "./layout/AppLayout";
 import { PageContainer } from "./layout/PageContainer";
 
@@ -117,6 +118,7 @@ export default function App() {
 	const canManageNotices = isOperatorAccount();
 
 	return (
+		<ThemeProvider>
 		<HashRouter>
 			{globalLoading && (
 				<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[9999]">
@@ -261,5 +263,6 @@ export default function App() {
 				<Route path="/reset-password" element={<ResetPasswordRoute />} />
 			</Routes>
 		</HashRouter>
+		</ThemeProvider>
 	);
 }

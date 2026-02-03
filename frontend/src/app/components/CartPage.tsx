@@ -318,13 +318,13 @@ export function CartPage({
 		<div className="w-full">
 			<div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 space-y-5">
 				<div>
-					<h2 className="text-2xl font-bold">장바구니</h2>
-					<div className="text-sm text-slate-500">
+					<h2 className="text-2xl font-bold dark:text-slate-100">장바구니</h2>
+					<div className="text-sm text-slate-500 dark:text-slate-400">
 						장바구니에 담은 공고를 관리하세요
 					</div>
 				</div>
 
-				<div className="bg-white border rounded-2xl p-4 sm:p-5">
+				<div className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-2xl p-4 sm:p-5">
 					<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
 						{ACTIVE_STAGES.map((st) => {
 							const label = stage_label(st);
@@ -336,14 +336,14 @@ export function CartPage({
 									type="button"
 									onClick={() => setActiveStage(active ? "ALL" : st)}
 									className={[
-										"rounded-xl px-3 py-2 border text-left hover:bg-slate-50 transition-colors",
+										"rounded-xl px-3 py-2 border text-left hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors",
 										active
-											? "border-slate-900 bg-slate-50"
-											: "border-slate-200 bg-white",
+											? "border-slate-900 dark:border-slate-100 bg-slate-50 dark:bg-slate-700"
+											: "border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800",
 									].join(" ")}
 								>
-									<div className="text-xs text-slate-500">{label}</div>
-									<div className="text-lg font-semibold text-slate-900">
+									<div className="text-xs text-slate-500 dark:text-slate-400">{label}</div>
+									<div className="text-lg font-semibold text-slate-900 dark:text-slate-100">
 										{count}건
 									</div>
 								</button>
@@ -352,7 +352,7 @@ export function CartPage({
 					</div>
 
 					{activeStage !== "ALL" && (
-						<div className="mt-3 text-sm text-slate-600 flex items-center gap-2">
+						<div className="mt-3 text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2">
 							<span>
 								필터 적용됨:{" "}
 								<span className="font-semibold">{stage_label(activeStage)}</span>
@@ -368,14 +368,14 @@ export function CartPage({
 					)}
 				</div>
 
-				<div className="bg-white border rounded-2xl overflow-hidden">
-					<div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b">
-						<div className="font-semibold text-slate-900">장바구니 공고 목록</div>
+				<div className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-2xl overflow-hidden">
+					<div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b dark:border-slate-700">
+						<div className="font-semibold text-slate-900 dark:text-slate-100">장바구니 공고 목록</div>
 
 						<div className="flex items-center gap-2">
-							<span className="hidden sm:inline text-sm text-slate-500">정렬</span>
+							<span className="hidden sm:inline text-sm text-slate-500 dark:text-slate-400">정렬</span>
 							<select
-								className="h-9 rounded-lg border bg-white px-3 text-sm shadow-sm"
+								className="h-9 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-700 px-3 text-sm shadow-sm dark:text-slate-100"
 								value={sortKey}
 								onChange={(e) => setSortKey(e.target.value as SortKey)}
 							>
@@ -395,7 +395,7 @@ export function CartPage({
 								: "해당 단계에 공고가 없습니다."}
 						</div>
 					) : (
-						<div className="divide-y">
+						<div className="divide-y dark:divide-slate-700">
 							{visibleItems.map((w) => {
 								const amountText = w.baseAmount
 									? `${formatAmount(w.baseAmount)}원`
@@ -416,7 +416,7 @@ export function CartPage({
 								return (
 									<div
 										key={`${w.id}:${w.bidId}`}
-										className="px-4 sm:px-5 py-4 hover:bg-slate-50 transition-colors"
+										className="px-4 sm:px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
 									>
 										<div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 sm:gap-4 items-start">
 											<button
@@ -425,7 +425,7 @@ export function CartPage({
 												onClick={() => navigate(`/bids/${w.bidId}`)}
 											>
 												<div className="flex items-center gap-2 min-w-0">
-													<div className="font-semibold text-slate-900 truncate">
+													<div className="font-semibold text-slate-900 dark:text-slate-100 truncate">
 														{w.title}
 													</div>
 													{showBadge ? (
@@ -444,7 +444,7 @@ export function CartPage({
 													) : null}
 												</div>
 
-												<div className="mt-1 text-sm text-slate-500 flex flex-wrap gap-x-2 gap-y-1">
+												<div className="mt-1 text-sm text-slate-500 dark:text-slate-400 flex flex-wrap gap-x-2 gap-y-1">
 													<span>{w.agency}</span>
 													{w.baseAmount ? (
 														<>
@@ -462,10 +462,10 @@ export function CartPage({
 											</button>
 
 											<div className="flex items-center justify-end">
-												<div className="inline-flex items-center gap-2 rounded-full border bg-slate-50 px-2 py-1 shadow-sm">
+												<div className="inline-flex items-center gap-2 rounded-full border dark:border-slate-600 bg-slate-50 dark:bg-slate-700 px-2 py-1 shadow-sm">
 													<div className="w-[128px] sm:w-[140px]">
 														<select
-															className="h-9 w-full rounded-full border bg-white px-3 text-sm"
+															className="h-9 w-full rounded-full border dark:border-slate-600 bg-white dark:bg-slate-800 px-3 text-sm dark:text-slate-100"
 															value={currentInActive ? w.stage : "SUBMITTED"}
 															onClick={(e) => e.stopPropagation()}
 															onChange={(e) => {
@@ -488,7 +488,7 @@ export function CartPage({
 
 													<button
 														type="button"
-														className="h-9 w-9 inline-flex items-center justify-center rounded-full border bg-white hover:bg-red-50 hover:border-red-200 transition-colors"
+														className="h-9 w-9 inline-flex items-center justify-center rounded-full border dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/30 hover:border-red-200 transition-colors"
 														onClick={(e) => {
 															e.stopPropagation();
 															void onDelete(w.bidId);
@@ -509,15 +509,15 @@ export function CartPage({
 				</div>
 
 				{pastWishlist.length > 0 ? (
-					<div className="bg-white border rounded-2xl overflow-hidden">
-						<div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b">
-							<div className="font-semibold text-slate-900">지난 공고 목록</div>
+					<div className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-2xl overflow-hidden">
+						<div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b dark:border-slate-700">
+							<div className="font-semibold text-slate-900 dark:text-slate-100">지난 공고 목록</div>
 
 							<div className="flex items-center gap-2">
-								<div className="text-sm text-slate-500">{pastWishlist.length}건</div>
-								<span className="hidden sm:inline text-sm text-slate-500">정렬</span>
+								<div className="text-sm text-slate-500 dark:text-slate-400">{pastWishlist.length}건</div>
+								<span className="hidden sm:inline text-sm text-slate-500 dark:text-slate-400">정렬</span>
 								<select
-									className="h-9 rounded-lg border bg-white px-3 text-sm shadow-sm"
+									className="h-9 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-700 px-3 text-sm shadow-sm dark:text-slate-100"
 									value={pastSortKey}
 									onChange={(e) => setPastSortKey(e.target.value as PastSortKey)}
 								>
@@ -529,9 +529,9 @@ export function CartPage({
 						</div>
 
 						{visiblePastItems.length === 0 ? (
-							<div className="p-5 text-slate-500">지난 공고가 없습니다.</div>
+							<div className="p-5 text-slate-500 dark:text-slate-400">지난 공고가 없습니다.</div>
 						) : (
-							<div className="divide-y">
+							<div className="divide-y dark:divide-slate-700">
 								{visiblePastItems.map((w) => {
 									const amountText = w.baseAmount
 										? `${formatAmount(w.baseAmount)}원`
@@ -545,7 +545,7 @@ export function CartPage({
 									return (
 										<div
 											key={`past:${w.id}:${w.bidId}`}
-											className="px-4 sm:px-5 py-4 hover:bg-slate-50 transition-colors"
+											className="px-4 sm:px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
 										>
 											<div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 sm:gap-4 items-start">
 												<button
@@ -554,13 +554,13 @@ export function CartPage({
 													onClick={() => navigate(`/bids/${w.bidId}`)}
 												>
 													<div className="flex items-center gap-2 min-w-0">
-														<div className="font-semibold text-slate-900 truncate">
+														<div className="font-semibold text-slate-900 dark:text-slate-100 truncate">
 															{w.title}
 														</div>
 														<PastBadge result={result} />
 													</div>
 
-													<div className="mt-1 text-sm text-slate-500 flex flex-wrap gap-x-2 gap-y-1">
+													<div className="mt-1 text-sm text-slate-500 dark:text-slate-400 flex flex-wrap gap-x-2 gap-y-1">
 														<span>{w.agency}</span>
 														{w.baseAmount ? (
 															<>
@@ -578,10 +578,10 @@ export function CartPage({
 												</button>
 
 												<div className="flex items-center justify-end">
-													<div className="inline-flex items-center gap-2 rounded-full border bg-slate-50 px-2 py-1 shadow-sm">
+													<div className="inline-flex items-center gap-2 rounded-full border dark:border-slate-600 bg-slate-50 dark:bg-slate-700 px-2 py-1 shadow-sm">
 														<div className="w-[128px] sm:w-[140px]">
 															<select
-																className="h-9 w-full rounded-full border bg-white px-3 text-sm"
+																className="h-9 w-full rounded-full border dark:border-slate-600 bg-white dark:bg-slate-800 px-3 text-sm dark:text-slate-100"
 																value={result}
 																onClick={(e) => e.stopPropagation()}
 																onChange={(e) => {
@@ -599,7 +599,7 @@ export function CartPage({
 
 														<button
 															type="button"
-															className="h-9 w-9 inline-flex items-center justify-center rounded-full border bg-white hover:bg-red-50 hover:border-red-200 transition-colors"
+															className="h-9 w-9 inline-flex items-center justify-center rounded-full border dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/30 hover:border-red-200 transition-colors"
 															onClick={(e) => {
 																e.stopPropagation();
 																void onDelete(w.bidId);

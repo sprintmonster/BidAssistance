@@ -106,7 +106,7 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
     return (
         <div className="space-y-3">
             <div className="hidden md:block">
-                <Card className="border bg-white">
+                <Card className="border dark:border-slate-700 bg-white dark:bg-slate-800">
                     <Table className="table-fixed">
                         <TableHeader>
                             <TableRow className="bg-slate-50 hover:bg-slate-50">
@@ -205,7 +205,7 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
                         <div
                             key={post.id}
                             onClick={() => onSelectPost(post)}
-                            className="bg-white rounded-lg border border-gray-200 p-4 hover:border-blue-300 hover:shadow-sm transition cursor-pointer"
+                            className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-sm transition cursor-pointer"
                         >
                             <div className="flex items-center gap-2 mb-2">
                                 <CategoryBadge category={post.category} />

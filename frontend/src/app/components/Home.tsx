@@ -499,12 +499,12 @@ export function Home() {
 	};
 
 	return (
-		<div className="bg-slate-50">
+		<div className="bg-slate-50 dark:bg-slate-900">
 			<div className="max-w-7xl mx-auto px-5 py-8">
 				<div className="flex items-end justify-between gap-4 mb-6">
 					<div>
-						<div className="text-sm text-slate-500">AI 기반 입찰 탐색 · 관리</div>
-						<h1 className="text-2xl font-bold tracking-tight text-slate-900">
+						<div className="text-sm text-slate-500 dark:text-slate-400">AI 기반 입찰 탐색 · 관리</div>
+						<h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
 							공고를 더 빠르게 찾고, 더 확실하게 준비하세요
 						</h1>
 					</div>
@@ -514,9 +514,9 @@ export function Home() {
 				{/* ✅ 핵심: 왼쪽(바로가기+오늘의 추천)을 한 컬럼으로 묶고, 오른쪽(로그인)을 독립 컬럼으로 둔다 */}
 				<div className="grid grid-cols-12 gap-6 items-start">
 					<div className="col-span-12 lg:col-span-8 space-y-6">
-						<section className="bg-white border rounded-2xl p-5 shadow-sm h-[320px] flex flex-col">
+						<section className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-2xl p-5 shadow-sm h-[320px] flex flex-col">
 							<div className="flex items-center justify-between mb-4">
-								<h2 className="font-semibold text-slate-900">바로가기</h2>
+								<h2 className="font-semibold text-slate-900 dark:text-slate-100">바로가기</h2>
 							</div>
 
 							<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -548,9 +548,9 @@ export function Home() {
 							</div>
 						</section>
 
-						<section className="bg-white border rounded-2xl p-5 shadow-sm">
+						<section className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-2xl p-5 shadow-sm">
 							<div className="flex items-center justify-between mb-3">
-								<h3 className="font-semibold text-slate-900">오늘의 추천</h3>
+								<h3 className="font-semibold text-slate-900 dark:text-slate-100">오늘의 추천</h3>
 							</div>
 
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -574,32 +574,32 @@ export function Home() {
 
 					<div className="col-span-12 lg:col-span-4">
 						{!isAuthed ? (
-							<aside className="bg-white border rounded-2xl p-5 shadow-sm flex flex-col">
+							<aside className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-2xl p-5 shadow-sm flex flex-col">
 								<div className="mb-4">
-									<h3 className="text-lg font-semibold text-slate-900 mb-2">로그인</h3>
-									<p className="text-sm text-slate-500">
+									<h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">로그인</h3>
+									<p className="text-sm text-slate-500 dark:text-slate-400">
 										로그인하면 장바구니/알림/AI 기능을 이용할 수 있습니다.
 									</p>
 								</div>
 
 								<form className="space-y-3" onSubmit={onQuickLogin}>
 									<div>
-										<div className="text-sm font-medium text-slate-700 mb-1">이메일</div>
+										<div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">이메일</div>
 										<input
 											value={email}
 											onChange={(e) => setEmail(e.target.value)}
-											className="w-full h-11 rounded-xl bg-slate-50 border px-3 outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-300"
+											className="w-full h-11 rounded-xl bg-slate-50 dark:bg-slate-700 border dark:border-slate-600 px-3 outline-none focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900 focus:border-blue-300 dark:text-slate-100"
 											placeholder="name@company.com"
 											type="email"
 										/>
 									</div>
 
 									<div>
-										<div className="text-sm font-medium text-slate-700 mb-1">비밀번호</div>
+										<div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">비밀번호</div>
 										<input
 											value={password}
 											onChange={(e) => setPassword(e.target.value)}
-											className="w-full h-11 rounded-xl bg-slate-50 border px-3 outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-300"
+											className="w-full h-11 rounded-xl bg-slate-50 dark:bg-slate-700 border dark:border-slate-600 px-3 outline-none focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900 focus:border-blue-300 dark:text-slate-100"
 											placeholder="••••••••"
 											type="password"
 										/>
@@ -628,7 +628,7 @@ export function Home() {
 										<button
 											type="button"
 											onClick={() => navigate("/signup")}
-											className="h-11 rounded-xl border hover:bg-slate-50"
+											className="h-11 rounded-xl border dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 dark:text-slate-100"
 										>
 											회원가입
 										</button>
@@ -667,11 +667,11 @@ export function Home() {
 								</form>
 							</aside>
 						) : (
-							<aside className="bg-white border rounded-2xl p-5 shadow-sm flex flex-col">
+							<aside className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-2xl p-5 shadow-sm flex flex-col">
 								<div className="flex items-center justify-between mb-4">
 									<div>
-										<div className="text-sm text-slate-500">환영합니다</div>
-										<div className="text-lg font-semibold text-slate-900">
+										<div className="text-sm text-slate-500 dark:text-slate-400">환영합니다</div>
+										<div className="text-lg font-semibold text-slate-900 dark:text-slate-100">
 											{mask_name(user?.name ?? "사용자")}
 										</div>
 										{companyLabel ? (
@@ -693,7 +693,7 @@ export function Home() {
 									</button>
 									<button
 										onClick={onLogout}
-										className="w-full h-11 rounded-xl border hover:bg-slate-50 text-slate-700"
+										className="w-full h-11 rounded-xl border dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
 									>
 										로그아웃
 									</button>
@@ -723,24 +723,24 @@ function QuickBox({
 	return (
 		<button
 			onClick={onClick}
-			className="group relative text-left border rounded-2xl p-4 hover:border-blue-200 hover:bg-blue-50/40 transition"
+			className="group relative text-left border dark:border-slate-600 rounded-2xl p-4 hover:border-blue-200 dark:hover:border-blue-600 hover:bg-blue-50/40 dark:hover:bg-slate-700/50 transition"
 		>
 			<div className="flex items-start gap-4">
 				{icon ? (
-					<div className="shrink-0 w-14 h-14 rounded-2xl bg-slate-50 border flex items-center justify-center overflow-hidden">
+					<div className="shrink-0 w-14 h-14 rounded-2xl bg-slate-50 dark:bg-slate-700 border dark:border-slate-600 flex items-center justify-center overflow-hidden">
 						<div className="w-12 h-12">{icon}</div>
 					</div>
 				) : null}
 				<div className="min-w-0 flex-1">
 					<div className="flex items-center justify-between gap-3 mb-1">
-						<div className="font-semibold text-slate-900 truncate">{title}</div>
+						<div className="font-semibold text-slate-900 dark:text-slate-100 truncate">{title}</div>
 						{!!badge && badge > 0 && (
-							<span className="min-w-[22px] h-[22px] px-1 rounded-full bg-slate-900 text-white text-[12px] flex items-center justify-center">
+							<span className="min-w-[22px] h-[22px] px-1 rounded-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[12px] flex items-center justify-center">
 								{badge}
 							</span>
 						)}
 					</div>
-					<div className="text-sm text-slate-500 leading-snug">{desc}</div>
+					<div className="text-sm text-slate-500 dark:text-slate-400 leading-snug">{desc}</div>
 				</div>
 			</div>
 
@@ -769,19 +769,19 @@ function MiniStat({
 			<button
 				type="button"
 				onClick={onClick}
-				className="group w-full text-left border rounded-2xl p-4 bg-slate-50 hover:bg-blue-50/40 hover:border-blue-200 transition focus:outline-none focus:ring-2 focus:ring-blue-200"
+				className="group w-full text-left border dark:border-slate-600 rounded-2xl p-4 bg-slate-50 dark:bg-slate-700 hover:bg-blue-50/40 dark:hover:bg-slate-600 hover:border-blue-200 dark:hover:border-blue-600 transition focus:outline-none focus:ring-2 focus:ring-blue-200"
 			>
 				<div className="flex items-start justify-between gap-3">
 					<div className="flex items-start gap-3 min-w-0">
 						{icon ? (
-							<div className="shrink-0 w-12 h-12 rounded-2xl bg-white border flex items-center justify-center overflow-hidden">
+							<div className="shrink-0 w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border dark:border-slate-600 flex items-center justify-center overflow-hidden">
 								<div className="w-10 h-10">{icon}</div>
 							</div>
 						) : null}
 						<div className="min-w-0">
-							<div className="text-sm text-slate-500">{label}</div>
-							<div className="text-2xl font-bold text-slate-900">{value}</div>
-							<div className="text-sm text-slate-500">{sub}</div>
+							<div className="text-sm text-slate-500 dark:text-slate-400">{label}</div>
+							<div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{value}</div>
+							<div className="text-sm text-slate-500 dark:text-slate-400">{sub}</div>
 						</div>
 					</div>
 					<div className="text-blue-600 text-sm mt-1 opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
@@ -793,10 +793,10 @@ function MiniStat({
 	}
 
 	return (
-		<div className="border rounded-2xl p-4 bg-slate-50 w-full">
-			<div className="text-sm text-slate-500">{label}</div>
-			<div className="text-2xl font-bold text-slate-900">{value}</div>
-			<div className="text-sm text-slate-500">{sub}</div>
+		<div className="border dark:border-slate-600 rounded-2xl p-4 bg-slate-50 dark:bg-slate-700 w-full">
+			<div className="text-sm text-slate-500 dark:text-slate-400">{label}</div>
+			<div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{value}</div>
+			<div className="text-sm text-slate-500 dark:text-slate-400">{sub}</div>
 		</div>
 	);
 }

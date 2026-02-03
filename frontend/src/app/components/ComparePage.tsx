@@ -42,13 +42,13 @@ export function ComparePage() {
     }, [searchParams]);
 
     if(loading) {
-        return <div className="p-8 text-center text-gray-500">공고 정보를 불러오는 중입니다...</div>;
+        return <div className="p-8 text-center text-gray-500 dark:text-gray-400">공고 정보를 불러오는 중입니다...</div>;
     }
 
     if(bids.length === 0) {
         return (
             <div className="p-8 text-center">
-                <div className="mb-4 text-gray-500">선택된 공고가 없습니다.</div>
+                <div className="mb-4 text-gray-500 dark:text-gray-400">선택된 공고가 없습니다.</div>
                 <Button variant="outline" onClick={() => navigate("/bids")}>공고 목록으로 돌아가기</Button>
             </div>
         );
@@ -81,11 +81,11 @@ export function ComparePage() {
                 </div>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border bg-white shadow-sm">
+            <div className="overflow-x-auto rounded-xl border dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
                 <Table>
-                    <TableHeader className="bg-slate-50/60">
+                    <TableHeader className="bg-slate-50/60 dark:bg-slate-700/60">
                         <TableRow>
-                            <TableHead className="w-[150px] font-semibold bg-slate-100">항목</TableHead>
+                            <TableHead className="w-[150px] font-semibold bg-slate-100 dark:bg-slate-700">항목</TableHead>
                             {bids.map(b => (
                                 <TableHead key={b.bidId} className="min-w-[250px]">
                                     <div className="py-2">
@@ -99,7 +99,7 @@ export function ComparePage() {
                     <TableBody>
                         {specs.map((spec, idx) => (
                             <TableRow key={idx}>
-                                <TableCell className="font-medium bg-slate-50/40 text-muted-foreground">{spec.label}</TableCell>
+                                <TableCell className="font-medium bg-slate-50/40 dark:bg-slate-700/40 text-muted-foreground">{spec.label}</TableCell>
                                 {bids.map(b => (
                                     <TableCell key={b.bidId} className="align-top">
                                         {spec.render(b)}

@@ -176,15 +176,15 @@ export function Dashboard() {
 			/>
 
 			{filterMode ? (
-				<div id="dashboard-focus" className="border rounded-2xl p-6 bg-white">
-					<div className="flex items-center justify-between">
-						<div className="font-semibold text-gray-900">
+				<div id="dashboard-focus" className="border dark:border-slate-700 rounded-2xl p-6 bg-white dark:bg-slate-800">
+				<div className="flex items-center justify-between">
+						<div className="font-semibold text-gray-900 dark:text-gray-100">
 							{filterMode === "new" ? "오늘 시작한 신규 공고" : "3일 이내 마감 임박 공고"}
 						</div>
 
 						<button
 							type="button"
-							className="text-sm text-gray-500 hover:underline"
+							className="text-sm text-gray-500 dark:text-gray-400 hover:underline"
 							onClick={() => setFilterMode(null)}
 						>
 							닫기
@@ -192,15 +192,15 @@ export function Dashboard() {
 					</div>
 
 					{pagedBids.length === 0 ? (
-						<div className="mt-4 text-sm text-gray-500">해당 공고가 없습니다.</div>
+						<div className="mt-4 text-sm text-gray-500 dark:text-gray-400">해당 공고가 없습니다.</div>
 					) : (
-						<ul className="mt-4 divide-y">
+						<ul className="mt-4 divide-y dark:divide-slate-700">
 							{pagedBids.map((b: any) => (
 								<li key={String(b.bidId ?? b.id ?? b.realId ?? `${Math.random()}`)} className="py-3">
-									<div className="font-medium text-gray-900">
+									<div className="font-medium text-gray-900 dark:text-gray-100">
 										{String(b.title ?? b.name ?? "제목 없음")}
 									</div>
-									<div className="text-sm text-gray-500">
+									<div className="text-sm text-gray-500 dark:text-gray-400">
 										{String(b.agency ?? b.organization ?? "")}
 										{(b.bidStart || b.startDate)
 											? ` · 시작: ${format_datetime_kor(String(b.bidStart ?? b.startDate))}`
@@ -230,8 +230,8 @@ export function Dashboard() {
                                             <button
                                                 type="button"
                                                 onClick={() => setPage(1)}
-                                                className={`px-3 py-1 border rounded-lg text-sm ${
-                                                    safePage === 1 ? "bg-gray-900 text-white" : "bg-white hover:bg-gray-100"
+                                                className={`px-3 py-1 border dark:border-slate-600 rounded-lg text-sm ${
+                                                    safePage === 1 ? "bg-gray-900 text-white dark:bg-slate-100 dark:text-slate-900" : "bg-white dark:bg-slate-800 dark:text-slate-100 hover:bg-gray-100 dark:hover:bg-slate-700"
                                                 }`}
                                             >
                                                 1
@@ -246,8 +246,8 @@ export function Dashboard() {
                                             key={n}
                                             type="button"
                                             onClick={() => setPage(n)}
-                                            className={`px-3 py-1 border rounded-lg text-sm ${
-                                                n === safePage ? "bg-gray-900 text-white" : "bg-white hover:bg-gray-100"
+                                            className={`px-3 py-1 border dark:border-slate-600 rounded-lg text-sm ${
+                                                n === safePage ? "bg-gray-900 text-white dark:bg-slate-100 dark:text-slate-900" : "bg-white dark:bg-slate-800 dark:text-slate-100 hover:bg-gray-100 dark:hover:bg-slate-700"
                                             }`}
                                         >
                                             {n}
@@ -261,8 +261,8 @@ export function Dashboard() {
                                             <button
                                                 type="button"
                                                 onClick={() => setPage(totalPages)}
-                                                className={`px-3 py-1 border rounded-lg text-sm ${
-                                                    safePage === totalPages ? "bg-gray-900 text-white" : "bg-white hover:bg-gray-100"
+                                                className={`px-3 py-1 border dark:border-slate-600 rounded-lg text-sm ${
+                                                    safePage === totalPages ? "bg-gray-900 text-white dark:bg-slate-100 dark:text-slate-900" : "bg-white dark:bg-slate-800 dark:text-slate-100 hover:bg-gray-100 dark:hover:bg-slate-700"
                                                 }`}
                                             >
                                                 {totalPages}
