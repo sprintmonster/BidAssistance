@@ -2,7 +2,7 @@ export type Id = string | number;
 export type PostId = number;
 export type CommentId = number;
 export type AttachmentId = number;
-export type PostCategory = "question" | "info" | "review" | "discussion";
+export type PostCategory = "question" | "info" | "review" | "discussion" | "notice";
 
 export interface Attachment {
 	id: AttachmentId;            // <- 변경
