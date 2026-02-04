@@ -172,7 +172,7 @@ export function SignupPage({ onSignup, onNavigateToLogin, onNavigateToHome }: Si
 				question: questionIndex,
 				answer: formData.recoveryAnswer.trim(),
 				birth: formData.birthDate,
-				tag: 0,
+
 			};
 
 			await api("/users", {

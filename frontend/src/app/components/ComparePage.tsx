@@ -25,7 +25,7 @@ export function ComparePage() {
             const rawIds = searchParams.get("ids");
             if (!rawIds) return;
 
-            const ids = rawIds.split(",").map(Number).filter(Number.isFinite);
+            const ids = Array.from(new Set(rawIds.split(",").map(Number).filter(Number.isFinite)));
             if (ids.length === 0) return;
 
             setLoading(true);
