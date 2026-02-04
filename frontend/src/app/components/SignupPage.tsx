@@ -3,23 +3,48 @@ import { set_password_changed_now_for_email } from "../utils/accessControl";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import {
-	Card,
-	CardContent,
-	CardFooter,
-	CardHeader,
-} from "./ui/card";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "./ui/select";
+import { Card, CardContent, CardFooter, CardHeader } from "./ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 import { PasswordRules } from "./PasswordRules";
 import { is_password_valid } from "../utils/password";
 import { api } from "../api/client";
+
+function sanitize_birth_date_input(raw: string) {
+	// YYYY-MM-DD 형태로만 입력되도록 강제 (모바일/브라우저별 date fallback 대응)
+	const digits = (raw || "").replace(/[^0-9]/g, "").slice(0, 8);
+	const y = digits.slice(0, 4);
+	const m = digits.slice(4, 6);
+	const d = digits.slice(6, 8);
+	let out = y;
+	if (m) out += `-${m}`;
+	if (d) out += `-${d}`;
+	return out;
+}
+
+function is_valid_birth_date(value: string) {
+	// 형식 체크
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+
+	// 실제 달/일 유효성 체크
+	const [yy, mm, dd] = value.split("-").map((v) => Number(v));
+	if (!Number.isFinite(yy) || !Number.isFinite(mm) || !Number.isFinite(dd)) return false;
+	if (mm < 1 || mm > 12) return false;
+	if (dd < 1 || dd > 31) return false;
+
+	const dt = new Date(`${value}T00:00:00`);
+	if (Number.isNaN(dt.getTime())) return false;
+
+	const ok = dt.getFullYear() === yy && dt.getMonth() + 1 === mm && dt.getDate() === dd;
+	if (!ok) return false;
+
+	// 미래 날짜 방지
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+	if (dt.getTime() > today.getTime()) return false;
+
+	return true;
+}
 
 interface SignupPageProps {
 	onSignup: (email: string) => void;
@@ -35,11 +60,7 @@ const SECURITY_QUESTIONS = [
 	"가장 좋아하는 음식은?",
 ] as const;
 
-export function SignupPage({
-	onSignup,
-	onNavigateToLogin,
-	onNavigateToHome,
-}: SignupPageProps) {
+export function SignupPage({ onSignup, onNavigateToLogin, onNavigateToHome }: SignupPageProps) {
 	const [formData, setFormData] = useState({
 		email: "",
 		password: "",
@@ -65,7 +86,7 @@ export function SignupPage({
 		if (!formData.name.trim()) return false;
 		if (!formData.email.trim()) return false;
 		if (!formData.nickName.trim()) return false;
-		if (!formData.birthDate) return false;
+		if (!is_valid_birth_date(formData.birthDate)) return false;
 
 		if (!formData.password) return false;
 		if (formData.password !== formData.confirmPassword) return false;
@@ -121,8 +142,8 @@ export function SignupPage({
 				return;
 			}
 
-			if (!formData.birthDate) {
-				setError("생년월일을 입력해 주세요.");
+			if (!is_valid_birth_date(formData.birthDate)) {
+				setError("생년월일을 YYYY-MM-DD 형식으로 올바르게 입력해 주세요.");
 				return;
 			}
 
@@ -156,16 +177,12 @@ export function SignupPage({
 
 			await api("/users", {
 				method: "POST",
-				// api(client.ts)가 기본 Content-Type을 부여하므로 여기서 중복 지정하지 않아도 됩니다.
 				body: JSON.stringify(payload),
 			});
 
-			// 접근통제(비밀번호 유효기간): 가입 시점을 비밀번호 변경 시점으로 기록(이메일 기준)
 			set_password_changed_now_for_email(payload.email);
 
 			setSuccess("가입이 완료됐어요! 로그인 페이지로 이동합니다.");
-
-			// 상위로 전달
 			onSignup(payload.email);
 
 			setTimeout(() => onNavigateToLogin(), 300);
@@ -196,7 +213,6 @@ export function SignupPage({
 				</CardHeader>
 
 				<form onSubmit={handleSubmit}>
-					{/* 긴 폼이므로 카드 내부 스크롤 */}
 					<CardContent className="space-y-5 max-h-[70vh] overflow-auto pr-1">
 						{error && (
 							<div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -217,9 +233,7 @@ export function SignupPage({
 								id="name"
 								className="h-11"
 								value={formData.name}
-								onChange={(e) =>
-									setFormData({ ...formData, name: e.target.value })
-								}
+								onChange={(e) => setFormData({ ...formData, name: e.target.value })}
 								autoComplete="name"
 								required
 							/>
@@ -235,9 +249,7 @@ export function SignupPage({
 								className="h-11"
 								placeholder="name@company.com"
 								value={formData.email}
-								onChange={(e) =>
-									setFormData({ ...formData, email: e.target.value })
-								}
+								onChange={(e) => setFormData({ ...formData, email: e.target.value })}
 								autoComplete="username"
 								required
 							/>
@@ -251,9 +263,7 @@ export function SignupPage({
 								id="nickName"
 								className="h-11"
 								value={formData.nickName}
-								onChange={(e) =>
-									setFormData({ ...formData, nickName: e.target.value })
-								}
+								onChange={(e) => setFormData({ ...formData, nickName: e.target.value })}
 								required
 							/>
 						</div>
@@ -264,14 +274,19 @@ export function SignupPage({
 							</Label>
 							<Input
 								id="birthDate"
-								type="date"
+								type="text"
 								className="h-11"
 								value={formData.birthDate}
-								onChange={(e) =>
-									setFormData({ ...formData, birthDate: e.target.value })
-								}
+								placeholder="YYYY-MM-DD"
+								inputMode="numeric"
+								maxLength={10}
+								onChange={(e) => {
+									const next = sanitize_birth_date_input(e.target.value);
+									setFormData({ ...formData, birthDate: next });
+								}}
 								required
 							/>
+							<div className="text-xs text-muted-foreground">예시: 1999-01-31</div>
 						</div>
 
 						<div className="space-y-2">
@@ -283,8 +298,12 @@ export function SignupPage({
 								type="password"
 								className="h-11"
 								value={formData.password}
+								maxLength={64}
 								onChange={(e) =>
-									setFormData({ ...formData, password: e.target.value })
+									setFormData({
+										...formData,
+										password: e.target.value.replace(/\s/g, ""),
+									})
 								}
 								autoComplete="new-password"
 								required
@@ -307,24 +326,25 @@ export function SignupPage({
 								type="password"
 								className="h-11"
 								value={formData.confirmPassword}
+								maxLength={64}
 								onChange={(e) =>
-									setFormData({ ...formData, confirmPassword: e.target.value })
+									setFormData({
+										...formData,
+										confirmPassword: e.target.value.replace(/\s/g, ""),
+									})
 								}
 								autoComplete="new-password"
 								required
 							/>
 						</div>
 
-						{/* 계정 찾기 질문/답변 */}
 						<div className="space-y-2 pt-1">
 							<Label htmlFor="recoveryQuestion" className="text-sm font-medium">
 								계정 찾기 질문
 							</Label>
 							<Select
 								value={formData.recoveryQuestion}
-								onValueChange={(value) =>
-									setFormData({ ...formData, recoveryQuestion: value })
-								}
+								onValueChange={(value) => setFormData({ ...formData, recoveryQuestion: value })}
 							>
 								<SelectTrigger id="recoveryQuestion" className="h-11">
 									<SelectValue placeholder="질문을 선택하세요" />
@@ -347,18 +367,13 @@ export function SignupPage({
 								id="recoveryAnswer"
 								className="h-11"
 								value={formData.recoveryAnswer}
-								onChange={(e) =>
-									setFormData({ ...formData, recoveryAnswer: e.target.value })
-								}
+								onChange={(e) => setFormData({ ...formData, recoveryAnswer: e.target.value })}
 								placeholder="답변을 입력하세요"
 								required
 							/>
-							<div className="text-xs text-muted-foreground">
-								나중에 계정 찾기/복구에 사용됩니다.
-							</div>
+							<div className="text-xs text-muted-foreground">나중에 계정 찾기/복구에 사용됩니다.</div>
 						</div>
 
-						{/* 약관 동의 */}
 						<div className="space-y-3 pt-2">
 							<div className="text-sm font-medium">약관 동의</div>
 
@@ -391,20 +406,19 @@ export function SignupPage({
 									{showPrivacyDetail && (
 										<div className="mt-2 rounded-md bg-slate-50 border px-3 py-2 text-xs text-slate-700 space-y-1">
 											<div>
-												<span className="font-medium">수집 항목</span>: 이름, 이메일,
-												닉네임, 생년월일(본인 확인/계정복구용)
+												<span className="font-medium">수집 항목</span>: 이름, 이메일, 닉네임,
+												생년월일(본인 확인/계정복구용)
 											</div>
 											<div>
-												<span className="font-medium">이용 목적</span>: 회원가입,
-												로그인, 계정 복구, 서비스 제공 및 고지사항 전달
+												<span className="font-medium">이용 목적</span>: 회원가입, 로그인, 계정 복구,
+												서비스 제공 및 고지사항 전달
 											</div>
 											<div>
-												<span className="font-medium">보유 기간</span>: 회원 탈퇴 후
-												지체 없이 파기(관계 법령에 따라 보관이 필요한 경우 예외)
+												<span className="font-medium">보유 기간</span>: 회원 탈퇴 후 지체 없이 파기(관계
+												법령에 따라 보관이 필요한 경우 예외)
 											</div>
 											<div>
-												<span className="font-medium">동의 거부</span>: 필수 항목 동의
-												거부 시 회원가입 불가
+												<span className="font-medium">동의 거부</span>: 필수 항목 동의 거부 시 회원가입 불가
 											</div>
 										</div>
 									)}
@@ -425,20 +439,14 @@ export function SignupPage({
 								/>
 								<span className="flex-1">
 									<span className="font-medium">마케팅 정보 수신 동의(선택)</span>
-									<div className="text-xs text-muted-foreground mt-1">
-										이벤트/혜택 알림을 받아볼 수 있어요.
-									</div>
+									<div className="text-xs text-muted-foreground mt-1">이벤트/혜택 알림을 받아볼 수 있어요.</div>
 								</span>
 							</label>
 						</div>
 					</CardContent>
 
 					<CardFooter className="flex flex-col gap-3 pt-4">
-						<Button
-							type="submit"
-							className="w-full h-11 text-base font-semibold"
-							disabled={!canSubmit || isSubmitting}
-						>
+						<Button type="submit" className="w-full h-11 text-base font-semibold" disabled={!canSubmit || isSubmitting}>
 							{isSubmitting ? "가입 처리 중..." : "가입하기"}
 						</Button>
 
