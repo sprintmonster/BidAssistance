@@ -175,8 +175,10 @@ export function CommunityPage() {
         async (items: Post[]) => {
             // id가 유효한 것만
             const targets = items
-                .map((p: any) => ({ ...p, id: p.id ?? p.postId }))   //  postId -> id
-                .filter((p: any) => to_valid_id(p.id) != null);
+                .map((p: any) => ({ ...p, id: p.id ?? p.postId }))
+                .filter((p: any) => to_valid_id(p.id) != null)
+                .filter((p: any) => !(p as any).thumbnailUrl);
+
 
             // 너무 많이 동시에 치지 않게 10개씩 끊기
             const chunkSize = 10;
@@ -218,6 +220,54 @@ export function CommunityPage() {
         [set_all_posts]
     );
 
+    const fill_thumbnails = useCallback(async (items: Post[]) => {
+        const targets = items
+            .map((p: any) => ({ ...p, id: p.id ?? p.postId }))
+            .filter((p: any) => to_valid_id(p.id) != null)
+            .filter((p: any) => (p.attachmentCount ?? 0) > 0) // 첨부 있는 글만
+            .filter((p: any) => !(p as any).thumbnailUrl);     // 이미 있으면 스킵
+
+        const chunkSize = 10;
+
+        for (let i = 0; i < targets.length; i += chunkSize) {
+            const chunk = targets.slice(i, i + chunkSize);
+
+            const results = await Promise.all(
+                chunk.map(async (p: any) => {
+                    const pid = to_valid_id(p.id);
+                    if (!pid) return null;
+
+                    try {
+                        const detail: any = await fetchCommunityPost(pid);
+                        const atts = Array.isArray(detail?.attachments) ? detail.attachments : [];
+                        const img = atts.find((a: any) =>
+                            typeof a?.url === "string" && /\.(png|jpg|jpeg|gif|webp|svg)(\?.*)?$/i.test(a.url)
+                        );
+
+                        // PDF만 있으면 null (아예 안 뜨게)
+                        const thumb = img?.url ?? null;
+                        return [pid, thumb] as const;
+                    } catch {
+                        return [pid, null] as const;
+                    }
+                })
+            );
+
+            // 목록 state에 thumbnailUrl 주입
+            set_all_posts((prev: any[]) =>
+                prev.map((p: any) => {
+                    const pid = to_valid_id(p.id ?? p.postId);
+                    if (!pid) return p;
+
+                    const found = results.find((r) => r && r[0] === pid);
+                    if (!found) return p;
+
+                    return { ...p, thumbnailUrl: found[1] }; // 여기!
+                })
+            );
+        }
+    }, [set_all_posts]);
+
     const load_list = useCallback(
         async (opts?: { q?: string; s?: SortKey }) => {
             set_list_loading(true);
@@ -237,11 +287,27 @@ export function CommunityPage() {
                 const likedSet = loadLikedSet(current_user_id);
 
                 const fixedItems = data.items.map((p: any) => {
-                    //  postId -> id 정규화 (이거 안 하면 open_detail/load_detail 다 꼬일 수 있음)
                     const pid = to_valid_id(p?.id ?? p?.postId);
 
-                    const base = { ...p, id: p.id ?? p.postId }; // id 보장
-                    const withLikes = setLikes(base, getLikes(base));
+                    // id 보장
+                    const base = { ...p, id: p.id ?? p.postId };
+
+                    // ✅ 서버 필드명 -> UI 필드명 맞추기 (목록에서 쓰는 필드들)
+                    const normalized = {
+                        ...base,
+                        authorName: base.authorName ?? base.userName ?? "",
+
+                        // list에서 views/likes로 쓰고 있으니 맞춰주기
+                        views: base.views ?? base.viewCount ?? 0,
+                        likes: base.likes ?? base.likeCount ?? 0,
+
+                        // 목록에 content/attachments가 없을 수도 있으니 기본값
+                        content: base.content ?? "",
+                        attachments: Array.isArray(base.attachments) ? base.attachments : [],
+                    };
+
+                    // likes / likeCount 혼재 안전 처리
+                    const withLikes = setLikes(normalized, getLikes(normalized));
 
                     if (!pid) return withLikes;
 
@@ -249,7 +315,10 @@ export function CommunityPage() {
                     return { ...withLikes, likedByMe: liked };
                 });
 
+
                 set_all_posts(fixedItems);
+                void fill_thumbnails(fixedItems);
+
 
 //  목록 화면 댓글수 채우기(프론트 계산)
                 void fill_comment_counts(fixedItems);
