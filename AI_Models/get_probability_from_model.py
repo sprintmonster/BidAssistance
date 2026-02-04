@@ -334,6 +334,145 @@ class ProbabilityPredictor:
             'std': float(np.std(pred_quantiles)),
             'input_features': self._get_input_features_dict(X)
         }
+    
+    def evaluate_highest_probability_average(self, test_data_path='../dataset/dataset_feature_selected.csv', bin_width=0.001, max_samples=None):
+        """
+        테스트 데이터의 모든 샘플에 대해 최대 확률 구간의 평균값으로 예측하고 오차율 계산
+        
+        Args:
+            test_data_path: 테스트 데이터 CSV 파일 경로
+            bin_width: 구간 폭 (기본값 0.001 = 0.1%p)
+            max_samples: 처리할 최대 샘플 수 (None이면 전체)
+        
+        Returns:
+            dict: 평균 오차율 및 상세 통계
+        """
+        import pandas as pd
+        
+        print(f"\n{'='*80}")
+        print(f"테스트 데이터 평가: 최대 확률 구간의 평균값으로 예측")
+        print(f"{'='*80}\n")
+        
+        # 데이터 로드
+        df = pd.read_csv(test_data_path)
+        print(f"✓ 테스트 데이터 로드: {len(df)}개 샘플")
+        
+        # 샘플 수 제한
+        if max_samples is not None and len(df) > max_samples:
+            df = df.head(max_samples)
+            print(f"  처리할 샘플 수 제한: {max_samples}개")
+        
+        print(f"  컬럼: {list(df.columns)}")
+        print(f"  처리할 샘플 수: {len(df)}개\n")
+        
+        # 실제 사정율은 데이터셋에 이미 존재하는 '사정율' 컬럼 사용
+        if '사정율' not in df.columns:
+            raise ValueError("데이터셋에 '사정율' 컬럼이 없습니다.")
+        
+        results = []
+        errors = []
+        
+        print("샘플별 예측 시작...")
+        for idx, row in df.iterrows():
+            # 입력 피처 준비
+            input_features = {
+                '예가범위': row['예가범위'],
+                '낙찰하한율': row['낙찰하한율'],
+                '추정가격': row['추정가격'],
+                '기초금액': row['기초금액']
+            }
+            
+            # 최대 확률 구간 찾기
+            result = self.get_highest_probability_ranges(input_features, bin_width=bin_width, top_k=1)
+            
+            if not result['top_ranges']:
+                print(f"  경고: 샘플 {idx}에서 구간을 찾을 수 없습니다.")
+                continue
+            
+            # 최대 확률 구간의 중심값 (평균)
+            top_range = result['top_ranges'][0]
+            predicted_rate = top_range['center']  # 구간의 평균값
+            actual_rate = row['사정율']
+            
+            # 오차 계산
+            error = abs(predicted_rate - actual_rate)
+            error_percent = error * 100  # %p 단위
+            relative_error = (error / actual_rate) * 100  # 상대 오차 (%)
+            
+            results.append({
+                'index': idx,
+                'actual_rate': actual_rate,
+                'predicted_rate': predicted_rate,
+                'error': error,
+                'error_percent': error_percent,
+                'relative_error': relative_error,
+                'probability': top_range['probability_percent'],
+                'range_lower': top_range['lower'],
+                'range_upper': top_range['upper']
+            })
+            
+            errors.append(error)
+            
+            # 100개마다 진행상황 출력
+            if (idx + 1) % 100 == 0:
+                print(f"  진행: {idx + 1}/{len(df)} 샘플 처리 완료...")
+        
+        # 통계 계산
+        errors = np.array(errors)
+        error_percents = errors * 100
+        
+        statistics = {
+            'total_samples': len(results),
+            'mean_absolute_error': float(np.mean(errors)),
+            'mean_absolute_error_percent': float(np.mean(error_percents)),
+            'median_absolute_error': float(np.median(errors)),
+            'median_absolute_error_percent': float(np.median(error_percents)),
+            'std_error': float(np.std(errors)),
+            'std_error_percent': float(np.std(error_percents)),
+            'min_error': float(np.min(errors)),
+            'max_error': float(np.max(errors)),
+            'q25_error': float(np.percentile(errors, 25)),
+            'q75_error': float(np.percentile(errors, 75)),
+            'mean_relative_error_percent': float(np.mean([r['relative_error'] for r in results]))
+        }
+        
+        # 결과 출력
+        print(f"\n{'='*80}")
+        print(f"평가 결과")
+        print(f"{'='*80}")
+        print(f"총 샘플 수: {statistics['total_samples']}")
+        print(f"\n[절대 오차 (사정율 차이)]")
+        print(f"  평균 오차율: {statistics['mean_absolute_error']:.6f} ({statistics['mean_absolute_error_percent']:.3f}%p)")
+        print(f"  중앙값 오차율: {statistics['median_absolute_error']:.6f} ({statistics['median_absolute_error_percent']:.3f}%p)")
+        print(f"  표준편차: {statistics['std_error']:.6f} ({statistics['std_error_percent']:.3f}%p)")
+        print(f"  최소 오차: {statistics['min_error']:.6f} ({statistics['min_error']*100:.3f}%p)")
+        print(f"  최대 오차: {statistics['max_error']:.6f} ({statistics['max_error']*100:.3f}%p)")
+        print(f"  Q25: {statistics['q25_error']:.6f}")
+        print(f"  Q75: {statistics['q75_error']:.6f}")
+        print(f"\n[상대 오차]")
+        print(f"  평균 상대 오차율: {statistics['mean_relative_error_percent']:.2f}%")
+        print(f"{'='*80}\n")
+        
+        # 오차가 큰 상위 5개 샘플
+        sorted_results = sorted(results, key=lambda x: x['error'], reverse=True)
+        print(f"오차가 큰 상위 5개 샘플:")
+        for i, r in enumerate(sorted_results[:5], 1):
+            print(f"  {i}. 샘플 #{r['index']}: 실제={r['actual_rate']:.4f}, 예측={r['predicted_rate']:.4f}, "
+                  f"오차={r['error_percent']:.2f}%p ({r['relative_error']:.1f}%)")
+        
+        # 오차가 작은 상위 5개 샘플
+        print(f"\n오차가 작은 상위 5개 샘플:")
+        sorted_best = sorted(results, key=lambda x: x['error'])
+        for i, r in enumerate(sorted_best[:5], 1):
+            print(f"  {i}. 샘플 #{r['index']}: 실제={r['actual_rate']:.4f}, 예측={r['predicted_rate']:.4f}, "
+                  f"오차={r['error_percent']:.2f}%p ({r['relative_error']:.1f}%)")
+        
+        return {
+            'statistics': statistics,
+            'detailed_results': results,
+            'test_data_path': test_data_path,
+            'bin_width': bin_width
+        }
 
 
 def main():
@@ -369,6 +508,16 @@ def main():
     print(f"\n✨ 확률이 높은 상위 5개 구간:")
     for i, r in enumerate(result['top_ranges'], 1):
         print(f"  {i}위. {r['range']} = 사정율 {r['lower']*100:.1f}%~{r['upper']*100:.1f}% (확률: {r['probability_percent']:.2f}%)")
+    
+    # 전체 테스트 데이터에 대한 평가 (10,000개 샘플)
+    print("\n\n" + "=" * 80)
+    print("전체 테스트 데이터 평가 (최대 10,000개 샘플)")
+    print("=" * 80)
+    evaluation_result = predictor.evaluate_highest_probability_average(
+        test_data_path='../dataset/dataset_feature_selected.csv',
+        bin_width=0.001,
+        max_samples=50000
+    )
 
 
 if __name__ == "__main__":
