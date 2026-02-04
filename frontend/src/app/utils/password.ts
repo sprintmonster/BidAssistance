@@ -22,6 +22,10 @@ function has_special(s: string) {
 	return /[^A-Za-z0-9\s]/.test(s);
 }
 
+function has_space(s: string) {
+	return /\s/.test(s);
+}
+
 function has_repeated_char(s: string, n: number) {
 	const re = new RegExp(`(.)\\1{${n - 1},}`);
 	return re.test(s);
@@ -36,6 +40,7 @@ export function get_password_rules(password: string, ctx?: PasswordPolicyContext
 	const a = has_alpha(p);
 	const d = has_digit(p);
 	const sp = has_special(p);
+	const space_ok = !has_space(p);
 	const kinds = [a, d, sp].filter(Boolean).length;
 
 	// 가이드라인: (영문/숫자/특수 중) 2종 조합이면 10자리 이상, 3종이면 8자리 이상
@@ -50,6 +55,11 @@ export function get_password_rules(password: string, ctx?: PasswordPolicyContext
 	const not_contains_nick = nickname ? !p_norm.includes(nickname) : true;
 
 	return [
+		{
+			key: "no_space",
+			label: "공백(스페이스/탭/줄바꿈) 포함 불가",
+			ok: space_ok,
+		},
 		{
 			key: "length",
 			label: "길이: 2종 조합은 10자 이상, 3종 조합은 8자 이상",

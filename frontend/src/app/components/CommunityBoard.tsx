@@ -96,12 +96,100 @@ function AttachmentMark({ count }: { count: number }) {
 		</span>
     );
 }
+function isImageUrl(url: string) {
+    return /\.(png|jpg|jpeg|gif|webp|svg)(\?.*)?$/i.test(url);
+}
+
+function isPdfUrl(url: string) {
+    return /\.pdf(\?.*)?$/i.test(url);
+}
+
+function getThumbImageUrl(post: Post): string | null {
+    // 1) attachments에서 이미지 찾기
+    const atts = (post as any).attachments as any[] | undefined;
+    if (Array.isArray(atts) && atts.length > 0) {
+        const img = atts.find((a) => typeof a?.url === "string" && isImageUrl(a.url));
+        if (img?.url) return img.url;
+
+        // PDF만 있으면 썸네일 안 띄움
+        const hasPdf = atts.some((a) => typeof a?.url === "string" && isPdfUrl(a.url));
+        if (hasPdf) return null;
+    }
+
+    // 2) 목록에 attachments가 없을 때: 본문(content)에서 이미지 URL을 직접 추출
+    //     contentPreview는 잘릴 수 있으니, 가능하면 content를 우선 사용
+    const text = String((post as any).content ?? post.contentPreview ?? "");
+
+    // 마크다운 이미지 ![](url) (닫는 괄호 없어도 어느 정도 잡기)
+    const md = text.match(/!\[[^\]]*]\((https?:\/\/[^\s)]+)\)?/i) || text.match(/!\[]\((https?:\/\/[^\s)]+)\)?/i);
+    const mdUrl = md?.[1];
+    if (mdUrl && isImageUrl(mdUrl)) return mdUrl;
+
+    // 그냥 이미지 URL (마크다운이 깨져도 잡히도록)
+    const plain = text.match(/https?:\/\/\S+\.(?:png|jpg|jpeg|gif|webp|svg)(?:\?\S*)?/i);
+    if (plain?.[0]) return plain[0];
+
+    return null;
+}
+
+
+/** 목록 미리보기에서 URL/마크다운 이미지/링크를 제거 */
+function stripUrlsFromPreview(input: string) {
+    let s = input ?? "";
+
+    // 1) 마크다운 이미지 ![](url) / ![alt](url)
+    //    - 닫는 괄호가 없어도 지우기 위해 \)? 허용
+    s = s.replace(/!\[[^\]]*]\((https?:\/\/[^\s)]+)\)?/gi, "");
+    s = s.replace(/!\[]\((https?:\/\/[^\s)]+)\)?/gi, "");
+
+    // 2) 마크다운 링크 [text](url) -> text만 (닫는 괄호 없어도 처리)
+    s = s.replace(/\[([^\]]+)]\((https?:\/\/[^\s)]+)\)?/gi, "$1");
+
+    // 3) 혹시 남아버린 조각들(![](, ![alt]( 같은)
+    s = s.replace(/!\[[^\]]*]\(/g, "");
+    s = s.replace(/!\[]\(/g, "");
+
+    // 4) URL 제거
+    s = s.replace(/https?:\/\/\S+/gi, "");
+
+    // 5) 남는 괄호/공백 정리
+    s = s.replace(/[()]/g, " ");
+    s = s.replace(/\s{2,}/g, " ").trim();
+
+    return s;
+}
+
+
+function ImageThumb({ url }: { url: string }) {
+    return (
+        <img
+            src={url}
+            alt=""
+            className="h-8 w-8 rounded object-cover border border-gray-200 shrink-0"
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
+        />
+    );
+}
+
 
 export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
+    // useEffect(() => {
+    //     console.log(
+    //         posts.map(p => ({ id: p.id, category: p.category, raw: p }))
+    //     );
+    // }, [posts]);
     useEffect(() => {
-        console.log(
-            posts.map(p => ({ id: p.id, category: p.category, raw: p }))
-        );
+        console.log(posts.map((p: any) => ({
+            id: p.id,
+            attachmentCount: p.attachmentCount,
+            attachments: p.attachments,
+            hasContent: !!p.content,
+            preview: p.contentPreview,
+        })));
     }, [posts]);
 
     return (
@@ -138,16 +226,50 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
                                         </TableCell>
 
                                         <TableCell className="whitespace-normal max-w-0">
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <div className="font-medium text-gray-900 truncate min-w-0">
-                                                    {post.title}
-                                                </div>
-                                                <AttachmentMark count={attachmentCount} />
-                                            </div>
-                                            <div className="mt-0.5 text-xs text-gray-500 line-clamp-1">
-                                                {post.contentPreview ?? post.content ?? ""}
-                                            </div>
+                                            {(() => {
+                                                const thumb = (post as any).thumbnailUrl ?? getThumbImageUrl(post);
+
+                                                return (
+                                                    <div className="space-y-1">
+                                                        {/* 1) 카테고리 배지: 기존 위치 그대로 쓰고 싶으면 여기서 빼도 됨.
+            너는 이미 왼쪽 컬럼에 배지가 있으니까, "카테고리 아래" 느낌을
+            제목 셀에서 만들려면 여기 한 번 더 보여주는 방식이 제일 직관적이야.
+            (중복이 싫으면 이 줄은 삭제해도 됨) */}
+                                                        {/* <CategoryBadge category={post.category} /> */}
+
+                                                        {/* 2) 썸네일을 아래로 내리고 크게 */}
+                                                        <div className="flex items-start gap-3 min-w-0">
+                                                            {thumb ? (
+                                                                <img
+                                                                    src={thumb}
+                                                                    alt=""
+                                                                    className="h-14 w-14 rounded-md object-cover border border-gray-200 shrink-0"
+                                                                    loading="lazy"
+                                                                    referrerPolicy="no-referrer"
+                                                                    onError={(e) => {
+                                                                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                                                                    }}
+                                                                />
+                                                            ) : null}
+
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="flex items-center gap-2 min-w-0">
+                                                                    <div className="font-medium text-gray-900 truncate min-w-0">
+                                                                        {post.title}
+                                                                    </div>
+                                                                    <AttachmentMark count={attachmentCount} />
+                                                                </div>
+
+                                                                <div className="mt-0.5 text-xs text-gray-500 line-clamp-2">
+                                                                    {stripUrlsFromPreview(String(post.contentPreview ?? post.content ?? ""))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
                                         </TableCell>
+
 
                                         <TableCell className="text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis">
                                             <span className="flex items-center gap-1.5">
@@ -229,8 +351,9 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
                             </div>
 
                             <div className="text-sm text-gray-600 line-clamp-2">
-                                {post.contentPreview ?? post.content ?? ""}
+                                {stripUrlsFromPreview(String(post.contentPreview ?? (post as any).content ?? ""))}
                             </div>
+
 
                             <div className="mt-3 flex items-center gap-3 text-xs text-gray-500 tabular-nums">
 								<span className="inline-flex items-center gap-1">
