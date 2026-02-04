@@ -57,3 +57,14 @@ export async function fetchBidsBatch(ids: number[]): Promise<Bid[]> {
 export async function deleteBid(bidId: number): Promise<void> {
     await api<void>(`/bids/${bidId}`, { method: 'DELETE' });
 }
+// ... existing exports ...
+
+export async function fetchBidHistory(userId: number | string): Promise<Bid[]> {
+	try {
+        const res = await api<any>(`/bids/history?userId=${userId}`, { method: "GET" });
+        return pickBidList(res) as Bid[];
+	} catch (e) {
+		console.error("Failed to fetch bid history", e);
+		return [];
+	}
+}

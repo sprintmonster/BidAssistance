@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { fetchBids, fetchBidHistory, type Bid } from "../api/bids";
 import { getUserProfile, updateUserProfile } from "../api/users";
 import { getCompanyForUser, upsertCompany, updateCompany } from "../api/company";
+import { fetchUserKeywords, addUserKeyword, deleteUserKeyword, type UserKeyword } from "../api/keywords";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -27,11 +29,11 @@ interface ProfilePageProps {
 	userEmail?: string;
 }
 
-type ProfileTab = "info" | "company" | "notifications" | "subscription";
+type ProfileTab = "info" | "company" | "keywords" | "history";
 const PROFILE_TAB_STORAGE_KEY = "profile.activeTab";
 
 function isProfileTab(v: string | null): v is ProfileTab {
-	return v === "info" || v === "company" || v === "notifications" || v === "subscription";
+	return v === "info" || v === "company" || v === "keywords" || v === "history";
 }
 
 function safeGetLocalStorage(key: string) {
@@ -349,11 +351,11 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 					<TabsTrigger value="company" className={tabTriggerClass}>
 						회사 정보
 					</TabsTrigger>
-					<TabsTrigger value="notifications" className={tabTriggerClass}>
-						알림 설정
+					<TabsTrigger value="keywords" className={tabTriggerClass}>
+						관심 키워드
 					</TabsTrigger>
-					<TabsTrigger value="subscription" className={tabTriggerClass}>
-						구독 관리
+					<TabsTrigger value="history" className={tabTriggerClass}>
+						최근 본 공고
 					</TabsTrigger>
 				</TabsList>
 
@@ -532,7 +534,181 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 						<CardContent className="text-sm text-muted-foreground">곧 제공됩니다.</CardContent>
 					</Card>
 				</TabsContent>
+				<TabsContent value="keywords" className="space-y-4">
+					<Card>
+						<CardHeader>
+							<CardTitle>관심 키워드 설정</CardTitle>
+							<CardDescription>관심있는 입찰 키워드를 등록하면 관련 공고를 빠르게 찾을 수 있습니다.</CardDescription>
+						</CardHeader>
+						<CardContent>
+							{userId ? <MyKeywords userId={userId} /> : <div>로그인이 필요합니다.</div>}
+						</CardContent>
+					</Card>
+				</TabsContent>
+
+				<TabsContent value="history" className="space-y-4">
+					<Card>
+						<CardHeader>
+							<CardTitle>최근 본 공고</CardTitle>
+							<CardDescription>최근에 조회한 입찰 공고 목록입니다.</CardDescription>
+						</CardHeader>
+						<CardContent>
+							{userId ? <RecentBids userId={userId} /> : <div>로그인이 필요합니다.</div>}
+						</CardContent>
+					</Card>
+				</TabsContent>
 			</Tabs>
+		</div>
+	);
+}
+
+function MyKeywords({ userId }: { userId: string }) {
+	const [keywords, setKeywords] = useState<UserKeyword[]>([]);
+	const [input, setInput] = useState("");
+	const [minPrice, setMinPrice] = useState("");
+	const [maxPrice, setMaxPrice] = useState("");
+	const [loading, setLoading] = useState(false);
+
+	useEffect(() => {
+		loadKeywords();
+	}, [userId]);
+
+	const loadKeywords = () => {
+		fetchUserKeywords(userId).then(setKeywords);
+	};
+
+	const onAdd = async () => {
+		if (!input.trim()) return;
+		setLoading(true);
+		try {
+			await addUserKeyword({
+				userId,
+				keyword: input.trim(),
+				minPrice: minPrice ? Number(minPrice) : undefined,
+				maxPrice: maxPrice ? Number(maxPrice) : undefined,
+			});
+			setInput("");
+			setMinPrice("");
+			setMaxPrice("");
+			loadKeywords();
+		} catch (e) {
+			console.error(e);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const onDelete = async (id: number) => {
+		if (!confirm("삭제하시겠습니까?")) return;
+		try {
+			await deleteUserKeyword(id);
+			loadKeywords();
+		} catch (e) {
+			console.error(e);
+		}
+	};
+
+	return (
+		<div className="space-y-6">
+			<div className="flex flex-wrap gap-2 items-end">
+				<div className="space-y-1">
+					<Label>키워드</Label>
+					<Input
+						value={input}
+						onChange={(e) => setInput(e.target.value)}
+						placeholder="예: 인공지능"
+						className="w-40"
+					/>
+				</div>
+				<div className="space-y-1">
+					<Label>최소 금액</Label>
+					<Input
+						type="number"
+						value={minPrice}
+						onChange={(e) => setMinPrice(e.target.value)}
+						placeholder="0"
+						className="w-32"
+					/>
+				</div>
+				<div className="space-y-1">
+					<Label>최대 금액</Label>
+					<Input
+						type="number"
+						value={maxPrice}
+						onChange={(e) => setMaxPrice(e.target.value)}
+						placeholder="제한 없음"
+						className="w-32"
+					/>
+				</div>
+				<Button onClick={onAdd} disabled={loading || !input.trim()}>
+					추가
+				</Button>
+			</div>
+
+			<div className="flex flex-wrap gap-2">
+				{keywords.map((k) => (
+					<Badge key={k.id} variant="secondary" className="px-3 py-1 text-sm gap-2">
+						{k.keyword}
+						{k.minPrice || k.maxPrice ? (
+							<span className="text-muted-foreground text-xs">
+								({k.minPrice?.toLocaleString() ?? 0} ~ {k.maxPrice?.toLocaleString() ?? "∞"})
+							</span>
+						) : null}
+						<button
+							onClick={() => onDelete(k.id)}
+							className="ml-1 hover:text-red-500"
+							aria-label="Delete"
+						>
+							×
+						</button>
+					</Badge>
+				))}
+				{keywords.length === 0 && (
+					<div className="text-muted-foreground text-sm">등록된 관심 키워드가 없습니다.</div>
+				)}
+			</div>
+		</div>
+	);
+}
+
+function RecentBids({ userId }: { userId: string }) {
+	const navigate = useNavigate();
+	const [bids, setBids] = useState<Bid[]>([]);
+	const [loading, setLoading] = useState(true);
+
+	useEffect(() => {
+		fetchBidHistory(userId)
+			.then((data) => {
+				// 백엔드 재시작 전이라도 프론트에서 확실하게 중복 제거 (id 기준)
+				const uniqueBids = Array.from(new Map(data.map((item) => [item.id, item])).values());
+				setBids(uniqueBids);
+			})
+			.finally(() => setLoading(false));
+	}, [userId]);
+
+	if (loading) return <div>로딩 중...</div>;
+
+	if (bids.length === 0) {
+		return <div className="text-muted-foreground">최근 조회한 공고가 없습니다.</div>;
+	}
+
+	return (
+		<div className="space-y-2">
+			{bids.map((bid) => (
+				<div
+					key={bid.id}
+					className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+					onClick={() => navigate(`/bids/${bid.id}`)}
+				>
+					<div>
+						<div className="font-medium">{bid.name}</div>
+						<div className="text-sm text-muted-foreground">
+							{bid.organization} · {bid.region}
+						</div>
+					</div>
+					<div className="text-sm text-blue-600">이동 →</div>
+				</div>
+			))}
 		</div>
 	);
 }
