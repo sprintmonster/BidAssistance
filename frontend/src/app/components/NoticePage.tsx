@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Megaphone, Paperclip, Search } from "lucide-react";
 
@@ -7,20 +7,11 @@ import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 
-type NoticeCategory = "all" | "service" | "update" | "maintenance" | "policy";
+import { fetch_notices_from_community, type NoticeCategory, type NoticeListItem } from "../api/notices";
 
-type NoticeItem = {
-	id: number;
-	title: string;
-	category: Exclude<NoticeCategory, "all">;
-	date: string; // YYYY-MM-DD
-	author: string;
-	pinned?: boolean;
-	attachments?: number;
-	keywords?: string[];
-};
+type FilterCategory = "all" | NoticeCategory;
 
-const CATEGORY_LABEL: Record<NoticeCategory, string> = {
+const CATEGORY_LABEL: Record<FilterCategory, string> = {
 	all: "전체",
 	service: "서비스",
 	update: "업데이트",
@@ -28,50 +19,18 @@ const CATEGORY_LABEL: Record<NoticeCategory, string> = {
 	policy: "정책",
 };
 
-const CATEGORY_BADGE: Record<Exclude<NoticeCategory, "all">, string> = {
+const CATEGORY_BADGE: Record<NoticeCategory, string> = {
 	service: "서비스",
 	update: "업데이트",
 	maintenance: "점검",
 	policy: "정책",
 };
 
-// TODO: 백엔드 공지 API가 붙기 전까지 임시 데이터
-const mock_notices: NoticeItem[] = [
-	{
-		id: 1001,
-		pinned: true,
-		category: "maintenance",
-		date: "2026-01-10",
-		author: "관리자",
-		attachments: 1,
-		title: "서비스 점검 안내 (01/10 02:00~04:00)",
-		keywords: ["점검", "서비스", "다운타임"],
-	},
-	{
-		id: 1002,
-		category: "update",
-		date: "2026-01-08",
-		author: "Product Team",
-		attachments: 0,
-		title: "입찰 알림 필터 기능 업데이트",
-		keywords: ["업데이트", "알림", "필터"],
-	},
-	{
-		id: 1003,
-		category: "policy",
-		date: "2026-01-05",
-		author: "법무/정책",
-		attachments: 0,
-		title: "개인정보 처리방침 변경 안내",
-		keywords: ["정책", "개인정보"],
-	},
-];
-
 function normalize_text(s: string) {
 	return (s || "").trim().toLowerCase();
 }
 
-function matches_query(n: NoticeItem, q: string) {
+function matches_query(n: NoticeListItem, q: string) {
 	if (!q) return true;
 	const hay = [n.title, n.author, n.date, ...(n.keywords ?? [])].join(" ");
 	return normalize_text(hay).includes(q);
@@ -79,25 +38,56 @@ function matches_query(n: NoticeItem, q: string) {
 
 export function NoticePage() {
 	const navigate = useNavigate();
-	const [category, setCategory] = useState<NoticeCategory>("all");
+
+	const [category, setCategory] = useState<FilterCategory>("all");
 	const [query, setQuery] = useState("");
+
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const [items, setItems] = useState<NoticeListItem[]>([]);
 
 	const q = useMemo(() => normalize_text(query), [query]);
 
+	useEffect(() => {
+		let alive = true;
+
+		(async () => {
+			setLoading(true);
+			setError(null);
+			try {
+				const list = await fetch_notices_from_community();
+				if (!alive) return;
+				setItems(list);
+			} catch (e: any) {
+				if (!alive) return;
+				setError(e?.message || "공지사항을 불러오지 못했습니다.");
+				setItems([]);
+			} finally {
+				if (!alive) return;
+				setLoading(false);
+			}
+		})();
+
+		return () => {
+			alive = false;
+		};
+	}, []);
+
 	const notices = useMemo(() => {
-		const filtered = mock_notices
+		const filtered = items
 			.filter((n) => (category === "all" ? true : n.category === category))
 			.filter((n) => matches_query(n, q));
 
-		// 고정글 우선, 그 다음 최신순
+		// pinned는 현재 false지만(확장 대비) 로직은 유지
 		filtered.sort((a, b) => {
 			const ap = a.pinned ? 1 : 0;
 			const bp = b.pinned ? 1 : 0;
 			if (ap !== bp) return bp - ap;
-			return b.date.localeCompare(a.date);
+			return (b.date || "").localeCompare(a.date || "");
 		});
+
 		return filtered;
-	}, [category, q]);
+	}, [items, category, q]);
 
 	const onSearch = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -106,7 +96,7 @@ export function NoticePage() {
 	return (
 		<div className="w-full max-w-[1100px] space-y-6">
 			<Card className="border-slate-200/70">
-				<CardHeader className="space-y-3">
+				<CardHeader className="space-y-3 pb-6">
 					<div className="flex items-start gap-3">
 						<div className="h-10 w-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0">
 							<Megaphone className="h-5 w-5" />
@@ -135,7 +125,7 @@ export function NoticePage() {
 					</form>
 
 					<div className="flex flex-wrap gap-2">
-						{(Object.keys(CATEGORY_LABEL) as NoticeCategory[]).map((k) => {
+						{(Object.keys(CATEGORY_LABEL) as FilterCategory[]).map((k) => {
 							const active = k === category;
 							return (
 								<Button
@@ -154,7 +144,20 @@ export function NoticePage() {
 				</CardHeader>
 			</Card>
 
-			{notices.length === 0 ? (
+			{loading ? (
+				<Card>
+					<CardContent className="py-16 text-center text-muted-foreground">불러오는 중...</CardContent>
+				</Card>
+			) : error ? (
+				<Card>
+					<CardContent className="py-10 space-y-3 text-center">
+						<div className="text-sm text-red-600">{error}</div>
+						<Button variant="outline" onClick={() => window.location.reload()}>
+							새로고침
+						</Button>
+					</CardContent>
+				</Card>
+			) : notices.length === 0 ? (
 				<Card>
 					<CardContent className="py-16 text-center text-muted-foreground">
 						등록된 공지사항이 없습니다.
@@ -175,7 +178,7 @@ export function NoticePage() {
 										<span>{n.date}</span>
 										<span className="text-slate-300">•</span>
 										<span>{n.author}</span>
-										{typeof n.attachments === "number" && n.attachments > 0 && (
+										{n.attachments > 0 && (
 											<span className="inline-flex items-center gap-1">
 												<span className="text-slate-300">•</span>
 												<Paperclip className="h-4 w-4" />
@@ -189,7 +192,7 @@ export function NoticePage() {
 								<Button
 									variant="outline"
 									className="shrink-0"
-									onClick={() => navigate(`/notice?open=${n.id}`)}
+									onClick={() => navigate(`/community/${n.id}`)}
 								>
 									상세
 								</Button>
