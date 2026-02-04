@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { getUserProfile, updateUserProfile } from "../api/users";
-import { getCompanyForUser, upsertCompany } from "../api/company";
+import { getCompanyForUser, upsertCompany, updateCompany } from "../api/company";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -119,11 +119,36 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 
     useEffect(() => {
         if (activeTab !== "company") return;
+        if (!userId) return;
 
-        // 백엔드 조회 대신, 프론트 저장값으로 채우기
-        setCompanyName(localStorage.getItem("companyName") || "");
-        setCompanyPosition(localStorage.getItem("companyPosition") || "");
-    }, [activeTab]);
+        let ignore = false;
+        setCompanyLoading(true);
+        setCompanyError(null);
+
+        // 백엔드에서 회사 정보 조회
+        getCompanyForUser(userId)
+            .then((c) => {
+                if (ignore) return;
+                if (c) {
+                    setCompanyId(c.id);
+                    setCompanyName(c.name || "");
+                    setCompanyPosition(c.position || "");
+                }
+            })
+            .catch((e: any) => {
+                if (ignore) return;
+                // 회사 정보가 없으면 빈 상태 유지
+                setCompanyId(undefined);
+                setCompanyName("");
+                setCompanyPosition("");
+            })
+            .finally(() => {
+                if (ignore) return;
+                setCompanyLoading(false);
+            });
+
+        return () => { ignore = true; };
+    }, [activeTab, userId]);
 
 	useEffect(() => {
 		if (!userId) return;
@@ -257,28 +282,27 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
             return;
         }
 
-        const prevName = localStorage.getItem("companyName") || "";
-        const prevPos = localStorage.getItem("companyPosition") || "";
+        setCompanySaving(true);
 
-        //  1) 완전 동일하면 저장하지 않고 안내만
-        if (prevName === nextName && prevPos === nextPos) {
-            setCompanyNotice("이미 등록된 회사 정보입니다.");
-            return;
-        }
-
-        // 2) 여기서부터는 업데이트(변경)로 간주하고 로컬에 저장
-        localStorage.setItem("companyName", nextName);
-        localStorage.setItem("companyPosition", nextPos);
-
-        // UI에도 즉시 반영(선택이지만 안정적)
-        setCompanyName(nextName);
-        setCompanyPosition(nextPos);
-
-        //  3) 메시지: 기존 값이 있었으면 '업데이트', 없었으면 '등록'
-        if (prevName || prevPos) {
-            setCompanyNotice("회사 정보가 업데이트되었습니다.");
-        } else {
-            setCompanyNotice("회사 정보가 등록되었습니다.");
+        try {
+            if (companyId) {
+                // 기존 회사 정보 업데이트
+                await updateCompany(companyId, { name: nextName, position: nextPos });
+                setCompanyNotice("회사 정보가 업데이트되었습니다.");
+            } else {
+                // 새 회사 생성
+                const res = await upsertCompany({ name: nextName, position: nextPos });
+                if (res.data?.id) {
+                    setCompanyId(res.data.id);
+                }
+                setCompanyNotice("회사 정보가 등록되었습니다.");
+            }
+            setCompanyName(nextName);
+            setCompanyPosition(nextPos);
+        } catch (e: any) {
+            setCompanyError(e?.message || "회사 정보 저장에 실패했습니다.");
+        } finally {
+            setCompanySaving(false);
         }
     };
 
