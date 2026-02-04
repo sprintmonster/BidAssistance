@@ -41,7 +41,11 @@ const category_label: Record<CategoryFilter, string> = {
     info: "정보",
     review: "후기",
     discussion: "토론",
+    notice: "공지", // NoticePage에서만 표시 - 커뮤니티 탭 렌더링에서 제외
 };
+
+// 커뮤니티 UI에서 표시할 카테고리 (notice 제외)
+const visible_categories: CategoryFilter[] = ["all", "question", "info", "review", "discussion"];
 
 function is_authed_now() {
     return !!localStorage.getItem("userId");
@@ -63,11 +67,12 @@ function compute_counts(items: Post[]) {
         info: 0,
         review: 0,
         discussion: 0,
+        notice: 0,
     };
 
     items.forEach((p) => {
         const c = p.category;
-        if (c === "question" || c === "info" || c === "review" || c === "discussion") base[c] += 1;
+        if (c === "question" || c === "info" || c === "review" || c === "discussion" || c === "notice") base[c] += 1;
     });
 
     return base;
@@ -140,6 +145,7 @@ export function CommunityPage() {
 
     /**  인기글 상위 3개 */
     const [trending_posts, set_trending_posts] = useState<Post[]>([]);
+    const [user_role, set_user_role] = useState<number>(0);
 
     /**  게시글별 좋아요 연타 방지 */
     const [likeBusyByPost, setLikeBusyByPost] = useState<Record<number, boolean>>({});
@@ -161,6 +167,23 @@ export function CommunityPage() {
             window.removeEventListener("storage", sync);
         };
     }, []);
+
+    useEffect(() => {
+        if (authed && current_user_id) {
+             import("../api/users").then(({ getUserProfile }) => {
+                 getUserProfile(current_user_id).then(res => {
+                     console.log("[CommunityPage] Full API response:", JSON.stringify(res, null, 2));
+                     console.log("[CommunityPage] User role fetched:", res.data?.role);
+                     set_user_role(res.data?.role ?? 0);
+                 }).catch((err) => {
+                     console.error("[CommunityPage] Failed to fetch user profile:", err);
+                     set_user_role(0);
+                 });
+             });
+        } else {
+            set_user_role(0);
+        }
+    }, [authed, current_user_id]);
 
     const go_login = () => navigate("/login", { state: { from: "/community" } });
 
@@ -286,7 +309,10 @@ export function CommunityPage() {
 
                 const likedSet = loadLikedSet(current_user_id);
 
-                const fixedItems = data.items.map((p: any) => {
+                const fixedItems = data.items
+                    // 공지(notice)는 NoticePage에서만 보이므로 커뮤니티에서 제외
+                    .filter((p: any) => p.category !== "notice")
+                    .map((p: any) => {
                     const pid = to_valid_id(p?.id ?? p?.postId);
 
                     // id 보장
@@ -757,12 +783,14 @@ export function CommunityPage() {
                         onRequireAuth={go_login}
                         currentUserId={current_user_id}
                         onAdopt={on_adopted}
+                        isAdmin={user_role === 2}
                     />
                 ) : null
             ) : null}
 
             {view_mode === "new" ? (
                 <NewPostForm
+                    isAdmin={user_role === 2}
                     onSubmit={add_post}
                     onCancel={() => set_view_mode("list")}
                     onUploadInlineFile={async (file) => {

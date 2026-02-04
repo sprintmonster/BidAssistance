@@ -36,6 +36,7 @@ interface PostDetailProps {
     onRequireAuth?: () => void;
     currentUserId?: string;
     onAdopt?: (postId: number, commentId: number) => void;
+    isAdmin?: boolean;
 }
 
 const category_labels: Record<PostCategory, string> = {
@@ -43,6 +44,7 @@ const category_labels: Record<PostCategory, string> = {
     info: "정보",
     review: "후기",
     discussion: "토론",
+    notice: "공지",
 };
 
 const category_colors: Record<PostCategory, string> = {
@@ -50,6 +52,7 @@ const category_colors: Record<PostCategory, string> = {
     info: "bg-green-100 text-green-800",
     review: "bg-purple-100 text-purple-800",
     discussion: "bg-orange-100 text-orange-800",
+    notice: "bg-red-100 text-red-800",
 };
 
 function formatCreatedAt(input: unknown) {
@@ -117,7 +120,7 @@ function renderInlineMarkdown(src: string): ReactNode[] {
         if (start > lastIndex) {
             const chunk = text.slice(lastIndex, start);
             // 줄바꿈 유지
-            nodes.push(...chunk.split("\n").flatMap((line, i) => (i === 0 ? [line] : [<br key={`br-${nodes.length}-${i}`} />, line])));
+            nodes.push(...chunk.split("\n").map((line, i) => (i === 0 ? [line] : [<br key={`br-${nodes.length}-${i}`} />, line])).reduce((acc, val) => acc.concat(val), []));
         }
 
         // 매치된 마크다운 push
@@ -155,7 +158,7 @@ function renderInlineMarkdown(src: string): ReactNode[] {
     // 마지막 남은 텍스트 push
     if (lastIndex < text.length) {
         const tail = text.slice(lastIndex);
-        nodes.push(...tail.split("\n").flatMap((line, i) => (i === 0 ? [line] : [<br key={`br-tail-${nodes.length}-${i}`} />, line])));
+        nodes.push(...tail.split("\n").map((line, i) => (i === 0 ? [line] : [<br key={`br-tail-${nodes.length}-${i}`} />, line])).reduce((acc, val) => acc.concat(val), []));
     }
 
     // React가 "문자열/컴포넌트" 섞인 배열도 잘 렌더링함
@@ -175,6 +178,7 @@ export function PostDetail({
                                onRequireAuth,
                                currentUserId,
                                onAdopt,
+                               isAdmin = false,
                            }: PostDetailProps) {
     const postId = useMemo(() => {
         const n = Number((post as any).id);
@@ -353,7 +357,7 @@ export function PostDetail({
                     </div>
 
                     <div className="shrink-0 flex gap-2">
-                        {canEdit && !is_editing && (
+                        {(canEdit || isAdmin) && !is_editing && (
                             <button
                                 type="button"
                                 onClick={delete_post}
@@ -519,7 +523,7 @@ export function PostDetail({
                         const me = currentUserId != null ? String(currentUserId) : undefined;
 
                         const can_delete_this_comment =
-                            !!canInteract && (!!canEdit || (!!comment_author_id && !!me && comment_author_id === me));
+                            !!canInteract && (!!isAdmin || !!canEdit || (!!comment_author_id && !!me && comment_author_id === me));
                         
                         const isAdopted = Number(comment.id) === adoptedCommentId;
                         const canNotAdoptSelf = comment_author_id !== me;

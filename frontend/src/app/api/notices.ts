@@ -92,22 +92,22 @@ function to_notice_item(p: Post): NoticeListItem {
 		author: p.authorName || "관리자",
 
 		pinned: false,
-		attachments: Number.isFinite(p.attachmentCount) ? p.attachmentCount : 0,
+		attachments: Number.isFinite(p.attachmentCount) ? (p.attachmentCount as number) : 0,
 		keywords: extract_keywords(p),
 	};
 }
 
 export async function fetch_notices_from_community(): Promise<NoticeListItem[]> {
 	const data = await fetchCommunityPosts({
-		category: "info",
-		sort: "recent",
+		category: "notice" as any,
+		sort: "recent" as any,
 		page: 0,
 		size: 50,
 	});
 
 	const items = (data?.items ?? []).map(to_notice_item);
 
-	items.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+	items.sort((a: NoticeListItem, b: NoticeListItem) => (b.date || "").localeCompare(a.date || ""));
 
 	return items;
 }

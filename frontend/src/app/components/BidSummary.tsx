@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { api } from "../api/client";
-import { logBidView } from "../api/bids";
+import { logBidView, deleteBid } from "../api/bids";
+import { getUserProfile } from "../api/users";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -465,8 +466,34 @@ export function BidSummary() {
     const [wishlistSynced, setWishlistSynced] = useState(false);
     const [adding, setAdding] = useState(false);
     const [alreadyAdded, setAlreadyAdded] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
 
     const autoAnalyzeOnceRef = useRef(false);
+
+    useEffect(() => {
+        const userIdStr = localStorage.getItem("userId");
+        console.log("[BidSummary] userId from localStorage:", userIdStr);
+        if (userIdStr) {
+            getUserProfile(userIdStr).then(res => {
+                console.log("[BidSummary] User role fetched:", res.data.role);
+                if (res.data.role === 2) setIsAdmin(true);
+            }).catch((err) => {
+                console.error("[BidSummary] Failed to fetch user profile:", err);
+            });
+        }
+    }, []);
+
+    const handleDelete = async () => {
+        if (!bid) return;
+        if (!window.confirm("정말로 이 공고를 삭제하시겠습니까? Delete?")) return;
+        try {
+            await deleteBid(bid.id);
+            toast.success("공고가 삭제되었습니다.");
+            navigate("/bids");
+        } catch (e: any) {
+             toast.error(e?.message || "삭제 실패");
+        }
+    };
 
     //  파싱 결과(구조화 데이터)
     const structured = analysis?.structured ?? null;
@@ -860,6 +887,17 @@ export function BidSummary() {
                                     className="gap-2"
                                 >
                                     공고 링크
+                                </Button>
+                            )}
+
+                             {isAdmin && (
+                                <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={handleDelete}
+                                    className="gap-2"
+                                >
+                                    삭제
                                 </Button>
                             )}
                         </div>
