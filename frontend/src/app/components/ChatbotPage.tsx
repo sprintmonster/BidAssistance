@@ -16,9 +16,22 @@ interface Message {
 	timestamp: string;
 	suggestions?: string[];
 }
+function dataUrlToFile(dataUrl: string, fileName: string): File {
+    const [meta, b64] = dataUrl.split(",");
+    const mime = meta.match(/data:(.*?);base64/)?.[1] ?? "application/octet-stream";
+
+    const binStr = atob(b64);
+    const len = binStr.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) bytes[i] = binStr.charCodeAt(i);
+
+    return new File([bytes], fileName, { type: mime });
+}
 
 export function ChatbotPage() {
-	const [messages, setMessages] = useState<Message[]>([
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+    const [messages, setMessages] = useState<Message[]>([
 		{
 			id: 1,
 			text: "안녕하세요! 입찰 인텔리전스 AI 어시스턴트입니다. 무엇을 도와드릴까요?",
@@ -67,49 +80,55 @@ export function ChatbotPage() {
 		};
 	};
 
-	const sendMessage = async (text: string) => {
-		const trimmed = text.trim();
-		if (!trimmed || isLoading) return; // 중복 전송 방지
+    const sendMessage = async (text: string) => {
+        const trimmed = text.trim();
+        if ((!trimmed && !selectedFile) || isLoading) return; // 파일만 보내는 것도 허용하려면 이렇게
 
-		const userMessage: Message = {
-			id: Date.now(),
-			text: trimmed,
-			sender: "user",
-			timestamp: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
-		};
+        const userMessage: Message = {
+            id: Date.now(),
+            text: trimmed || `(파일 전송: ${selectedFile?.name})`, // 파일만 보낼 때 대비
+            sender: "user",
+            timestamp: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
+        };
 
-		setMessages((prev) => [...prev, userMessage]);
-		setInputValue("");
+        setMessages((prev) => [...prev, userMessage]);
+        setInputValue("");
         setIsLoading(true);
 
-        try { // API 호출
-            const requestData: ChatRequest = {
+        try {
+            const result = await fetchChatResponse({
                 query: trimmed,
                 thread_id: "user_session_1",
-            };
-            const result = await fetchChatResponse(requestData);
+                file: selectedFile ?? undefined,
+            });
 
-            const botMessage:Message = { // 화면에 응답 표시
+            const botMessage: Message = {
                 id: Date.now() + 1,
                 text: result.data.message,
                 sender: "bot",
-                timestamp: new Date().toLocaleTimeString("ko-KR", {hour: "2-digit", minute: "2-digit"}),
+                timestamp: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
                 suggestions: [],
-            }
+            };
+
             setMessages((prev) => [...prev, botMessage]);
+
+            setSelectedFile(null); //  전송 후 파일 초기화 (중요)
         } catch (error) {
-            const errorMessage: Message = {
-                id: Date.now() + 1,
-                text: "죄송합니다. 서버 연결에 실패했습니다.",
-                sender: "bot",
-                timestamp: new Date().toLocaleTimeString(),
-            }
+            setMessages((prev) => [
+                ...prev,
+                {
+                    id: Date.now() + 1,
+                    text: "죄송합니다. 서버 연결에 실패했습니다.",
+                    sender: "bot",
+                    timestamp: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
+                },
+            ]);
         } finally {
             setIsLoading(false);
         }
-	};
+    };
 
-	const handleSend = () => {
+    const handleSend = () => {
 		sendMessage(inputValue);
 	};
 
@@ -204,18 +223,26 @@ export function ChatbotPage() {
 				</ScrollArea>
 
 				<CardContent className="border-t pt-4 shrink-0">
-					<div className="flex gap-2">
-						<Input
-							placeholder="메시지를 입력하세요..."
-							value={inputValue}
-							onChange={(e) => setInputValue(e.target.value)}
-							onKeyPress={handleKeyPress}
-						/>
-						<Button onClick={handleSend}>
-							<Send className="h-4 w-4" />
-						</Button>
-					</div>
-				</CardContent>
+                    <div className="flex gap-2">
+                        <Input
+                            placeholder="메시지를 입력하세요..."
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                            onKeyDown={handleKeyPress as any} // 기존 함수 유지 시. (권장은 onKeyDown으로 바꾸기)
+                        />
+
+                        {/* ✅ 파일 선택 */}
+                        <input
+                            type="file"
+                            onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+                        />
+
+                        <Button onClick={handleSend} disabled={isLoading}>
+                            <Send className="h-4 w-4" />
+                        </Button>
+                    </div>
+
+                </CardContent>
 			</Card>
 
 			<Card>

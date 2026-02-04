@@ -3,7 +3,7 @@ import { api } from "./client";
 export interface ChatRequest {
     query: string;
     thread_id?: string; // 세션 스레드 ID
-    payload?: any; // 파일 담기 위해
+    // payload?: any; // 파일 담기 위해
 }
 
 export interface ChatResponse {
@@ -13,17 +13,30 @@ export interface ChatResponse {
         message: string;
     }
 }
-export const fetchChatResponse = async (request: ChatRequest): Promise<ChatResponse> => {
-    try {
-        const response = await api<ChatResponse>("/chatbots", {
+export const fetchChatResponse = async (
+    request: ChatRequest & { file?: File }
+): Promise<ChatResponse> => {
+    if (request.file) {
+        const formData = new FormData();
+
+        // ✅ 서버가 요구하는 필드명으로 맞추기
+        formData.append("text", request.query || "파일 분석 요청");
+
+        if (request.thread_id) {
+            formData.append("thread_id", request.thread_id);
+        }
+
+        formData.append("file", request.file);
+
+        return api<ChatResponse>("/chatbots/file", {
             method: "POST",
-            body: JSON.stringify(request),
+            body: formData,
         });
-
-
-        return response;
-    } catch (error) {
-        console.error("Chatbot API Error:", error);
-        throw error;
     }
-}
+
+    return api<ChatResponse>("/chatbots", {
+        method: "POST",
+        body: JSON.stringify(request),
+    });
+};
+

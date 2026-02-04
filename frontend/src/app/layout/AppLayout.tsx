@@ -258,13 +258,13 @@ export function AppLayout() {
                 {/* 회사 정보 */}
                 <div className="flex flex-col gap-1 text-xs">
                     <div>
-                        (주)입찰인사이트 | 대표 김도현 | 사업자등록번호 412-86-01927
+                        (주)입찰인사이트 | 대표 전보윤 | 사업자등록번호 000-00-000000
                     </div>
                     <div>
-                        서울특별시 강남구 테헤란로 152, 8층 (역삼동)
+                        대구광역시 북구 고성로 141
                     </div>
                     <div>
-                        고객센터 02-6956-1042 | support@bidsight.co.kr
+                        고객센터 053-000-0000 | support@bidsight.co.kr
                     </div>
                 </div>
 

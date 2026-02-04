@@ -29,14 +29,14 @@ function nowTime() {
 	return new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
 }
 
-const readFileAsBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
-};
+// const readFileAsBase64 = (file: File): Promise<string> => {
+//     return new Promise((resolve, reject) => {
+//         const reader = new FileReader();
+//         reader.onload = () => resolve(reader.result as string);
+//         reader.onerror = reject;
+//         reader.readAsDataURL(file);
+//     });
+// };
 
 function Bubble({ message }: { message: Message }) {
 	const isUser = message.sender === "user";
@@ -123,58 +123,50 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
             sender: "user",
             timestamp: nowTime(),
         };
+
         setMessages((prev) => [...prev, userMessage]);
         setInput("");
         setIsTyping(true);
 
+        // ✅ 여기 중요: state가 await 사이에 바뀔 수 있으니 로컬 변수로 고정
+        const fileToSend = selectedFile;
+
         try {
-            let result;
+            const result = await fetchChatResponse({
+                query: trimmed || "파일 분석 요청",     // ✅ 파일만 보낼 때 대비(서버가 query 필수면 특히 중요)
+                thread_id: "user_session_1",
+                file: fileToSend ?? undefined,        // ✅ 이게 있어야 /chatbots/file 로 감
+            });
 
-            if (selectedFile) {
-                const base64File = await readFileAsBase64(selectedFile); // 파일을 Base64로 변환
+            setMessages((prev) => [
+                ...prev,
+                {
+                    id: Date.now() + 1,
+                    text: result.data.message,
+                    sender: "bot",
+                    timestamp: nowTime(),
+                    suggestions: [],
+                },
+            ]);
 
-                const requestData: ChatRequest = { // Payload에 담아서 전송
-                    query: trimmed, // 입력한 텍스트
-                    thread_id: "user_session_1",
-                    payload: {
-                        fileName: selectedFile.name,
-                        fileData: base64File // 전체 문자열
-                    }
-                };
-
-                result = await fetchChatResponse(requestData);
-                clearFile();
-
-            } else { // 일반 텍스트 전송
-                result = await fetchChatResponse({
-                    query: trimmed,
-                    thread_id: "user_session_1"
-                });
-            }
-
-            const botMessage: Message = {
-                id: Date.now() + 1,
-                text: result.data.message,
-                sender: "bot",
-                timestamp: nowTime(),
-                suggestions: [],
-            };
-            setMessages((prev) => [...prev, botMessage]);
-
+            clearFile(); // ✅ 전송 후 파일 초기화
         } catch (error) {
-            const errorMessage: Message = {
-                id: Date.now() + 1,
-                text: "죄송합니다. 서버 연결에 실패했습니다.",
-                sender: "bot",
-                timestamp: nowTime(),
-            };
-            setMessages((prev) => [...prev, errorMessage]);
+            setMessages((prev) => [
+                ...prev,
+                {
+                    id: Date.now() + 1,
+                    text: "죄송합니다. 서버 연결에 실패했습니다.",
+                    sender: "bot",
+                    timestamp: nowTime(),
+                },
+            ]);
         } finally {
             setIsTyping(false);
         }
     };
 
-	const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+
+    const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.nativeEvent.isComposing) return;
 
 		if (e.key === "Enter" && !e.shiftKey) {
