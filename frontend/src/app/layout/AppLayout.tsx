@@ -256,16 +256,18 @@ export function AppLayout() {
         <footer className="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-4 text-sm text-gray-500 dark:text-gray-400">
             <div className="w-full px-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 {/* 회사 정보 */}
-                <div className="flex flex-col gap-1 text-xs">
-                    <div>
-                        (주)입찰인사이트 | 대표 전보윤 | 사업자등록번호 000-00-000000
-                    </div>
-                    <div>
-                        대구광역시 북구 고성로 141
-                    </div>
-                    <div>
-                        고객센터 053-000-0000 | support@bidsight.co.kr
-                    </div>
+                <div className="text-xs leading-relaxed flex flex-wrap gap-x-2 gap-y-1">
+                	<span>(주)입찰인사이트</span>
+	                <span className="text-slate-300">|</span>
+                	<span>대표 전보윤</span>
+                	<span className="text-slate-300">|</span>
+                	<span>사업자등록번호 000-00-00000</span>
+                	<span className="text-slate-300">|</span>
+                	<span>대구광역시 북구 고성로 141</span>
+                	<span className="text-slate-300">|</span>
+                	<span>고객센터 053-000-0000</span>
+                	<span className="text-slate-300">|</span>
+                	<span>support@bidsight.co.kr</span>
                 </div>
 
                 {/* 링크 */}
