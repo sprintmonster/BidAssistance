@@ -378,7 +378,7 @@ async def chat_endpoint(req: ChatRequest):
         resp_type = "chat"
 
         # 후처리 요청이면 summary로 고정
-        if req.type in ("notice_result", "report"):
+        if req.type in ("notice_result"):
             resp_type = "search"
         '''
         s = (final_text or "").strip()
