@@ -448,6 +448,13 @@ function mergeStructured(
     };
 }
 
+const DEFAULT_CHECKLIST: Array<{ item: string; checked: boolean }> = [
+    { item: "사업자등록증", checked: false },
+    { item: "법인등기부등본", checked: false },
+    { item: "인감증명서/사용인감계", checked: false },
+    { item: "실적증명서", checked: false },
+];
+
 export function BidSummary() {
     const navigate = useNavigate();
     const { bidId } = useParams();
@@ -457,7 +464,7 @@ export function BidSummary() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const [checklist, setChecklist] = useState<Array<{ item: string; checked: boolean }>>([]);
+    const [checklist, setChecklist] = useState(DEFAULT_CHECKLIST);
 
     const [analysis, setAnalysis] = useState<AnalysisDto | null>(null);
     const [analyzing, setAnalyzing] = useState(false);
@@ -599,8 +606,9 @@ export function BidSummary() {
 
     useEffect(() => {
         if (!bid) return;
-        setChecklist(bid.checklist ?? []);
+        setChecklist(DEFAULT_CHECKLIST);
     }, [bid?.id]);
+
 
     useEffect(() => {
         const sync = async () => {
