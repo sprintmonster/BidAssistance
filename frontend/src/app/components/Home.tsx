@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { fetchBids } from "../api/bids";
 import { login } from "../api/auth";
 import { fetchWishlist } from "../api/wishlist";
+import { getCompanyForUser } from "../api/company";
 import { mask_name } from "../utils/masking";
 import {
 	format_mmss,
@@ -328,13 +329,30 @@ export function Home() {
 		return () => window.clearInterval(id);
 	}, [email]);
 
-	const companyLabel = useMemo(() => {
-		const n = localStorage.getItem("companyName")?.trim() || "";
-		const p = localStorage.getItem("companyPosition")?.trim() || "";
-		if (!n && !p) return "";
-		if (n && p) return `${n} · ${p}`;
-		return n || p;
-	}, []);
+	// const companyLabel = useMemo(() => {
+	// 	const n = localStorage.getItem("companyName")?.trim() || "";
+	// 	const p = localStorage.getItem("companyPosition")?.trim() || "";
+	// 	if (!n && !p) return "";
+	// 	if (n && p) return `${n} · ${p}`;
+	// 	return n || p;
+	// }, []);
+
+	const [companyLabel, setCompanyLabel] = useState("");
+
+	useEffect(() => {
+		if (!isAuthed) return;
+		const uid = localStorage.getItem("userId");
+		if (!uid) return;
+
+		getCompanyForUser(uid).then((c) => {
+			if (!c) return;
+			const n = c.name?.trim() || "";
+			const p = c.position?.trim() || "";
+			if (!n && !p) setCompanyLabel("");
+			else if (n && p) setCompanyLabel(`${n} · ${p}`);
+			else setCompanyLabel(n || p);
+		});
+	}, [isAuthed]);
 
 	const locked = useMemo(() => {
 		const em = email.trim();

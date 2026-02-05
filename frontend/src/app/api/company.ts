@@ -13,8 +13,7 @@ export type CompanyInfo = {
 	id?: number;
 	userId?: number | string;
 	name: string;
-	license?: string;
-	performanceHistory?: string;
+	position?: string; // 직책
 };
 
 function to_str(v: unknown): string {
@@ -35,8 +34,7 @@ function normalize_company(raw: any): CompanyInfo {
 		id: to_num(obj.id),
 		userId: obj.userId ?? obj.user_id,
 		name: to_str(obj.name),
-		license: to_str(obj.license),
-		performanceHistory: to_str(obj.performanceHistory ?? obj.performance_history),
+		position: to_str(obj.position),
 	};
 }
 
@@ -74,11 +72,18 @@ export async function getCompanyForUser(userId: string | number): Promise<Compan
 export function upsertCompany(payload: {
 	id?: number;
 	name: string;
-	license?: string;
-	performanceHistory?: string;
+	position?: string; // 직책
 }) {
-	return api<ApiResponse<{ message?: string }>>("/company", {
+	return api<ApiResponse<CompanyInfo>>("/company", {
 		method: "POST",
 		body: JSON.stringify(payload),
 	});
 }
+
+export function updateCompany(id: number, payload: { name: string; position?: string }) {
+	return api<ApiResponse<CompanyInfo>>(`/company/${id}`, {
+		method: "PUT",
+		body: JSON.stringify(payload),
+	});
+}
+

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Eye, FilterX, Plus, RefreshCw, Search } from "lucide-react";
 import { fetchWishlist, toggleWishlist } from "../api/wishlist";
-import { fetchBids } from "../api/bids";
+import { fetchBids, deleteBid } from "../api/bids";
+import { getUserProfile } from "../api/users";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 
@@ -109,6 +110,20 @@ export function BidDiscovery({
 	const [addingId, setAddingId] = useState<number | null>(null);
 	const [addedIds, setAddedIds] = useState<Set<number>>(() => new Set());
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+    const [isAdmin, setIsAdmin] = useState(false);
+
+    useEffect(() => {
+        const userIdStr = localStorage.getItem("userId");
+        console.log("[BidDiscovery] userId from localStorage:", userIdStr);
+        if (userIdStr) {
+            getUserProfile(userIdStr).then(res => {
+                console.log("[BidDiscovery] User role fetched:", res.data.role);
+                if (res.data.role === 2) setIsAdmin(true);
+            }).catch((err) => {
+                console.error("[BidDiscovery] Failed to fetch user profile:", err);
+            });
+        }
+    }, []);
 
 	const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -601,6 +616,26 @@ export function BidDiscovery({
 
 												<TableCell className="pr-6">
 													<div className="flex justify-end gap-2">
+                                                        {isAdmin && (
+                                                            <Button
+                                                                variant="destructive"
+                                                                size="sm"
+                                                                className="h-9 rounded-xl"
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    if (!window.confirm("삭제하시겠습니까?")) return;
+                                                                    try {
+                                                                        await deleteBid(b.bidId);
+                                                                        showToast("삭제되었습니다", "success");
+                                                                        void load(); // Reload list
+                                                                    } catch {
+                                                                        showToast("삭제 실패", "error");
+                                                                    }
+                                                                }}
+                                                            >
+                                                                삭제
+                                                            </Button>
+                                                        )}
 														<Button
 															variant="outline"
 															size="sm"

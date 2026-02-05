@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { fetchBids, fetchBidHistory, type Bid } from "../api/bids";
 import { getUserProfile, updateUserProfile } from "../api/users";
-import { getCompanyForUser, upsertCompany } from "../api/company";
+import { getCompanyForUser, upsertCompany, updateCompany } from "../api/company";
+import { fetchUserKeywords, addUserKeyword, deleteUserKeyword, type UserKeyword } from "../api/keywords";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -27,11 +29,11 @@ interface ProfilePageProps {
 	userEmail?: string;
 }
 
-type ProfileTab = "info" | "company" | "notifications" | "subscription";
+type ProfileTab = "info" | "company" | "keywords" | "history";
 const PROFILE_TAB_STORAGE_KEY = "profile.activeTab";
 
 function isProfileTab(v: string | null): v is ProfileTab {
-	return v === "info" || v === "company" || v === "notifications" || v === "subscription";
+	return v === "info" || v === "company" || v === "keywords" || v === "history";
 }
 
 function safeGetLocalStorage(key: string) {
@@ -119,11 +121,36 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 
     useEffect(() => {
         if (activeTab !== "company") return;
+        if (!userId) return;
 
-        // 백엔드 조회 대신, 프론트 저장값으로 채우기
-        setCompanyName(localStorage.getItem("companyName") || "");
-        setCompanyPosition(localStorage.getItem("companyPosition") || "");
-    }, [activeTab]);
+        let ignore = false;
+        setCompanyLoading(true);
+        setCompanyError(null);
+
+        // 백엔드에서 회사 정보 조회
+        getCompanyForUser(userId)
+            .then((c) => {
+                if (ignore) return;
+                if (c) {
+                    setCompanyId(c.id);
+                    setCompanyName(c.name || "");
+                    setCompanyPosition(c.position || "");
+                }
+            })
+            .catch((e: any) => {
+                if (ignore) return;
+                // 회사 정보가 없으면 빈 상태 유지
+                setCompanyId(undefined);
+                setCompanyName("");
+                setCompanyPosition("");
+            })
+            .finally(() => {
+                if (ignore) return;
+                setCompanyLoading(false);
+            });
+
+        return () => { ignore = true; };
+    }, [activeTab, userId]);
 
 	useEffect(() => {
 		if (!userId) return;
@@ -257,28 +284,27 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
             return;
         }
 
-        const prevName = localStorage.getItem("companyName") || "";
-        const prevPos = localStorage.getItem("companyPosition") || "";
+        setCompanySaving(true);
 
-        //  1) 완전 동일하면 저장하지 않고 안내만
-        if (prevName === nextName && prevPos === nextPos) {
-            setCompanyNotice("이미 등록된 회사 정보입니다.");
-            return;
-        }
-
-        // 2) 여기서부터는 업데이트(변경)로 간주하고 로컬에 저장
-        localStorage.setItem("companyName", nextName);
-        localStorage.setItem("companyPosition", nextPos);
-
-        // UI에도 즉시 반영(선택이지만 안정적)
-        setCompanyName(nextName);
-        setCompanyPosition(nextPos);
-
-        //  3) 메시지: 기존 값이 있었으면 '업데이트', 없었으면 '등록'
-        if (prevName || prevPos) {
-            setCompanyNotice("회사 정보가 업데이트되었습니다.");
-        } else {
-            setCompanyNotice("회사 정보가 등록되었습니다.");
+        try {
+            if (companyId) {
+                // 기존 회사 정보 업데이트
+                await updateCompany(companyId, { name: nextName, position: nextPos });
+                setCompanyNotice("회사 정보가 업데이트되었습니다.");
+            } else {
+                // 새 회사 생성
+                const res = await upsertCompany({ name: nextName, position: nextPos });
+                if (res.data?.id) {
+                    setCompanyId(res.data.id);
+                }
+                setCompanyNotice("회사 정보가 등록되었습니다.");
+            }
+            setCompanyName(nextName);
+            setCompanyPosition(nextPos);
+        } catch (e: any) {
+            setCompanyError(e?.message || "회사 정보 저장에 실패했습니다.");
+        } finally {
+            setCompanySaving(false);
         }
     };
 
@@ -325,11 +351,11 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 					<TabsTrigger value="company" className={tabTriggerClass}>
 						회사 정보
 					</TabsTrigger>
-					<TabsTrigger value="notifications" className={tabTriggerClass}>
-						알림 설정
+					<TabsTrigger value="keywords" className={tabTriggerClass}>
+						관심 키워드
 					</TabsTrigger>
-					<TabsTrigger value="subscription" className={tabTriggerClass}>
-						구독 관리
+					<TabsTrigger value="history" className={tabTriggerClass}>
+						최근 본 공고
 					</TabsTrigger>
 				</TabsList>
 
@@ -508,7 +534,181 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 						<CardContent className="text-sm text-muted-foreground">곧 제공됩니다.</CardContent>
 					</Card>
 				</TabsContent>
+				<TabsContent value="keywords" className="space-y-4">
+					<Card>
+						<CardHeader>
+							<CardTitle>관심 키워드 설정</CardTitle>
+							<CardDescription>관심있는 입찰 키워드를 등록하면 관련 공고를 빠르게 찾을 수 있습니다.</CardDescription>
+						</CardHeader>
+						<CardContent>
+							{userId ? <MyKeywords userId={userId} /> : <div>로그인이 필요합니다.</div>}
+						</CardContent>
+					</Card>
+				</TabsContent>
+
+				<TabsContent value="history" className="space-y-4">
+					<Card>
+						<CardHeader>
+							<CardTitle>최근 본 공고</CardTitle>
+							<CardDescription>최근에 조회한 입찰 공고 목록입니다.</CardDescription>
+						</CardHeader>
+						<CardContent>
+							{userId ? <RecentBids userId={userId} /> : <div>로그인이 필요합니다.</div>}
+						</CardContent>
+					</Card>
+				</TabsContent>
 			</Tabs>
+		</div>
+	);
+}
+
+function MyKeywords({ userId }: { userId: string }) {
+	const [keywords, setKeywords] = useState<UserKeyword[]>([]);
+	const [input, setInput] = useState("");
+	const [minPrice, setMinPrice] = useState("");
+	const [maxPrice, setMaxPrice] = useState("");
+	const [loading, setLoading] = useState(false);
+
+	useEffect(() => {
+		loadKeywords();
+	}, [userId]);
+
+	const loadKeywords = () => {
+		fetchUserKeywords(userId).then(setKeywords);
+	};
+
+	const onAdd = async () => {
+		if (!input.trim()) return;
+		setLoading(true);
+		try {
+			await addUserKeyword({
+				userId,
+				keyword: input.trim(),
+				minPrice: minPrice ? Number(minPrice) : undefined,
+				maxPrice: maxPrice ? Number(maxPrice) : undefined,
+			});
+			setInput("");
+			setMinPrice("");
+			setMaxPrice("");
+			loadKeywords();
+		} catch (e) {
+			console.error(e);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const onDelete = async (id: number) => {
+		if (!confirm("삭제하시겠습니까?")) return;
+		try {
+			await deleteUserKeyword(id);
+			loadKeywords();
+		} catch (e) {
+			console.error(e);
+		}
+	};
+
+	return (
+		<div className="space-y-6">
+			<div className="flex flex-wrap gap-2 items-end">
+				<div className="space-y-1">
+					<Label>키워드</Label>
+					<Input
+						value={input}
+						onChange={(e) => setInput(e.target.value)}
+						placeholder="예: 인공지능"
+						className="w-40"
+					/>
+				</div>
+				<div className="space-y-1">
+					<Label>최소 금액</Label>
+					<Input
+						type="number"
+						value={minPrice}
+						onChange={(e) => setMinPrice(e.target.value)}
+						placeholder="0"
+						className="w-32"
+					/>
+				</div>
+				<div className="space-y-1">
+					<Label>최대 금액</Label>
+					<Input
+						type="number"
+						value={maxPrice}
+						onChange={(e) => setMaxPrice(e.target.value)}
+						placeholder="제한 없음"
+						className="w-32"
+					/>
+				</div>
+				<Button onClick={onAdd} disabled={loading || !input.trim()}>
+					추가
+				</Button>
+			</div>
+
+			<div className="flex flex-wrap gap-2">
+				{keywords.map((k) => (
+					<Badge key={k.id} variant="secondary" className="px-3 py-1 text-sm gap-2">
+						{k.keyword}
+						{k.minPrice || k.maxPrice ? (
+							<span className="text-muted-foreground text-xs">
+								({k.minPrice?.toLocaleString() ?? 0} ~ {k.maxPrice?.toLocaleString() ?? "∞"})
+							</span>
+						) : null}
+						<button
+							onClick={() => onDelete(k.id)}
+							className="ml-1 hover:text-red-500"
+							aria-label="Delete"
+						>
+							×
+						</button>
+					</Badge>
+				))}
+				{keywords.length === 0 && (
+					<div className="text-muted-foreground text-sm">등록된 관심 키워드가 없습니다.</div>
+				)}
+			</div>
+		</div>
+	);
+}
+
+function RecentBids({ userId }: { userId: string }) {
+	const navigate = useNavigate();
+	const [bids, setBids] = useState<Bid[]>([]);
+	const [loading, setLoading] = useState(true);
+
+	useEffect(() => {
+		fetchBidHistory(userId)
+			.then((data) => {
+				// 백엔드 재시작 전이라도 프론트에서 확실하게 중복 제거 (id 기준)
+				const uniqueBids = Array.from(new Map(data.map((item) => [item.id, item])).values());
+				setBids(uniqueBids);
+			})
+			.finally(() => setLoading(false));
+	}, [userId]);
+
+	if (loading) return <div>로딩 중...</div>;
+
+	if (bids.length === 0) {
+		return <div className="text-muted-foreground">최근 조회한 공고가 없습니다.</div>;
+	}
+
+	return (
+		<div className="space-y-2">
+			{bids.map((bid) => (
+				<div
+					key={bid.id}
+					className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+					onClick={() => navigate(`/bids/${bid.id}`)}
+				>
+					<div>
+						<div className="font-medium">{bid.name}</div>
+						<div className="text-sm text-muted-foreground">
+							{bid.organization} · {bid.region}
+						</div>
+					</div>
+					<div className="text-sm text-blue-600">이동 →</div>
+				</div>
+			))}
 		</div>
 	);
 }

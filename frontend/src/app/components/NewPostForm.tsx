@@ -19,9 +19,10 @@ interface NewPostFormProps {
 
     // 인라인(드래그/붙여넣기) 업로드용
     onUploadInlineFile?: (file: File) => Promise<{ url: string; attachmentId: number }>;
+    isAdmin?: boolean;
 }
 
-export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile }: NewPostFormProps) {
+export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile, isAdmin = false }: NewPostFormProps) {
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
     const [category, setCategory] = useState<PostCategory>("question");
@@ -195,6 +196,19 @@ export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile }: NewPostF
                         >
                             토론
                         </button>
+                        {isAdmin && (
+                            <button
+                                type="button"
+                                onClick={() => setCategory("notice")}
+                                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                                    category === "notice"
+                                        ? "bg-red-600 text-white"
+                                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                }`}
+                            >
+                                공지
+                            </button>
+                        )}
                     </div>
                 </div>
 

@@ -5,7 +5,7 @@ import { Star, X, Sparkles, ArrowRight } from "lucide-react";
 import { fetchBids, fetchRecommendedBids, type Bid } from "../api/bids";
 import { toggleWishlist } from "../api/wishlist";
 
-import { Dialog, DialogContent } from "./ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 
 const SUPPRESS_KEY = "reco_popup_suppress_date";
 const TRIGGER_KEY = "reco_popup_after_login_session";
@@ -216,6 +216,10 @@ export function RecommendedBidsModal({
 				overlayClassName="bg-black/40 backdrop-blur-sm"
 				className="p-0 sm:max-w-3xl rounded-3xl border-0 shadow-2xl ring-1 ring-black/5 overflow-visible bg-transparent"
 			>
+				<DialogTitle className="sr-only">추천 공고</DialogTitle>
+				<DialogDescription className="sr-only">
+					사용자의 관심사를 기반으로 추천된 입찰 공고 목록입니다.
+				</DialogDescription>
 				<div className="rounded-3xl overflow-hidden bg-white">
 					<div className="relative px-7 pt-7 pb-5 border-b border-white/40 bg-[radial-gradient(1200px_400px_at_20%_-20%,rgba(59,130,246,0.18),transparent),radial-gradient(900px_380px_at_90%_0%,rgba(99,102,241,0.16),transparent)]">
 						<div className="flex items-start justify-between gap-4">
