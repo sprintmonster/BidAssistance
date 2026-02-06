@@ -252,10 +252,12 @@ async def general_exception_handler(request: Request, exc: Exception):
 def root():
     return {"status": "running", "message": "LangGraph API is active"}
 
-@app.post("/analyze")
-async def analyze(file: UploadFile = File(...),
-                  thread_id: str = Form("default")
-                  ):
+@app.post("/chat/file")
+async def analyze(
+    file: UploadFile = File(...),      # Spring에서 보낸 파일
+    text: str = Form(...),             # Spring에서 보낸 질문 ("이 문서 요약해줘")
+    thread_id: str = Form("default")   # 세션 ID
+):
     """입찰공고 분석 + TFT 예측 + PDF 생성 + Azure 업로드"""
     try:
         # 1) 업로드 파일 이름 확인
@@ -300,6 +302,31 @@ async def analyze(file: UploadFile = File(...),
         prediction_result = result.get("prediction_result", {})
         os.remove(tmp_path)
         '''
+        #report_md->json으로 만들어서 llm한테 넘겨주기 /chat 엔드포인트로 안넘겨주는건 통신속도가 느려서 /chat/file내에서 한번에 처리하기 위함
+        llm_input = json.dumps(
+            {
+                    "type": "report",
+                    "query": text,        # 사용자의 추가 요청 ("5줄 요약해줘")
+                    "payload": report_md,  # RAG 결과 리포트
+                    "thread_id":thread_id
+            },
+            ensure_ascii=False
+        )
+        
+        # LangGraph 입력 메시지 생성
+        
+        inputs = {"messages": [HumanMessage(content=llm_input)]}
+        config = {"configurable": {"thread_id": thread_id}}
+        
+        # 그래프 실행 (invoke는 동기 함수이므로 async def 안에서는 주의 필요)
+        # LangGraph의 invoke()는 최종 상태를 반환합니다.
+        final_state = await graph_app.ainvoke(inputs, config=config)
+        
+        # 마지막 메시지(AI 답변) 추출
+        last_message = final_state["messages"][-1]
+        final_text = last_message.content if last_message else ""
+        '''
+        '''
         # 2. PDF 저장 폴더 준비
         output_dir = "./output"
         if not os.path.exists(output_dir):
@@ -334,7 +361,7 @@ async def analyze(file: UploadFile = File(...),
         }
 
     except Exception as e:
-        print(f"❌ /analyze 오류: {e}")
+        print(f"❌ /chat/file 오류: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

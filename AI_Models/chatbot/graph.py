@@ -124,7 +124,7 @@ SYSTEM_PROMPT_notice_result=SystemMessage(
     입력 JSON 리스트를 받으면 즉시 위 형식으로 요약하라.
 """
 )
-
+'''
 SYSTEM_PROMPT_report=SystemMessage(
     content="""
     너는 공공입찰 공고 제안/투찰 분석 보고서를 사용자에게 핵심만 요약하는 도우미이다.
@@ -141,7 +141,7 @@ SYSTEM_PROMPT_report=SystemMessage(
     3줄 정도로 간단히 요약해라.
 """
 )
-
+'''
 
 def agent_node(state: AgentState):
     """LLM이 다음 행동(답변 or 툴호출)을 결정"""   
@@ -162,6 +162,8 @@ def postprocess_node(state: AgentState):
         response = llm_postprocess.invoke(
             [SYSTEM_PROMPT_notice_result, HumanMessage(content=json.dumps(payload, ensure_ascii=False))]
         )
+        return {"messages":[response]}
+    '''
     elif data.get("type")=="report":
         payload = data.get("payload", [])
         response = llm_postprocess.invoke(
@@ -169,8 +171,8 @@ def postprocess_node(state: AgentState):
         )
     else:
         return state
-
-    return {"messages":[response]}
+    '''
+    return state
 
 def human_input_node(state: AgentState):
     """
