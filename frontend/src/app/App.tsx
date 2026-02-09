@@ -17,7 +17,7 @@ import { ComparePage } from "./components/ComparePage";
 import { CartPage } from "./components/CartPage";
 import { CommunityPage } from "./components/CommunityPage";
 import { NoticePage } from "./components/NoticePage";
-import { NoticeDetail } from "./components/NoticeDetail";
+import { NoticeDetailPage } from "./components/NoticeDetailPage";
 import { NotificationsPage } from "./components/NotificationsPage";
 import { ProfilePage } from "./components/ProfilePage";
 import { TermsAndConditionsPage } from "./components/TermsAndConditions";
@@ -211,7 +211,7 @@ export default function App() {
                         path="/notice/:id"
                         element={
                             <PageContainer>
-                                <NoticeDetail />
+                                <NoticeDetailPage />
                             </PageContainer>
                         }
                     />
