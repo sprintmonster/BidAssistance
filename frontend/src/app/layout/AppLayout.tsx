@@ -110,21 +110,23 @@ export function AppLayout() {
     [location.pathname, authTick]
   );
 
-  // ✅ "로그인 직후 1회"만 팝업 오픈
-  useEffect(() => {
-    if (!localStorage.getItem("userId")) return;
-
-    if (is_reco_popup_suppressed_today()) {
-      // 트리거가 있더라도 오늘은 안 띄움 (한 번 소비 처리)
-      consume_reco_popup_trigger();
-      return;
-    }
-
-    // 세션 트리거가 있으면 1회만 오픈
-    if (consume_reco_popup_trigger()) {
-      setRecoOpen(true);
-    }
-  }, [location.pathname]);
+  // // ✅ "로그인 직후 1회"만 팝업 오픈
+  // useEffect(() => {
+  //   if (!localStorage.getItem("userId")) return;
+  //   if (!location.pathname.startsWith("/bids")) return;
+  //
+  //
+  //     if (is_reco_popup_suppressed_today()) {
+  //     // 트리거가 있더라도 오늘은 안 띄움 (한 번 소비 처리)
+  //     consume_reco_popup_trigger();
+  //     return;
+  //   }
+  //
+  //   // 세션 트리거가 있으면 1회만 오픈
+  //   if (consume_reco_popup_trigger()) {
+  //     setRecoOpen(true);
+  //   }
+  // }, [location.pathname]);
 
   // ✅ 공지/알림 빨간점(뱃지) 갱신
   useEffect(() => {
