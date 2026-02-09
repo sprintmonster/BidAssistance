@@ -238,6 +238,25 @@ function parseKoreanMarkdownReport(text: string): AnalysisStructured {
         }
         return out;
     }
+    function extractSubSection(
+        lines: string[],
+        header: string,
+    ) {
+        const start = lines.findIndex((l) => l.startsWith(header));
+        if (start < 0) return [];
+
+        const out: string[] = [];
+        for (let i = start + 1; i < lines.length; i++) {
+            const l = lines[i];
+            if (l.startsWith("## ")) break;
+            if (l.startsWith("# ")) break;
+            out.push(l);
+        }
+
+        return out
+            .map((l) => l.replace(/^•\s*/, "").trim())
+            .filter(Boolean);
+    }
 
     //
     //  "- [ ] ..." 체크박스 항목 추출
@@ -298,69 +317,57 @@ function parseKoreanMarkdownReport(text: string): AnalysisStructured {
     if (result.summary.region) {
         result.requirements.regionReq = [result.summary.region];
     }
-    // 2) 참가자격/실적/제출서류는 #2 체크박스에서 파싱해서 각각에 맞게 넣기
-    const section2 = extractSectionLines(lines, "# 2.");
-    const checkItems = parseCheckboxItems(section2);
-    if (checkItems.length > 0) {
-        const { eligibility, performance, documents } = splitReqItems(checkItems);
+    // #2 참가자격 / 실적 / 제출서류 (신규 포맷)
+    const eligibility = extractSubSection(lines, "## 가. 참가자격");
+    const performance = extractSubSection(lines, "## 나. 실적");
+    const documents = extractSubSection(lines, "## 다. 제출서류");
 
-        if (eligibility.length) result.requirements.eligibility = eligibility;
-        if (performance.length) result.requirements.performance = performance;
-        if (documents.length) result.requirements.documents = documents;
-    } else {
-        // (구버전 대비 폴백 유지)
-        const missing: string[] = [];
-        function setReq(
-            key: "참가자격" | "실적" | "제출서류",
-            target: keyof AnalysisStructured["requirements"],
-        ) {
-            const v = kv.get(key);
-            if (!v) {
-                missing.push(key);
-                return;
-            }
-            const isMissing = v.includes("추가 수집 필요") || v.includes("정보 없음");
-            if (isMissing) {
-                missing.push(key);
-                return;
-            }
-            const items = v
-                .split(/,|\/|·|및|\s{2,}/g)
-                .map((s) => s.trim())
-                .filter(Boolean);
-            (result.requirements as any)[target] = items.length ? items : [v];
+    if (eligibility.length) result.requirements.eligibility = eligibility;
+    if (performance.length) result.requirements.performance = performance;
+    if (documents.length) result.requirements.documents = documents;
+
+
+    // 3-1) 사정율 구간 TOP 3 파싱 (안정화 버전)
+    const topBands: PriceBand[] = [];
+
+    const section3Start = lines.findIndex((l) => l.startsWith("# 3."));
+
+    if (section3Start >= 0) {
+        for (let i = section3Start + 1; i < lines.length; i++) {
+            const line = lines[i];
+
+            // 다음 섹션 시작 시 종료
+            if (line.startsWith("# 4.")) break;
+
+            // 소제목(### ...)은 건너뜀
+            if (line.startsWith("##")) continue;
+
+            /**
+             * 허용 포맷:
+             * • 1순위: 구간 92.6% ~ 92.5%, 사정율 92.55%, 확률 29.50%
+             * - 1순위: ...
+             * 1. 구간 ...
+             */
+            const m = line.match(
+                /(?:•|\-|\d+\.)?\s*.*?구간\s*([\d.]+%\s*~\s*[\d.]+%)\s*,\s*사정율\s*([\d.]+%)\s*,\s*확률\s*([\d.]+%)/
+            );
+
+            if (!m) continue;
+
+            topBands.push({
+                bandRangeText: m[1],
+                adjRateText: m[2],
+                probabilityText: m[3],
+            });
+
+            // TOP 3까지만
+            if (topBands.length >= 3) break;
         }
-
-        setReq("참가자격", "eligibility");
-        setReq("실적", "performance");
-        setReq("제출서류", "documents");
-        if (missing.length) result.requirements.missing = missing;
     }
 
-    // 3) pricePrediction 포인트/최소/최대 등(구버전 대비 유지)
-    const point =
-        kv.get("예상 낙찰가") ??
-        kv.get("포인트 예측가") ??
-        kv.get("예상 낙찰가(포인트)") ??
-        null;
-    if (point) result.pricePrediction.point = getNum(point);
-
-    const conf = kv.get("신뢰도");
-    if (conf) {
-        const c = conf.trim();
-        if (c.includes("높")) result.pricePrediction.confidence = "high";
-        else if (c.includes("중") || c.includes("보통")) result.pricePrediction.confidence = "medium";
-        else if (c.includes("낮")) result.pricePrediction.confidence = "low";
+    if (topBands.length > 0) {
+        result.pricePrediction.topBands = topBands;
     }
-
-    const basis = kv.get("근거");
-    if (basis) result.pricePrediction.basis = basis;
-
-    const min = kv.get("최소 예측가") ?? kv.get("예상 최소 낙찰가") ?? null;
-    if (min) result.pricePrediction.min = getNum(min);
-
-    const max = kv.get("최대 예측가") ?? kv.get("예상 최대 낙찰가") ?? null;
-    if (max) result.pricePrediction.max = getNum(max);
 
     // 4) 리스크(기존 포맷 유지)
     const riskLines: string[] = [];
@@ -369,29 +376,6 @@ function parseKoreanMarkdownReport(text: string): AnalysisStructured {
         if (m) riskLines.push(m[1].trim());
     }
     if (riskLines.length) result.pricePrediction.risks = riskLines;
-
-    // 3) #3 "구간 + 확률"만 뽑아서 topBands에 넣기 (신규 포맷)
-    // 예: "- **1순위**: 99.6% ~ 99.5% (확률 26.30%)"
-    // 예: "- 1순위: 104.0% ~ 103.9% (확률 15.92%)"
-    const section3 = extractSectionLines(lines, "# 3.");
-    const topBands: PriceBand[] = [];
-    for (const l of section3) {
-        const m = l.match(
-            /^\-?\s*(?:\*\*)?(\d+)순위(?:\*\*)?\s*:\s*([^\(]+)\(확률\s*([^)]+)\)/,
-        );
-        if (!m) continue;
-
-        const rangeText = m[2].trim(); // "99.6% ~ 99.5%"
-        const probText = m[3].trim(); // "26.30%"
-
-        topBands.push({
-            bandRangeText: rangeText,
-            adjRateText: "", // (신규 포맷에서는 사용 안 함)
-            probabilityText: probText,
-        });
-    }
-    if (topBands.length) result.pricePrediction.topBands = topBands.slice(0, 3);
-
     // 5) 권고 액션(#4)
     const actionStart = lines.findIndex((x) => x.startsWith("# 4."));
     if (actionStart >= 0) {
@@ -399,13 +383,16 @@ function parseKoreanMarkdownReport(text: string): AnalysisStructured {
             const l = lines[i];
             if (l.startsWith("# ")) break;
 
-            const m = l.match(/^\d+\.\s*(.+)$/);
-            if (m) {
-                const cleaned = m[1].replace(/\*\*(.+?)\*\*/g, "$1").trim();
-                result.actions72h.push(cleaned);
+            const m = l.match(/^(?:\-|•|\d+\.)\s*(.+)$/);
+            if (!m) continue;
+
+            const text = m[1].trim();
+            if (!result.actions72h.includes(text)) {
+                result.actions72h.push(text);
             }
         }
     }
+
 
     return result;
 }
@@ -477,18 +464,24 @@ function buildAiAnalysisReport(bid: Bid, completionRate: number) {
     return lines.join("\n");
 }
 
-function formatKo(dt?: string | null) {
+function formatDateTime(dt?: string | null) {
     if (!dt) return "데이터 준비 중";
     const d = new Date(dt);
-    if (Number.isNaN(d.getTime())) return dt;
-    return d.toLocaleString("ko-KR", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
+    if (!Number.isFinite(d.getTime())) return dt;
+
+    const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+        d.getDate(),
+    ).padStart(2, "0")}`;
+
+    const time = d.toLocaleTimeString("ko-KR", {
         hour: "2-digit",
         minute: "2-digit",
+        hour12: true,
     });
+
+    return `${date} ${time}`;
 }
+
 
 function mergeStructured(
     base: AnalysisStructured | null | undefined,
@@ -513,6 +506,19 @@ const DEFAULT_CHECKLIST: Array<{ item: string; checked: boolean }> = [
     { item: "인감증명서/사용인감계", checked: false },
     { item: "실적증명서", checked: false },
 ];
+
+function getDDayNumber(deadline: string) {
+    const d = new Date(deadline);
+    if (!Number.isFinite(d.getTime())) return null;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const end = new Date(d);
+    end.setHours(0, 0, 0, 0);
+
+    return Math.round((end.getTime() - today.getTime()) / 86400000);
+}
 
 export function BidSummary() {
     const navigate = useNavigate();
@@ -885,6 +891,15 @@ export function BidSummary() {
     const actions72h = structured?.actions72h ?? [];
     const topBands = structured?.pricePrediction?.topBands ?? [];
 
+    const ddayNumber = bid?.deadline ? getDDayNumber(bid.deadline) : null;
+
+    const isClosingSoon =
+        typeof ddayNumber === "number" && ddayNumber >= 0 && ddayNumber <= 3;
+
+    const isEnded =
+        typeof ddayNumber === "number" && ddayNumber < 0;
+
+
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-4">
@@ -915,7 +930,13 @@ export function BidSummary() {
                             <div className="flex items-center gap-2 mb-3">
                                 <Badge>{bid.type}</Badge>
                                 <Badge variant="outline">{bid.status}</Badge>
-                                <Badge variant="destructive">마감임박</Badge>
+                                {isClosingSoon && (
+                                    <Badge variant="destructive">마감임박</Badge>
+                                )}
+
+                                {isEnded && (
+                                    <Badge variant="secondary">마감 종료</Badge>
+                                )}
                             </div>
 
                             <CardTitle className="text-2xl mb-2">{bid.title}</CardTitle>
@@ -983,10 +1004,10 @@ export function BidSummary() {
                             <div>
                                 <p className="text-sm text-muted-foreground">{bid.bidCreated ? "공고게시일" : "입찰서 제출 시작일"}</p>
 
-                                <p className="font-semibold whitespace-nowrap">{formatKo(bid.bidCreated ?? bid.announcementDate)}</p>
+                                <p className="font-semibold whitespace-nowrap">{formatDateTime(bid.bidCreated ?? bid.announcementDate)}</p>
 
                                 <p className="text-sm text-muted-foreground">마감일</p>
-                                <p className="font-semibold text-red-600 whitespace-nowrap">{formatKo(bid.deadline)}</p>
+                                <p className="font-semibold text-red-600 whitespace-nowrap">{formatDateTime(bid.deadline)}</p>
                             </div>
                         </div>
 
@@ -1249,6 +1270,7 @@ export function BidSummary() {
 
                                                         {/*  3) 구간 + 확률을 파싱된 값으로 대체해서 출력 */}
                                                         <div className="text-sm text-muted-foreground">구간: {b.bandRangeText}</div>
+                                                        <div className="text-sm text-muted-foreground">사정율: {b.adjRateText}</div>
                                                         <div className="text-sm text-muted-foreground">확률: {b.probabilityText}</div>
                                                     </div>
                                                 ))}
