@@ -13,6 +13,8 @@ import {
   RecommendedBidsModal,
 } from "../components/RecommendedBidsModal";
 import { fetchWishlist } from "../api/wishlist";
+import { fetchAlarms } from "../api/alarms";
+import { fetch_notices_from_community } from "../api/notices";
 import {
   LayoutDashboard,
   Search,
@@ -39,8 +41,37 @@ export function AppLayout() {
 
   const [query, setQuery] = useState("");
   const [wishlistCount, setWishlistCount] = useState<number>(0);
+
+  // ✅ NEW: 헤더 빨간점/뱃지
+  const [notificationUnread, setNotificationUnread] = useState<number>(0);
+  const [hasNewNotice, setHasNewNotice] = useState(false);
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [recoOpen, setRecoOpen] = useState(false);
+
+  const NOTIFICATION_READ_KEY = "notifications.read.v1";
+  const NOTICE_LAST_SEEN_KEY = "notice.last_seen_id.v1";
+
+  const loadReadMap = () => {
+    try {
+      const raw = localStorage.getItem(NOTIFICATION_READ_KEY);
+      if (!raw) return {} as Record<string, boolean>;
+      return JSON.parse(raw) as Record<string, boolean>;
+    } catch {
+      return {} as Record<string, boolean>;
+    }
+  };
+
+  const saveNoticeLastSeen = (id: number) => {
+    if (!Number.isFinite(id) || id <= 0) return;
+    localStorage.setItem(NOTICE_LAST_SEEN_KEY, String(id));
+  };
+
+  const loadNoticeLastSeen = () => {
+    const raw = localStorage.getItem(NOTICE_LAST_SEEN_KEY);
+    const n = raw ? Number(raw) : NaN;
+    return Number.isFinite(n) ? n : 0;
+  };
 
   useEffect(() => {
     let ignore = false;
@@ -57,7 +88,10 @@ export function AppLayout() {
     };
   }, [location.pathname]);
 
-  const isAuthed = useMemo(() => !!localStorage.getItem("userId"), [location.pathname]);
+  const isAuthed = useMemo(
+    () => !!localStorage.getItem("userId"),
+    [location.pathname]
+  );
 
   // ✅ "로그인 직후 1회"만 팝업 오픈
   useEffect(() => {
@@ -73,6 +107,56 @@ export function AppLayout() {
     if (consume_reco_popup_trigger()) {
       setRecoOpen(true);
     }
+  }, [location.pathname]);
+
+  // ✅ 공지/알림 빨간점(뱃지) 갱신
+  useEffect(() => {
+    let ignore = false;
+
+    const run = async () => {
+      // 공지사항: 로그인 없이도 볼 수 있으므로 항상 확인
+      try {
+        const notices = await fetch_notices_from_community();
+        const latestId = notices.reduce(
+          (mx, n) => Math.max(mx, Number(n.id) || 0),
+          0
+        );
+        const lastSeen = loadNoticeLastSeen();
+        if (!ignore) setHasNewNotice(latestId > lastSeen);
+
+        // 공지사항 페이지 진입 시 '확인'으로 간주
+        if (location.pathname.startsWith("/notice") && latestId > 0) {
+          saveNoticeLastSeen(latestId);
+          if (!ignore) setHasNewNotice(false);
+        }
+      } catch {
+        if (!ignore) setHasNewNotice(false);
+      }
+
+      // 알림: 로그인 사용자만
+      const rawUserId = localStorage.getItem("userId");
+      const userId = rawUserId ? Number(rawUserId) : NaN;
+      if (!Number.isFinite(userId)) {
+        if (!ignore) setNotificationUnread(0);
+        return;
+      }
+
+      try {
+        const alarms = await fetchAlarms(userId);
+        const readMap = loadReadMap();
+        const unread = alarms.filter((a) => !readMap[String(a.alarmId)]).length;
+        if (!ignore) setNotificationUnread(unread);
+      } catch {
+        if (!ignore) setNotificationUnread(0);
+      }
+
+      // ⚠️ 알림 페이지 진입만으로 자동 읽음 처리하지 않음(사용자 액션 기반)
+    };
+
+    run();
+    return () => {
+      ignore = true;
+    };
   }, [location.pathname]);
 
   useEffect(() => {
@@ -159,13 +243,22 @@ export function AppLayout() {
                 src="/logo.png"
                 alt="입찰인사이트 로고"
                 className="h-16 w-auto block object-contain"
+                aria-hidden="true"
               />
             </button>
           </div>
 
           <div className="flex-1 h-16 flex items-center justify-end gap-2 px-5">
-            <HeaderPill onClick={() => navigate("/notice")} label="공지사항" />
-            <HeaderPill onClick={() => navigate("/notifications")} label="알림" />
+            <HeaderPill
+              onClick={() => navigate("/notice")}
+              label="공지사항"
+              dot={hasNewNotice}
+            />
+            <HeaderPill
+              onClick={() => navigate("/notifications")}
+              label="알림"
+              badge={notificationUnread}
+            />
           </div>
         </div>
       </header>
@@ -193,7 +286,10 @@ export function AppLayout() {
       {isHome && (
         <section className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-700">
           <div className="w-full px-5 py-6">
-            <form onSubmit={onSubmitSearch} className="w-full max-w-[760px] mx-auto">
+            <form
+              onSubmit={onSubmitSearch}
+              className="w-full max-w-[760px] mx-auto"
+            >
               <div className="relative">
                 <input
                   value={query}
@@ -253,53 +349,81 @@ export function AppLayout() {
         </div>
       )}
 
-        <footer className="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-4 text-sm text-gray-500 dark:text-gray-400">
-            <div className="w-full px-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                {/* 회사 정보 */}
-                <div className="text-xs leading-relaxed flex flex-wrap gap-x-2 gap-y-1">
-                	<span>(주)입찰인사이트</span>
-	                <span className="text-slate-300">|</span>
-                	<span>대표 전보윤</span>
-                	<span className="text-slate-300">|</span>
-                	<span>사업자등록번호 000-00-00000</span>
-                	<span className="text-slate-300">|</span>
-                	<span>대구광역시 북구 고성로 141</span>
-                	<span className="text-slate-300">|</span>
-                	<span>고객센터 053-000-0000</span>
-                	<span className="text-slate-300">|</span>
-                	<span>support@bidsight.co.kr</span>
-                </div>
+      <footer className="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-4 text-sm text-gray-500 dark:text-gray-400">
+        <div className="w-full px-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div className="text-xs leading-relaxed flex flex-wrap gap-x-2 gap-y-1">
+            <span>(주)입찰인사이트</span>
+            <span className="text-slate-300">|</span>
+            <span>대표 전보윤</span>
+            <span className="text-slate-300">|</span>
+            <span>사업자등록번호 000-00-00000</span>
+            <span className="text-slate-300">|</span>
+            <span>대구광역시 북구 고성로 141</span>
+            <span className="text-slate-300">|</span>
+            <span>고객센터 053-000-0000</span>
+            <span className="text-slate-300">|</span>
+            <span>support@bidsight.co.kr</span>
+          </div>
 
-                {/* 링크 */}
-                <div className="flex gap-4 text-xs">
-                    <button onClick={() => navigate("/terms")} className="hover:text-gray-600">
-                        이용약관
-                    </button>
-                    <button onClick={() => navigate("/privacy")} className="hover:text-gray-600">
-                        개인정보처리방침
-                    </button>
-                    <button onClick={() => navigate("/support")} className="hover:text-gray-600">
-                        고객지원
-                    </button>
-                </div>
-            </div>
-        </footer>
+          <div className="flex gap-4 text-xs">
+            <button
+              onClick={() => navigate("/terms")}
+              className="hover:text-gray-600"
+            >
+              이용약관
+            </button>
+            <button
+              onClick={() => navigate("/privacy")}
+              className="hover:text-gray-600"
+            >
+              개인정보처리방침
+            </button>
+            <button
+              onClick={() => navigate("/support")}
+              className="hover:text-gray-600"
+            >
+              고객지원
+            </button>
+          </div>
+        </div>
+      </footer>
 
-
-
-        <ChatbotFloatingButton />
+      <ChatbotFloatingButton />
       <RecommendedBidsModal open={recoOpen} onOpenChange={setRecoOpen} />
     </div>
   );
 }
 
-function HeaderPill({ label, onClick }: { label: string; onClick: () => void }) {
+function HeaderPill({
+  label,
+  onClick,
+  dot,
+  badge,
+}: {
+  label: string;
+  onClick: () => void;
+  dot?: boolean;
+  badge?: number;
+}) {
   return (
     <button
       onClick={onClick}
-      className="px-4 h-10 rounded-full bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 transition text-sm"
+      className="relative px-4 h-10 rounded-full bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 transition text-sm"
     >
-      {label}
+      <span>{label}</span>
+
+      {typeof badge === "number" && badge > 0 && (
+        <span className="ml-2 inline-flex min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[11px] font-bold items-center justify-center align-middle">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
+
+      {dot && (
+        <span
+          aria-label="새 소식"
+          className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-rose-600 ring-2 ring-slate-900"
+        />
+      )}
     </button>
   );
 }
@@ -320,7 +444,9 @@ function SideBarContent({
   return (
     <div className="h-full w-full flex flex-col">
       <div className="px-5 py-4">
-        <div className="text-sm font-semibold tracking-wide text-slate-200">MENU</div>
+        <div className="text-sm font-semibold tracking-wide text-slate-200">
+          MENU
+        </div>
       </div>
 
       <nav className="px-4 flex flex-col gap-1">
@@ -396,7 +522,9 @@ function SideNavLink({
         "relative h-11 px-3 rounded-md",
         "flex items-center gap-3",
         "transition",
-        active ? "bg-white/10 text-white" : "text-slate-200 hover:bg-white/5 hover:text-white",
+        active
+          ? "bg-white/10 text-white"
+          : "text-slate-200 hover:bg-white/5 hover:text-white",
       ].join(" ")}
     >
       <span className={active ? "text-white" : "text-slate-200"}>{icon}</span>

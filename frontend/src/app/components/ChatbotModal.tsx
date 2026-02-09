@@ -7,7 +7,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Textarea } from "./ui/textarea";
 import { Separator } from "./ui/separator";
 import { Avatar, AvatarFallback } from "./ui/avatar";
-import {fetchChatResponse, ChatRequest} from "../api/chatbot";
+import { fetchChatResponse, ChatRequest } from "../api/chatbot";
 
 type Sender = "user" | "bot";
 
@@ -29,16 +29,13 @@ function nowTime() {
 	return new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
 }
 
-// const readFileAsBase64 = (file: File): Promise<string> => {
-//     return new Promise((resolve, reject) => {
-//         const reader = new FileReader();
-//         reader.onload = () => resolve(reader.result as string);
-//         reader.onerror = reject;
-//         reader.readAsDataURL(file);
-//     });
-// };
-
-function Bubble({ message }: { message: Message }) {
+function Bubble({
+	message,
+	onSendSuggestion,
+}: {
+	message: Message;
+	onSendSuggestion: (text: string) => void;
+}) {
 	const isUser = message.sender === "user";
 
 	return (
@@ -62,12 +59,20 @@ function Bubble({ message }: { message: Message }) {
 				</div>
 				<div className="mt-1 text-[11px] text-slate-500 tabular-nums">{message.timestamp}</div>
 
+				{/* ✅ FIX: suggestions 클릭 시 실제 전송되도록 연결 */}
 				{!isUser && message.suggestions && message.suggestions.length > 0 && (
 					<div className="mt-2 flex flex-wrap gap-2">
 						{message.suggestions.map((s, idx) => (
-							<Badge key={idx} variant="outline" className="cursor-pointer hover:bg-slate-50">
-								{s}
-							</Badge>
+							<button
+								key={idx}
+								type="button"
+								onClick={() => onSendSuggestion(s)}
+								className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rounded-md"
+							>
+								<Badge variant="outline" className="cursor-pointer hover:bg-slate-50">
+									{s}
+								</Badge>
+							</button>
 						))}
 					</div>
 				)}
@@ -91,83 +96,81 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
 
 	const [input, setInput] = useState("");
 	const [isTyping, setIsTyping] = useState(false);
-    const [selectedFile, setSelectedFile] = useState<File | null>(null); // 파일
+	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
 	const bottomRef = useRef<HTMLDivElement | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
 		bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
 	}, [messages, isTyping]);
 
-    const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setSelectedFile(e.target.files[0]);
-        }
-    };
+	const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+		if (e.target.files && e.target.files[0]) {
+			setSelectedFile(e.target.files[0]);
+		}
+	};
 
-    const clearFile = () => {
-        setSelectedFile(null);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-        }
-    };
+	const clearFile = () => {
+		setSelectedFile(null);
+		if (fileInputRef.current) {
+			fileInputRef.current.value = "";
+		}
+	};
 
-    const send = async (text: string) => {
-        const trimmed = text.trim();
-        if ((!trimmed && !selectedFile) || isTyping) return;
+	const send = async (text: string) => {
+		const trimmed = text.trim();
+		if ((!trimmed && !selectedFile) || isTyping) return;
 
-        const userMessage: Message = {
-            id: Date.now(),
-            text: trimmed + (selectedFile ? `\n[첨부파일: ${selectedFile.name}]` : ""),
-            sender: "user",
-            timestamp: nowTime(),
-        };
+		const userMessage: Message = {
+			id: Date.now(),
+			text: trimmed + (selectedFile ? `\n[첨부파일: ${selectedFile.name}]` : ""),
+			sender: "user",
+			timestamp: nowTime(),
+		};
 
-        setMessages((prev) => [...prev, userMessage]);
-        setInput("");
-        setIsTyping(true);
+		setMessages((prev) => [...prev, userMessage]);
+		setInput("");
+		setIsTyping(true);
 
-        // ✅ 여기 중요: state가 await 사이에 바뀔 수 있으니 로컬 변수로 고정
-        const fileToSend = selectedFile;
+		const fileToSend = selectedFile;
 
-        try {
-            const result = await fetchChatResponse({
-                query: trimmed || "파일 분석 요청",     // ✅ 파일만 보낼 때 대비(서버가 query 필수면 특히 중요)
-                thread_id: "user_session_1",
-                file: fileToSend ?? undefined,        // ✅ 이게 있어야 /chatbots/file 로 감
-            });
+		try {
+			const result = await fetchChatResponse({
+				query: trimmed || "파일 분석 요청",
+				thread_id: "user_session_1",
+				file: fileToSend ?? undefined,
+			});
 
-            setMessages((prev) => [
-                ...prev,
-                {
-                    id: Date.now() + 1,
-                    text: result.data.message,
-                    sender: "bot",
-                    timestamp: nowTime(),
-                    suggestions: [],
-                },
-            ]);
+			setMessages((prev) => [
+				...prev,
+				{
+					id: Date.now() + 1,
+					text: result.data.message,
+					sender: "bot",
+					timestamp: nowTime(),
+					suggestions: [],
+				},
+			]);
 
-            clearFile(); // ✅ 전송 후 파일 초기화
-        } catch (error) {
-            setMessages((prev) => [
-                ...prev,
-                {
-                    id: Date.now() + 1,
-                    text: "죄송합니다. 서버 연결에 실패했습니다.",
-                    sender: "bot",
-                    timestamp: nowTime(),
-                },
-            ]);
-        } finally {
-            setIsTyping(false);
-        }
-    };
+			clearFile();
+		} catch (error) {
+			setMessages((prev) => [
+				...prev,
+				{
+					id: Date.now() + 1,
+					text: "죄송합니다. 서버 연결에 실패했습니다.",
+					sender: "bot",
+					timestamp: nowTime(),
+				},
+			]);
+		} finally {
+			setIsTyping(false);
+		}
+	};
 
-
-    const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.nativeEvent.isComposing) return;
+	const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+		if (e.nativeEvent.isComposing) return;
 
 		if (e.key === "Enter" && !e.shiftKey) {
 			e.preventDefault();
@@ -177,9 +180,7 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
 
 	return (
 		<div className="w-full h-[min(760px,calc(100vh-2rem))] max-w-[980px] bg-white border rounded-2xl shadow-2xl overflow-hidden flex">
-			{/* Left: Chat */}
 			<div className="flex-1 min-w-0 flex flex-col min-h-0">
-				{/* Header */}
 				<div className="px-5 py-4 bg-slate-950 text-white flex items-center justify-between shrink-0">
 					<div className="flex items-center gap-3">
 						<div className="h-10 w-10 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center">
@@ -204,7 +205,7 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
 					<div className="p-5 space-y-4 pb-10">
 						{messages.map((m) => (
 							<div key={m.id}>
-								<Bubble message={m} />
+								<Bubble message={m} onSendSuggestion={send} />
 							</div>
 						))}
 
@@ -215,10 +216,10 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
 										<Bot className="h-4 w-4" />
 									</AvatarFallback>
 								</Avatar>
-                                <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-600 flex items-center gap-2">
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                    답변을 작성하고 있습니다...
-                                </div>
+								<div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-600 flex items-center gap-2">
+									<Loader2 className="h-3 w-3 animate-spin" />
+									답변을 작성하고 있습니다...
+								</div>
 							</div>
 						)}
 
@@ -226,63 +227,61 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
 					</div>
 				</ScrollArea>
 
-                {/* Input */}
-                <div className="border-t bg-white p-4 shrink-0">
-                    {/* 파일 미리보기*/}
-                    {selectedFile && (
-                        <div className="flex items-center gap-2 mb-2 p-2 bg-slate-100 rounded-lg w-fit text-xs border">
-                            <Paperclip className="h-3 w-3 text-slate-500" />
-                            <span className="max-w-[200px] truncate">{selectedFile.name}</span>
-                            <button onClick={clearFile} className="hover:bg-slate-200 rounded-full p-0.5">
-                                <X className="h-3 w-3 text-slate-500" />
-                            </button>
-                        </div>
-                    )}
+				<div className="border-t bg-white p-4 shrink-0">
+					{selectedFile && (
+						<div className="flex items-center gap-2 mb-2 p-2 bg-slate-100 rounded-lg w-fit text-xs border">
+							<Paperclip className="h-3 w-3 text-slate-500" />
+							<span className="max-w-[200px] truncate">{selectedFile.name}</span>
+							<button onClick={clearFile} className="hover:bg-slate-200 rounded-full p-0.5">
+								<X className="h-3 w-3 text-slate-500" />
+							</button>
+						</div>
+					)}
 
-                    <div className="flex gap-2 items-end">
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            className="hidden"
-                        />
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-11 w-11 shrink-0"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={isTyping}
-                        >
-                            <Paperclip className="h-5 w-5 text-slate-500" />
-                        </Button>
+					<div className="flex gap-2 items-end">
+						<input
+							type="file"
+							ref={fileInputRef}
+							onChange={handleFileChange}
+							className="hidden"
+						/>
+						<Button
+							variant="ghost"
+							size="icon"
+							className="h-11 w-11 shrink-0"
+							onClick={() => fileInputRef.current?.click()}
+							disabled={isTyping}
+						>
+							<Paperclip className="h-5 w-5 text-slate-500" />
+						</Button>
 
-                        <div className="flex-1">
-                            <Textarea
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={onKeyDown}
-                                placeholder="메시지를 입력하거나 파일을 첨부하세요..."
-                                className="min-h-[44px] max-h-[140px] resize-none"
-                                disabled={isTyping}
-                            />
-                        </div>
+						<div className="flex-1">
+							<Textarea
+								value={input}
+								onChange={(e) => setInput(e.target.value)}
+								onKeyDown={onKeyDown}
+								placeholder="메시지를 입력하거나 파일을 첨부하세요..."
+								className="min-h-[44px] max-h-[140px] resize-none"
+								disabled={isTyping}
+							/>
+						</div>
 
-                        {/* 전송 버튼 */}
-                        <Button onClick={() => send(input)} className="h-11 px-4" disabled={isTyping || (!input.trim() && !selectedFile)}>
-                            <Send className="h-4 w-4 mr-2" />
-                            전송
-                        </Button>
-                    </div>
-                </div>
+						<Button
+							onClick={() => send(input)}
+							className="h-11 px-4"
+							disabled={isTyping || (!input.trim() && !selectedFile)}
+						>
+							<Send className="h-4 w-4 mr-2" />
+							전송
+						</Button>
+					</div>
+				</div>
 			</div>
 
-			{/* Right: Quick Panel */}
 			<div className="hidden lg:flex w-[320px] border-l bg-slate-50 flex-col min-h-0">
 				<div className="p-5 shrink-0">
 					<div className="text-sm font-semibold text-slate-900">빠른 질문</div>
-					<div className="mt-1 text-xs text-slate-600">
-						자주 쓰는 질문을 한 번에 보내세요.
-					</div>
+					<div className="mt-1 text-xs text-slate-600">자주 쓰는 질문을 한 번에 보내세요.</div>
 				</div>
 
 				<Separator />
