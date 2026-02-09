@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchBids } from "../api/bids";
-import { login } from "../api/auth";
+import { login, logout as apiLogout } from "../api/auth";
 import { fetchWishlist } from "../api/wishlist";
 import { getCompanyForUser } from "../api/company";
 import { mask_name } from "../utils/masking";
@@ -503,18 +503,17 @@ export function Home() {
 		await doLogin(email.trim(), password.trim());
 	};
 
-	const onLogout = () => {
-		localStorage.removeItem("userId");
-		localStorage.removeItem("refreshToken");
-
-		localStorage.removeItem("userName");
-		localStorage.removeItem("name");
-		localStorage.removeItem("email");
-
+const onLogout = () => {
+	// localStorage만 지우면 서버 세션이 남아, 다른 메뉴 이동/뒤로가기에서 checkLogin으로
+	// 다시 로그인 상태가 복구될 수 있습니다. 반드시 서버 로그아웃 로직을 호출합니다.
+	try {
+		void apiLogout();
+	} finally {
 		window.dispatchEvent(new Event("auth:changed"));
-
-		window.location.href = "/";
-	};
+		// replace로 히스토리 엔트리를 남기지 않아 뒤로가기(bfcache) 복원 이슈를 줄입니다.
+		window.location.replace("/");
+	}
+};
 
 	return (
 		<div className="bg-slate-50 dark:bg-slate-900">
