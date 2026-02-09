@@ -53,26 +53,19 @@ function formatAmount(value: unknown): string {
 	return n.toLocaleString("ko-KR");
 }
 
-function formatDateTimeOneLine(dateStr: string) {
-	if (!dateStr) return "-";
-	const d = new Date(dateStr);
-	if (!Number.isFinite(d.getTime())) return "-";
+function format_date_ymd_hm(dateStr: string): string {
+    if (!dateStr) return "-";
+    const d = new Date(dateStr);
+    if (!Number.isFinite(d.getTime())) return "-";
 
-	const date = d
-		.toLocaleDateString("ko-KR", {
-			year: "numeric",
-			month: "2-digit",
-			day: "2-digit",
-		})
-		.replace(/\.\s*/g, ".");
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
 
-	const time = d.toLocaleTimeString("ko-KR", {
-		hour: "2-digit",
-		minute: "2-digit",
-		hour12: false,
-	});
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
 
-	return `${date} ${time}`;
+    return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
 }
 
 function stage_label(stage: BidStage): string {
@@ -401,7 +394,7 @@ export function CartPage({
 									? `${formatAmount(w.baseAmount)}원`
 									: "";
 								const endText = w.bidEnd
-									? `마감 ${formatDateTimeOneLine(String(w.bidEnd))}`
+                                    ? `마감 ${format_date_ymd_hm(String(w.bidEnd))}`
 									: "";
 
 								const daysLeft = w.bidEnd
@@ -537,7 +530,7 @@ export function CartPage({
 										? `${formatAmount(w.baseAmount)}원`
 										: "";
 									const endText = w.bidEnd
-										? `마감 ${formatDateTimeOneLine(String(w.bidEnd))}`
+                                        ? `마감 ${format_date_ymd_hm(String(w.bidEnd))}`
 										: "";
 
 									const result = past_result_from_stage(w.stage);

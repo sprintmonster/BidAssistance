@@ -519,6 +519,9 @@ function getDDayNumber(deadline: string) {
 
     return Math.round((end.getTime() - today.getTime()) / 86400000);
 }
+function checklistStorageKey(bidId: number) {
+    return `bid-checklist-${bidId}`;
+}
 
 export function BidSummary() {
     const navigate = useNavigate();
@@ -703,8 +706,22 @@ export function BidSummary() {
 
     useEffect(() => {
         if (!bid) return;
+
+        const key = checklistStorageKey(bid.id);
+        const saved = localStorage.getItem(key);
+
+        if (saved) {
+            try {
+                setChecklist(JSON.parse(saved));
+                return;
+            } catch {
+                // 파싱 실패 시 초기값
+            }
+        }
+
         setChecklist(DEFAULT_CHECKLIST);
     }, [bid?.id]);
+
 
     useEffect(() => {
         const sync = async () => {
@@ -793,7 +810,15 @@ export function BidSummary() {
                 merged.push({ item, checked: false });
             }
 
+            if (bid) {
+                localStorage.setItem(
+                    checklistStorageKey(bid.id),
+                    JSON.stringify(merged),
+                );
+            }
+
             return merged;
+
         });
     }, [structured?.requirements?.documents]);
 
@@ -1175,9 +1200,21 @@ export function BidSummary() {
                                             key={`${item.item}-${index}`}
                                             type="button"
                                             onClick={() => {
-                                                setChecklist((prev) =>
-                                                    prev.map((x) => (x.item === item.item ? { ...x, checked: !x.checked } : x)),
-                                                );
+                                                setChecklist((prev) => {
+                                                    const updated = prev.map((x) =>
+                                                        x.item === item.item ? { ...x, checked: !x.checked } : x
+                                                    );
+
+                                                    if (bid) {
+                                                        localStorage.setItem(
+                                                            checklistStorageKey(bid.id),
+                                                            JSON.stringify(updated),
+                                                        );
+                                                    }
+
+                                                    return updated;
+                                                });
+
                                             }}
                                             className={`w-full text-left flex items-center gap-3 p-3 rounded-lg border transition ${
                                                 item.checked ? "bg-green-50 border-green-200" : "bg-gray-50 hover:bg-gray-100"

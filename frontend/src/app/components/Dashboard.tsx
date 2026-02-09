@@ -22,18 +22,31 @@ type Kpi = {
 };
 
 type FilterMode = null | "new" | "closingSoon";
-function format_datetime_kor(s: string): string {
-	if (!s) return "-";
-	const d = new Date(s);
-	if (!Number.isFinite(d.getTime())) return s;
+function format_date_ymd(s: string): string {
+    if (!s) return "-";
+    const d = new Date(s);
+    if (!Number.isFinite(d.getTime())) return s;
 
-	const yyyy = d.getFullYear();
-	const mm = String(d.getMonth() + 1).padStart(2, "0");
-	const dd = String(d.getDate()).padStart(2, "0");
-	const hh = String(d.getHours()).padStart(2, "0");
-	const mi = String(d.getMinutes()).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
 
-	return `${yyyy}.${mm}.${dd} ${hh}:${mi}`;
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+function format_date_ymd_hm(s: string): string {
+    if (!s) return "-";
+    const d = new Date(s);
+    if (!Number.isFinite(d.getTime())) return s;
+
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
+
+    return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
 }
 
 export function Dashboard() {
@@ -203,11 +216,11 @@ export function Dashboard() {
 									<div className="text-sm text-gray-500 dark:text-gray-400">
 										{String(b.agency ?? b.organization ?? "")}
 										{(b.bidStart || b.startDate)
-											? ` · 시작: ${format_datetime_kor(String(b.bidStart ?? b.startDate))}`
+                                            ? ` · 시작: ${format_date_ymd(String(b.bidStart ?? b.startDate))}`
 											: ""}
 
 										{(b.bidEnd || b.endDate)
-											? ` · 마감: ${format_datetime_kor(String(b.bidEnd ?? b.endDate))}`
+                                            ? ` · 마감: ${format_date_ymd_hm(String(b.bidEnd ?? b.endDate))}`
 											: ""}
 									</div>
 								</li>
