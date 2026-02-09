@@ -130,12 +130,28 @@ export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile, isAdmin = 
         setFiles((prev) => prev.filter((_, i) => i !== idx));
     };
 
+    // 공지사항 서브 카테고리
+    const [noticeSubCategory, setNoticeSubCategory] = useState<"service" | "update" | "maintenance" | "policy">("service");
+
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
         if (!title.trim() || !content.trim()) return;
 
+        let finalTitle = title.trim();
+        
+        // 공지사항일 경우 말머리 자동 추가
+        if (category === "notice") {
+            const labels = { service: "서비스", update: "업데이트", maintenance: "점검", policy: "정책" };
+            const tag = `[${labels[noticeSubCategory]}]`;
+            
+            // 이미 말머리가 있는지 확인 (중복 방지)
+            if (!finalTitle.startsWith("[")) {
+                finalTitle = `${tag} ${finalTitle}`;
+            }
+        }
+
         onSubmit({
-            title: title.trim(),
+            title: finalTitle,
             content: content.trim(),
             category,
             files,
@@ -199,7 +215,10 @@ export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile, isAdmin = 
                         {isAdmin && (
                             <button
                                 type="button"
-                                onClick={() => setCategory("notice")}
+                                onClick={() => {
+                                    setCategory("notice");
+                                    setNoticeSubCategory("service"); // 기본값
+                                }}
                                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                                     category === "notice"
                                         ? "bg-red-600 text-white"
@@ -210,6 +229,33 @@ export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile, isAdmin = 
                             </button>
                         )}
                     </div>
+
+                    {/* ✅ 공지사항 하위 카테고리 (운영자 전용) */}
+                    {category === "notice" && (
+                        <div className="mt-4 p-4 bg-red-50 rounded-lg border border-red-100">
+                            <label className="block text-sm font-medium text-red-800 mb-2">공지 분류 선택</label>
+                            <div className="flex gap-2">
+                                {(["service", "update", "maintenance", "policy"] as const).map((sub) => {
+                                    const labels = { service: "서비스", update: "업데이트", maintenance: "점검", policy: "정책" };
+                                    const isActive = noticeSubCategory === sub;
+                                    return (
+                                        <button
+                                            key={sub}
+                                            type="button"
+                                            onClick={() => setNoticeSubCategory(sub)}
+                                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                                                isActive
+                                                    ? "bg-red-600 text-white"
+                                                    : "bg-white text-red-700 border border-red-200 hover:bg-red-100"
+                                            }`}
+                                        >
+                                            {labels[sub]}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div>

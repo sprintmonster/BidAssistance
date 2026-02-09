@@ -192,7 +192,7 @@ export function NoticePage() {
 								<Button
 									variant="outline"
 									className="shrink-0"
-									onClick={() => navigate(`/community/${n.id}`)}
+									onClick={() => navigate(`/notice/${n.id}`)}
 								>
 									상세
 								</Button>

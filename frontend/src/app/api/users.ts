@@ -33,6 +33,10 @@ export function updateUserProfile(
 
 export function deleteUserAccount(userId: string) {
 	return api<ApiResponse<{ message?: string }>>(`/users/${userId}`, {
-		method: "DELETE",
 	});
 }
+
+export function checkLogin() {
+	return api<ApiResponse<UserProfile>>("/users/checkLogin", { method: "GET" });
+}
+
