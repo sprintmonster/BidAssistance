@@ -1,4 +1,4 @@
-# 🏠 AIVLE 스쿨 빅 프로젝트 16조조
+# 🏠 AIVLE 스쿨 빅 프로젝트 16조
 
 > **Public** / 🏠 **RAG도 락이다!!**
 
@@ -12,7 +12,7 @@
   [![React](https://img.shields.io/badge/react-18.0+-blue.svg)](https://reactjs.org)
   [![FastAPI](https://img.shields.io/badge/FastAPI-0.68+-green.svg)](https://fastapi.tiangolo.com)
   
-<!-- **🚀 [Live Demo-백엔드 비활성화](https://dgu-chat-bot.netlify.app/)** | -->
+<!-- BidAssitance wiki 페이지 만들어서 링크 수정할 것 -->
 **📖 [Documentation Wiki](https://github.com/LxNx-Hn/chatbot-with-kt-dgucenter/wiki/%EC%9C%84%ED%82%A4%E2%80%90%EB%AC%B8%EC%84%9C%EB%AA%A8%EC%9D%8C)**
 </div>
 
@@ -20,12 +20,12 @@
 
 ## 📋 목차
 
-1. [👥 팀 소개](#-팀-소개)
+1. [👥 팀 구성](#-팀-구성)
 2. [📁 리포지토리 구조](#-리포지토리-구조)
-3. [📖 프로젝트 소개](#-프로젝트-소개)
-4. [✨ 주요 기능](#-주요-기능)
-5. [🛠️ 기술 스택](#️-기술-스택)
-6. [🏗️ 시스템 아키텍처](#️-시스템-아키텍처)
+3. [📖 프로젝트 개요](#-프로젝트-개요)
+4. [💡 기능 소개](#-기능-소개)
+5. [▶️ 시연 영상](#️-시연-영상)
+6. [🏗️ 구현 상세](#️-구현-상세)
 7. [🛠️ 배포 가이드](#-배포-가이드)
 8. [👨‍💻 팀원별 상세 업무](#-팀원별-상세-업무)
 9. [📝 회의록 및 개발 과정](#-회의록-및-개발-과정)
@@ -33,39 +33,61 @@
 
 ---
 
-## 👥 팀 소개
+## 👥 팀 구성
 <div align="center">
   <table>
     <tr>
       <td align="center" width="200px">
-        <img src="./ops/images/team/윤서진.jpg" width="120px" alt="윤서진"/><br>
-        <b>윤서진</b><br>
-        <sub>ProductManager</sub><br>
+        <img src="./ops/images/team/전보윤.jpg" width="120px" alt="전보윤"/><br>
+        <b>전보윤</b><br>
+        <sub>PM, AI</sub><br>
         <a href="https://github.com/0azzpll">@0azzpll</a>
       </td>
       <td align="center" width="200px">
-        <img src="./ops/images/team/문종건.jpg" width="120px" alt="문종건"/><br>
-        <b>문종건</b><br>
-        <sub>ProjectLeader</sub><br>
+        <img src="./ops/images/team/강버들.jpg" width="120px" alt="강버들"/><br>
+        <b>강버들</b><br>
+        <sub>FE</sub><br>
         <a href="https://github.com/LxNx-Hn">@LxNx-Hn</a>
+      </td>
+      <td align="center" width="200px">
+        <img src="./ops/images/team/김형모.jpg" width="120px" alt="김형모"/><br>
+        <b>김형모</b><br>
+        <sub>BE</sub><br>
+        <a href="https://github.com/pla2n">@pla2n</a>
+      </td>
+      <td align="center" width="200px">
+        <img src="./ops/images/team/공동욱.jpg" width="120px" alt="공동욱"/><br>
+        <b>공동욱</b><br>
+        <sub>BE</sub><br>
+        <a href="https://github.com/cos65536">@cos65536</a>
+      </td>
+    </tr>
+  </table>
+  <table>
+    <tr>
+      <td align="center" width="200px">
+        <img src="./ops/images/team/윤성빈.jpg" width="120px" alt="윤성빈"/><br>
+        <b>윤성빈</b><br>
+        <sub>AI</sub><br>
+        <a href="https://github.com/0azzpll">@0azzpll</a>
       </td>
       <td align="center" width="200px">
         <img src="./ops/images/team/이세용.jpg" width="120px" alt="이세용"/><br>
         <b>이세용</b><br>
-        <sub>Dev_Main</sub><br>
+        <sub>BE</sub><br>
+        <a href="https://github.com/LxNx-Hn">@LxNx-Hn</a>
+      </td>
+      <td align="center" width="200px">
+        <img src="./ops/images/team/장우진.jpg" width="120px" alt="장우진"/><br>
+        <b>장우진</b><br>
+        <sub>AI</sub><br>
         <a href="https://github.com/pla2n">@pla2n</a>
       </td>
       <td align="center" width="200px">
-        <img src="./ops/images/team/이재홍.jpg" width="120px" alt="이재홍"/><br>
-        <b>이재홍</b><br>
-        <sub>DB_Main</sub><br>
+        <img src="./ops/images/team/황도윤.jpg" width="120px" alt="황도윤"/><br>
+        <b>황도윤</b><br>
+        <sub>BE</sub><br>
         <a href="https://github.com/cos65536">@cos65536</a>
-      </td>
-      <td align="center" width="200px">
-        <img src="./ops/images/team/황용선.jpg" width="120px" alt="황용선"/><br>
-        <b>황용선</b><br>
-        <sub>Linker</sub><br>
-        <a href="https://github.com/yongseonzvz">@yongseonzvz</a>
       </td>
     </tr>
   </table>
@@ -74,6 +96,7 @@
 ---
 
 ## 📁 리포지토리 구조
+<!-- 프로젝트 최종 병합 후 수정할 것 -->
 
 <details>
 <summary><b>📂 상세 폴더 구조 보기</b></summary>
@@ -147,10 +170,10 @@ chatbot-with-kt-dgucenter/
 ---
 
 ## 📖 프로젝트 소개
-동성로 창업 희망자를 위한 **RAG 기반 AI 창업 정보 제공 챗봇**입니다.
+소형·중형 건설사를 위한 **AI 기반 입찰 인텔리전스 플랫폼​**입니다.
 
 ### 🎯 프로젝트 목표
-동성로 지역 창업 희망자에게 업종별 창업 현황, 트렌드 분석, 정책 정보를 제공하는 지능형 챗봇 시스템 구축
+AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지 저비용으로 간편하게 정보를 얻는 입찰 플랫폼 구축​
 
 #### 챗봇 예시화면
 
@@ -187,43 +210,19 @@ chatbot-with-kt-dgucenter/
 
 ---
 
-## ✨ 주요 기능
+## 💡 기능 소개
 
-### 🚀 RAG 시스템의 핵심 기능
-- **실시간 정보 업데이트**: 데이터 변경 시 모델 재학습 불필요
-- **정확한 정보 제공**: 벡터 검색을 통한 관련성 높은 응답
-- **유지보수 효율성**: 파인튜닝 대비 빠른 데이터 업데이트 가능
-- **비용 효율성**: 대규모 모델 재학습 없이 최신 정보 반영
+### 🎯 맞춤형 추천 대시보드
+- 사용자의 프로필과 과거 조회 이력 분석하여, 수주 가능성 높은 공고를 추천하는 대시보드
 
-### 🎯 업종별 창업 현황 분석
-- 동성로 지역 업종별 창업률 통계 제공
-- 사업장 데이터 기반 경쟁 분석
-- 임대료 및 입지 정보 분석
+### 🤖 RAG 기반 챗봇
+- RAG 챗봇을 기반으로 원하는 공고를 자연어로 검색 가능
 
-### 🤖 RAG 기반 자연어 대화
-- ko-sroberta 임베딩을 통한 의미적 문서 검색
-- Midm-2.0-Mini LLM으로 자연스러운 응답 생성
-- 질문 카테고리 자동 분류 시스템
+### 📄 공고문 요약 AI
+- RAG가 적용된 기술이 첨부파일을 자동 분석하여 핵심 정보(자격, 과업, 독소 조항) 즉시 요약 제공
 
-### 🔗정책 포털 DB기반 정책정보 검색
-- 대구창업허브 지원사업공고  API기반 정책검색
-- 창업진흥원K-Startup(사업소개,사업공고,콘텐츠 등)조회서비스 API기반 정책 검색
-- 임베딩을 통한 사용자 정보 추출 및 맞춤화된 정책정보 제공
-
-### 📊 데이터랩  API기반 트렌드 분석
-- 데이터 실시간 분석 및 통계수치 제공
-- 창업 트렌드 예측 및 인사이트 제공
-
-### 🔍 분류모델을 통한 답변 최적화
-- Midm-2.0-Mini LLM 하이퍼 파라미터 튜닝을 통한 분류모델 구현
-- 분류결과에 따라 적절한 DB로의 연결을 통한 검색 시간 최소화
-- 성능지표 Accuracy : 97.14 , Recall : 97.94 , Precision : 98.07 , F-1 Score : 97.60 확보
-
-
-### 💬 사용자 친화적 인터페이스
-- React 기반 반응형 채팅 UI
-- 다크/라이트 테마 지원
-- 실시간 메시지 처리
+### 🔍 커뮤니티
+- 질문, 정보, 후기, 토론 커뮤니티를 통해 입찰 정보 공유
 
 ---
 
