@@ -955,6 +955,9 @@ export function BidSummary() {
                             <div className="flex items-center gap-2 mb-3">
                                 <Badge>{bid.type}</Badge>
                                 <Badge variant="outline">{bid.status}</Badge>
+                                {!isEnded && (
+                                    <Badge variant="outline">{bid.status}</Badge>
+                                )}
                                 {isClosingSoon && (
                                     <Badge variant="destructive">마감임박</Badge>
                                 )}
@@ -1100,7 +1103,7 @@ export function BidSummary() {
                 <TabsList>
                     <TabsTrigger value="summary">AI 요약</TabsTrigger>
                     <TabsTrigger value="checklist">서류 체크리스트</TabsTrigger>
-                    <TabsTrigger value="risks">리스크 분석</TabsTrigger>
+                    {/*<TabsTrigger value="risks">리스크 분석</TabsTrigger>*/}
                     <TabsTrigger value="price">투찰 가이드</TabsTrigger>
                 </TabsList>
 
