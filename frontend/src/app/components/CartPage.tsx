@@ -82,14 +82,28 @@ function get_user_id(): number | null {
 }
 
 function days_until(dateStr: string, nowMs: number): number | null {
-	if (!dateStr) return null;
-	const end = new Date(dateStr);
-	if (!Number.isFinite(end.getTime())) return null;
-	const diff = end.getTime() - nowMs;
-	if (!Number.isFinite(diff)) return null;
-	if (diff < 0) return -1;
-	return Math.floor(diff / 86400000);
+    if (!dateStr) return null;
+
+    const end = new Date(dateStr);
+    if (!Number.isFinite(end.getTime())) return null;
+
+    // 오늘 00:00
+    const today = new Date(nowMs);
+    today.setHours(0, 0, 0, 0);
+
+    // 마감일 00:00 (시간 제거)
+    const endDate = new Date(end);
+    endDate.setHours(0, 0, 0, 0);
+
+    const diffDays = Math.round((endDate.getTime() - today.getTime()) / 86400000);
+
+    // 이미 지난 날짜면 -1
+    if (!Number.isFinite(diffDays)) return null;
+    if (diffDays < 0) return -1;
+
+    return diffDays;
 }
+
 
 function dday_label(daysLeft: number): string | null {
 	if (!Number.isFinite(daysLeft)) return null;
