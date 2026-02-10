@@ -190,31 +190,32 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 > </div>
 > <br>
 
-> **💼 창업 질문 답변 예시**
+> **💼 대시보드 & 맞춤형 추천**
 >
 > <div align="center">
->   <img src="./ops/images/Screenshot/예시_창업.png" alt="답변예시_창업" width="800"/>
+>   <img src="./ops/images/Screenshot/대시보드.png" alt="대시보드" width="800"/>
+>  <img src="./ops/images/Screenshot/맞춤형 추천.png" alt="맞춤형 추천" width="800"/>
 > </div>
 > <br>
 
-> **📋 정책 질문 답변 예시**
+> **📋 지능형 검색**
 >
 > <div align="center">
->   <img src="./ops/images/Screenshot/예시_정책.png" alt="답변예시_정책" width="800"/>
+>   <img src="./ops/images/Screenshot/지능형 검색.png" alt="지능형 검색" width="800"/>
 > </div>
 > <br>
 
-> **📈 트렌드 질문 답변 예시**
+> **📈 AI 요약 보고서**
 >
 > <div align="center">
->   <img src="./ops/images/Screenshot/예시_트렌드.png" alt="답변예시_트렌드" width="800"/>
+>   <img src="./ops/images/Screenshot/AI 요약 보고서.png" alt="AI 요약 보고서" width="800"/>
 > </div>
 > <br>
 
-> **📱 반응형 UI 설계**
+> **📱 커뮤니티**
 >
 > <div align="center">
->   <img src="./ops/images/Screenshot/반응형UI.png" alt="반응형" width="800"/>
+>   <img src="./ops/images/Screenshot/커뮤니티.png" alt="커뮤니티" width="800"/>
 > </div>
 > <br>
 
@@ -247,12 +248,13 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 ### Frontend
 
 <img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black">
+<img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black">
 <img src="https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white">
 <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white">
 
 ### Backend
 
-<img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white">
+<img src="https://img.shields.io/badge/java-%23ED8B00.svg?style=for-the-badge&logo=openjdk&logoColor=white">
 <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white">
 <img src="https://img.shields.io/badge/spring-%236DB33F.svg?style=for-the-badge&logo=spring&logoColor=white">
 
