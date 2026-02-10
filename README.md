@@ -2,7 +2,8 @@
 
 > **Public** / 🏠 **RAG도 락이다!!**
 
-# 🏪 AI 기반 입찰 인텔리전스 플랫폼
+# 🏢 AI 기반 입찰 인텔리전스 플랫폼
+
 <!-- 프로젝트 대표 이미지 추가해야함 -->
 <div align="center">
   <img src="./ops/images/Screenshot/반응형UI.png" alt="AI 기반 입찰 인텔리전스 플랫폼 메인 화면" width="800"/>
@@ -34,6 +35,7 @@
 ---
 
 ## 👥 팀 구성
+
 <div align="center">
   <table>
     <tr>
@@ -96,6 +98,7 @@
 ---
 
 ## 📁 리포지토리 구조
+
 <!-- 프로젝트 최종 병합 후 수정할 것 -->
 
 <details>
@@ -107,7 +110,7 @@ chatbot-with-kt-dgucenter/
 ├── README.md                   # 프로젝트 설명서
 ├── docker-compose.yml          # 도커 컴포즈 설정
 ├── .github/                    # CI /CD 폴더
-│   └──  workflows/             # Github 액션 파일 
+│   └──  workflows/             # Github 액션 파일
 ├──     └── deploy.yml          # CI/CD 자동화 문서
 ├── ops/                        # 문서 및 운영 자료
 │   ├── images/                 # README용 이미지
@@ -170,58 +173,69 @@ chatbot-with-kt-dgucenter/
 ---
 
 ## 📖 프로젝트 소개
+
 소형·중형 건설사를 위한 **AI 기반 입찰 인텔리전스 플랫폼​**입니다.
 
 ### 🎯 프로젝트 목표
+
 AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지 저비용으로 간편하게 정보를 얻는 입찰 플랫폼 구축​
 
 #### 챗봇 예시화면
 
 > **🏠 메인화면**
+>
 > <div align="center">
 >     <img src="./ops/images/Screenshot/LIGHT.png" alt="데스크탑 라이트" width="400"/>
 >     <img src="./ops/images/Screenshot/DARK.png" alt="데스크탑 다크" width="400"/> 
 > </div>
-<br>
+> <br>
 
 > **💼 창업 질문 답변 예시**
+>
 > <div align="center">
 >   <img src="./ops/images/Screenshot/예시_창업.png" alt="답변예시_창업" width="800"/>
 > </div>
-<br>
+> <br>
 
 > **📋 정책 질문 답변 예시**
+>
 > <div align="center">
 >   <img src="./ops/images/Screenshot/예시_정책.png" alt="답변예시_정책" width="800"/>
 > </div>
-<br>
+> <br>
 
 > **📈 트렌드 질문 답변 예시**
+>
 > <div align="center">
 >   <img src="./ops/images/Screenshot/예시_트렌드.png" alt="답변예시_트렌드" width="800"/>
 > </div>
-<br>
+> <br>
 
 > **📱 반응형 UI 설계**
+>
 > <div align="center">
 >   <img src="./ops/images/Screenshot/반응형UI.png" alt="반응형" width="800"/>
 > </div>
-<br>
+> <br>
 
 ---
 
 ## 💡 기능 소개
 
 ### 🎯 맞춤형 추천 대시보드
+
 - 사용자의 프로필과 과거 조회 이력 분석하여, 수주 가능성 높은 공고를 추천하는 대시보드
 
 ### 🤖 RAG 기반 챗봇
+
 - RAG 챗봇을 기반으로 원하는 공고를 자연어로 검색 가능
 
 ### 📄 공고문 요약 AI
+
 - RAG가 적용된 기술이 첨부파일을 자동 분석하여 핵심 정보(자격, 과업, 독소 조항) 즉시 요약 제공
 
 ### 🔍 커뮤니티
+
 - 질문, 정보, 후기, 토론 커뮤니티를 통해 입찰 정보 공유
 
 ---
@@ -231,37 +245,44 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 <div align="center">
 
 ### Frontend
+
 <img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black">
 <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black">
 <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white">
 
 ### Backend
+
 <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white">
 <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white">
 <img src="https://img.shields.io/badge/Uvicorn-FF6F00?style=for-the-badge&logo=gunicorn&logoColor=white">
 
 ### AI/ML Framework
+
 <img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white">
 <img src="https://img.shields.io/badge/Transformers-FF6F00?style=for-the-badge&logo=huggingface&logoColor=white">
 <img src="https://img.shields.io/badge/Sentence_Transformers-4285F4?style=for-the-badge">
 
 ### AI Models & Systems
+
 <img src="https://img.shields.io/badge/ko--sroberta-Embedding-FF6F00?style=for-the-badge">
 <img src="https://img.shields.io/badge/Midm--2.0--Mini-LLM-4285F4?style=for-the-badge">
 <img src="https://img.shields.io/badge/RAG-System-00C853?style=for-the-badge">
 
 ### Data Processing
+
 <img src="https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white">
 <img src="https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white">
 <img src="https://img.shields.io/badge/CSV-Database-217346?style=for-the-badge&logo=microsoftexcel&logoColor=white">
 
 ### DevOps & Deployment
+
 <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white">
 <img src="https://img.shields.io/badge/Docker_Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white">
 <img src="https://img.shields.io/badge/Netlify-00C7B7?style=for-the-badge&logo=netlify&logoColor=white">
 <img src="https://img.shields.io/badge/Runpod-6366F1?style=for-the-badge&logo=pytorch&logoColor=white">
 
 ### CI/CD
+
 <img src="https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white">
 <img src="https://img.shields.io/badge/YAML-CB171E?style=for-the-badge&logo=yaml&logoColor=white">
 
@@ -310,6 +331,7 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 ## 🚀CI/CD (자동 배포 시스템)
 
 ### 🔄 자동 배포 파이프라인
+
 GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구축했습니다.
 
 - **태그 기반 배포**: `v*` 태그 푸시 시 자동 빌드/배포 실행
@@ -375,7 +397,7 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 
 - **🌐 프론트엔드**: [Netlify 서비스](https://your-app.netlify.app)
 - **⚙️ 백엔드 API**: [RunPod 서비스](https://your-api.runpod.io)
-- **🐳 Docker 이미지**: 
+- **🐳 Docker 이미지**:
 - Backend: [`ghcr.io/lxnx-hn/chatbot-with-kt-dgucenter-backend:latest`](https://github.com/LxNx-Hn/chatbot-with-kt-dgucenter/pkgs/container/chatbot-with-kt-dgucenter-backend)
 - Frontend: [`ghcr.io/lxnx-hn/chatbot-with-kt-dgucenter-frontend:latest`](https://github.com/LxNx-Hn/chatbot-with-kt-dgucenter/pkgs/container/chatbot-with-kt-dgucenter-frontend)
 
@@ -385,6 +407,7 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 <summary><b>🎯 윤서진 - ProductManager</b></summary>
 
 ### 담당 업무
+
 - **프로젝트 총괄 관리**
 - **요구사항 분석 및 우선순위 결정**
 - **API 관리 및 회계 처리**
@@ -394,8 +417,8 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 - **최종 발표 준비**
 - **코드 의존성관리 및 구조화**
 
-
 ### 주요 성과
+
 - **체계적 프로젝트 관리**: 요구사항 우선순위 및 예산 검토를 통해 불필요한 자원 소모 최소화
 - **서비스 품질 개선**: 피드백 반영을 통한 시스템 개선 및 DB 지원으로 정확성 강화
 - **효율적 예산 운영**: 예산 우선순위 관리 및 회계 처리의 투명성을 확보
@@ -406,22 +429,27 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 ### 사용 기술
 
 **Backend & AI**
+
 - `RAG (Retrieval-Augmented Generation)`
 
 **Project Management & Collaboration**
+
 - `Notion`, `Git`
 
 **Design & Documentation**
-- `Figma` , `Adove PremierPro` 
-- `Google Sheets / Excel` 
+
+- `Figma` , `Adove PremierPro`
+- `Google Sheets / Excel`
 
 **Frontend Review**
-- `React` 
+
+- `React`
 - `JavaScript`
 - `CSS`
 
 **Version Control**
-- `Git`, `GitHub` 
+
+- `Git`, `GitHub`
 
 </details>
 
@@ -429,6 +457,7 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 <summary><b>🏗️ 문종건 - ProjectLeader</b></summary>
 
 ### 담당 업무
+
 - **프로젝트 전체 설계 및 아키텍처 구성**
 - **백엔드 개발 지원 및 FastAPI 서버 구축**
 - **프론트엔드 UI 구성 및 React 컴포넌트 개발**
@@ -438,6 +467,7 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 - **각종 프로젝트 문서 작성 및 관리**
 
 ### 주요 성과
+
 - **RAG 시스템 도입**: 임베딩 모델 기반 검색 증강 생성 구조 설계 및 구현
 - **전체 아키텍처 구축**: 프론트엔드-백엔드 연결 및 시스템 전반 설계
 - **CI/CD 파이프라인 구축**: GitHub Actions를 통한 자동화된 배포 시스템 구현
@@ -447,22 +477,27 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 ### 사용 기술
 
 **Project Management**
+
 - `Notion`, `Git` , `Github Project` , `GithubWiki`
 
 **Backend & AI**
+
 - `Python`, `FastAPI`, `PyTorch`
 - `Transformers`, `Sentence-Transformers`
 - `RAG (Retrieval-Augmented Generation)`
 
-**Frontend**  
+**Frontend**
+
 - `React`, `JavaScript`, `CSS3`
 
 **DevOps**
+
 - `Docker`, `Docker Compose`, `YML`
 - `GitHub Actions`, `Netlify`, `Runpod`
 
 **Version Control**
-- `Git`, `GitHub` 
+
+- `Git`, `GitHub`
 
 </details>
 
@@ -476,6 +511,7 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 - **챗봇 최적화를 위한 프롬프트 엔지니어링**
 
 ### 주요 성과
+
 - **핵심기능 개발** : 창업, 정책, 트렌드의 3가지 챗봇 핵심기능 개발
 - **프롬포트 최적화**: 사용자가 정보를 쉽게 습득할 수 있도록 출력 프롬프트 최적화
 - **하이퍼 파라미터 튜닝**: 적절한 출력을 위한 모델 하이퍼 파라미터 미세조정
@@ -483,19 +519,24 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 - **FastAPI활용 백엔드 서비스 구축**: uvicorn, fastapi 활용 백엔드 서버 구현
 
 ### 사용 기술
+
 **Backend & AI**
+
 - `Python`, `FastAPI`, `PyTorch`
 - `Transformers`, `Sentence-Transformers`
 - `RAG (Retrieval-Augmented Generation)`
 
 **Frontend**
+
 - `React`
 
 **DevOps**
+
 - `Docker`
 
 **Version Control**
-- `Git`, `GitHub` 
+
+- `Git`, `GitHub`
 
 </details>
 
@@ -504,6 +545,7 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 <summary><b>🗄️ 이재홍 - DB_Main</b></summary>
 
 ### 담당 업무
+
 - **데이터 탐색(EDA) 및 확보 가능한 데이터 확정**
 - **데이터 정제 로직 개발** (중복, 이상치, 결측치 처리)
 - **RAG 모델 최적화를 위한 데이터셋 가공 및 프롬프트 테스트**
@@ -511,6 +553,7 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 - **프로젝트 데이터 관련 기술 문서 작성 및 관리**
 
 ### 주요 성과
+
 - **데이터 파이프라인 구축**: 공공 인허가 데이터의 수집, 정제, 검증 과정을 자동화하여 데이터 신뢰도 확보 및 처리 시간 단축
 - **RAG 모델 성능 향상**: 고품질 데이터셋 제공과 프롬프트 최적화를 통해 AI 모델의 검색 정확도 및 답변 품질 개선에 기여
 - **데이터 분석 API 개발**: FastAPI 기반 트렌드 분석 서비스 초기 모델 설계 및 구현
@@ -518,15 +561,19 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 - **데이터 유의어 처리 및 문장화** : CSV기반 데이터 컬럼 유의어 탐색 시스템 구현 및 데이터 문장화 시스템 구현
 
 ### 사용 기술
+
 **Data, Backend & AI**
-- `Python`, `Pandas`, `NumPy`, `FastAPI`, 
+
+- `Python`, `Pandas`, `NumPy`, `FastAPI`,
 - `RAG (Retrieval-Augmented Generation)`
 
 **Tools & Version Control**
+
 - `Git`, `GitHub`, `Google Colab`, `CSV`
 
 **Version Control**
-- `Git`, `GitHub` 
+
+- `Git`, `GitHub`
 
 </details>
 
@@ -534,6 +581,7 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 <summary><b>🔗 황용선 - Linker</b></summary>
 
 ### 담당 업무
+
 - **시스템 연동 및 데이터 파이프라인 설계**
 - **분류 모델 성능 개선 및 운영**
 - **데이터 구축 및 정제**
@@ -541,6 +589,7 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 - **임베딩모듈 구현**
 
 ### 주요 성과
+
 - **분류 모델 하이퍼 파라미터 튜닝** : 하이퍼파라미터, 프롬포트 미세조정을 통해 정확도 14%향상, F-1 Score 8%향상
 - **데이터 전처리를 통한 임베딩시스템 구현** : 데이터 가공 및 키워드 추출을 통한 임베딩 효율 향상 및 답변 일관성 유지
 - **키워드 추출모델 제작** : 질문에서 키워드를 추출할수있는 모델 제작 및 프롬포트 엔지니어링
@@ -548,15 +597,19 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 - **계층적 검색 시스템 구축** : 핵심 업종 파악 후 LLM응답에 벡터 검색 결과를 추가하는 계층적 검색 방식 구현
 
 ### 사용 기술
+
 **AI & Data**
+
 - `Python`, `Pandas`, `PyTorch`
 - `Transformers`, `Sentence-Transformers`
 
 **Data Processing**
+
 - `Regex`, `CSV`
 
 **Version Control**
-- `Git`, `GitHub` 
+
+- `Git`, `GitHub`
 
 </details>
 
@@ -569,24 +622,31 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 ---
 
 ## 💬 팀원 한마디
+
 #### 최종 발표후 작성 예정
+
 ### 🎯 윤서진 - ProductManager
+
 > "프로젝트를 진행하면서 느낀 점이나 소감을 작성해주세요."
 
-### 🏗️ 문종건 - ProjectLeader 
+### 🏗️ 문종건 - ProjectLeader
+
 > "프로젝트를 진행하면서 느낀 점이나 소감을 작성해주세요."
 
 ### ⚡ 이세용 - Dev_Main
+
 > "프로젝트를 진행하면서 느낀 점이나 소감을 작성해주세요."
 
 ### 🗄️ 이재홍 - DB_Main
+
 > "프로젝트를 진행하면서 느낀 점이나 소감을 작성해주세요."
 
 ### 🔗 황용선 - Linker
+
 > "프로젝트를 진행하면서 느낀 점이나 소감을 작성해주세요."
 
 ---
 
 <div align="center">
-  <sub>Built with ❤️ by 디인재 X 블루보드 9조</sub>
+  <sub>Built with ❤️ AIVLE 스쿨 빅 프로젝트 16조</sub>
 </div>
