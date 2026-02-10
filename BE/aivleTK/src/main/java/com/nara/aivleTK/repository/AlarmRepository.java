@@ -12,4 +12,6 @@ public interface AlarmRepository extends JpaRepository<Alarm, Integer> {
 
     // 특정 공고(Bid)와 관련된 알림 삭제 시 사용
     void deleteByBid(Bid bid);
+
+    void deleteByBidBidId(Integer bidId);
 }

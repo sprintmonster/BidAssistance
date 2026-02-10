@@ -11,9 +11,9 @@ public class UserCreateRequest {
     private String email;
     private String password;
     private String name;
-    private String question;
+    private Integer question;
     private String answer;
     private Integer role;
     private LocalDate birth;
-    private Integer tag;
+
 }

@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/compnay")
+@RequestMapping("/api/company")
 @RequiredArgsConstructor
 public class CompanyController {
     private final CompanyService companyService;
@@ -29,10 +29,17 @@ public class CompanyController {
         return ResponseEntity.ok(ApiResponse.success(list));
     }
 
-    @GetMapping("/{id}") // 회사 상세 조회
+    @GetMapping("/{id:\\d+}") // 회사 상세 조회
     public ResponseEntity<ApiResponse<CompanyResponse>> getCompany(@PathVariable("id") Integer id) {
         CompanyResponse company = companyService.getCompany(id);
         return ResponseEntity.ok(ApiResponse.success(company));
+    }
+
+    @PutMapping("/{id:\\d+}") // 회사 정보 수정
+    public ResponseEntity<ApiResponse<CompanyResponse>> updateCompany(@PathVariable("id") Integer id,
+            @RequestBody CompanyRequest cr) {
+        CompanyResponse company = companyService.updateCompany(id, cr.getName(), cr.getPosition());
+        return ResponseEntity.ok(ApiResponse.success("회사 정보가 수정되었습니다.", company));
     }
 
 }

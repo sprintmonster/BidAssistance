@@ -3,26 +3,31 @@ server:
 spring:
   application:
     name: aivleTK
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
 
-  #  mail:
-  #    host: smtp.gmail.com
-  #    port: 587
-  #    username: ${MAIL_USERNAME}
-  #    password: ${MAIL_PASSWORD}
   mail:
     host: smtp.gmail.com
     port: 587
-    username: "temp@gmail.com"
-    password: "temp_password"
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
     properties:
-      mail.smtp.auth: true
-      mail.smtp.starttls.enable: true
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 
-
+  # 마지막날에 db 주소 바꿔야한다고 말좀 해주세요 이거 공용이라
   datasource:
-    url: jdbc:mysql://localhost:3306/aivleTK
-    username: root
-    password: test1234!
+    url: jdbc:mysql://aivle08be-server.mysql.database.azure.com:3306/aivleTK?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&sslMode=REQUIRED
+    username: cufblosigq
+    password: beV9i3$DWXZMhLqn
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -35,8 +40,16 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
 app:
   cors:
-    allowed-origins: "http://localhost:5173, https://calm-tree-0e8ee630f.4.azurestaticapps.net/"
+    allowed-origins: "http://localhost:5173,https://witty-sky-068602700.2.azurestaticapps.net/,https://aivleinsight.xyz/"
+  bid:
+    fetch:
+      schedule: "0 0 0 * * *" # 매일 자정 공고 받아오기
+      on-startup: true # 서버 시작 시 공고 받아 오기
 
 jwt:
   secret:
     key: "aivleaivleaivleaivleaivle1234567aivleaivleaivleaivleaivle1234567"
+azure:
+  storage:
+    connection-string: ${AZURE_STORAGE_KEY}
+    container-name: "uploads"

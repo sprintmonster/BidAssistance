@@ -13,7 +13,7 @@ public interface UserService {
 
     UserResponse login(LoginRequest request);
 
-    String findEmail(String name, String answer, LocalDate birth);
+    String findEmail(String name, Integer question, String answer, LocalDate birth);
 
     String resetPassword(String email, String name, String answer, LocalDate birth);
 

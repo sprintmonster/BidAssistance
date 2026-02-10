@@ -8,6 +8,7 @@ import jakarta.servlet.http.Cookie;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,6 +18,7 @@ import java.net.URLEncoder;
 import java.security.Key;
 import java.util.Base64;
 import java.util.Date;
+import org.springframework.http.ResponseCookie;
 
 @Component
 public class JwtUtil {
@@ -26,7 +28,7 @@ public class JwtUtil {
 
     public static final String BEARER_PREFIX = "Bearer ";
 
-    private final long TOKEN_TIME = 30*60*1000L; // 30분 분 초 밀리세컨
+    private final long TOKEN_TIME = 30 * 60 * 1000L; // 30분 분 초 밀리세컨
 
     @Value("${jwt.secret.key}")
     private String secretkey;
@@ -60,10 +62,15 @@ public class JwtUtil {
         try {
             token = URLEncoder.encode(token, "utf-8").replaceAll("\\+", "%20");
 
-            Cookie cookie = new Cookie(AUTHORIZATION_HEADER,token);
-            cookie.setPath("/");
+            ResponseCookie cookie = ResponseCookie.from(AUTHORIZATION_HEADER, token)
+                    .path("/")
+                    .sameSite("None")
+                    .secure(true)
+                    .httpOnly(true)
+                    .maxAge(TOKEN_TIME / 1000)
+                    .build();
 
-            response.addCookie(cookie);
+            response.addHeader("Set-Cookie", cookie.toString());
         } catch (UnsupportedEncodingException e) {
             logger.error(e.getMessage());
         }
@@ -78,7 +85,7 @@ public class JwtUtil {
         throw new NullPointerException("Not Found Token");
     }
 
-    //토큰 확인
+    // 토큰 확인
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);

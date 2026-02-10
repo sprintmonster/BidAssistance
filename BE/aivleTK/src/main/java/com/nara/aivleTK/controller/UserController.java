@@ -9,9 +9,10 @@ import com.nara.aivleTK.repository.UserRepository;
 import com.nara.aivleTK.service.UserService;
 import com.nara.aivleTK.util.JwtUtil;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,7 +35,7 @@ public class UserController {
     }
 
     // 2. 유저 조회
-    @GetMapping("/{id}")
+    @GetMapping("/{id:\\d+}")
     public ResponseEntity<ApiResponse<UserResponse>> getUser(@PathVariable("id") Integer id) {
         UserResponse userResponse = userService.getUserInfo(id);
         return ResponseEntity.ok(ApiResponse.success(userResponse));
@@ -42,7 +43,8 @@ public class UserController {
 
     // 3. 로그인 (POST)
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<UserResponse>> login(@RequestBody LoginRequest request, HttpServletResponse response) {
+    public ResponseEntity<ApiResponse<UserResponse>> login(@RequestBody LoginRequest request,
+            HttpServletResponse response) {
         UserResponse loginUser = userService.login(request);
 
         String token = jwtUtil.createToken(loginUser.getId(), loginUser.getEmail());
@@ -55,16 +57,21 @@ public class UserController {
     // 4. 로그아웃 (POST)
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Object>> logout(HttpServletResponse response) {
-        Cookie cookie = new Cookie(JwtUtil.AUTHORIZATION_HEADER, null);
-        cookie.setMaxAge(0);
-        cookie.setPath("/");
-        response.addCookie(cookie);
+        ResponseCookie cookie = ResponseCookie.from(JwtUtil.AUTHORIZATION_HEADER, "")
+                .path("/")
+                .maxAge(0) // 쿠키 삭제
+                .sameSite("None")
+                .secure(true)
+                .httpOnly(true)
+                .build();
+
+        response.addHeader("Set-Cookie", cookie.toString());
 
         return ResponseEntity.ok(ApiResponse.success("로그아웃 되었습니다."));
     }
 
     // 5. 회원정보 수정 (PUT)
-    @PutMapping("/{id}")
+    @PutMapping("/{id:\\d+}")
     public ResponseEntity<ApiResponse<UserResponse>> updateUser(@PathVariable Integer id,
             @RequestBody UserCreateRequest request) {
         UserResponse updatedUser = userService.updateUser(id, request);
@@ -72,14 +79,14 @@ public class UserController {
     }
 
     // 6. 회원정보 삭제 (DELETE)
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id:\\d+}")
     public ResponseEntity<ApiResponse<Object>> deleteUser(@PathVariable Integer id) {
         userService.deleteUser(id);
         return ResponseEntity.ok(ApiResponse.success("회원정보가 삭제되었습니다."));
     }
 
     // 7. 휴먼 계정 전환
-    @PostMapping("/restUser/{id}")
+    @PostMapping("/restUser/{id:\\d+}")
     public ResponseEntity<ApiResponse<Object>> restUser(@PathVariable Integer id, @RequestParam Integer rest) { // rest가
         // 전환
         userService.restUser(id, rest);
@@ -88,7 +95,8 @@ public class UserController {
 
     // 8. 로그인 확인
     @GetMapping("/checkLogin")
-    public ResponseEntity<ApiResponse<UserResponse>> checkLogin(@CookieValue(value = JwtUtil.AUTHORIZATION_HEADER, required = false) String tokenValue) {
+    public ResponseEntity<ApiResponse<UserResponse>> checkLogin(
+            @CookieValue(value = JwtUtil.AUTHORIZATION_HEADER, required = false) String tokenValue) {
 
         if (tokenValue == null) {
             throw new UnauthorizedException("로그인이 필요합니다.");
@@ -110,12 +118,12 @@ public class UserController {
     // 9. 계정(아이디) 찾기 질문 조회
     @GetMapping("/find-email/identify")
     public ResponseEntity<ApiResponse<QuestionDto>> checkQuestion(@RequestParam String name,
-            @RequestParam LocalDate birth) {
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate birth) {
         User user = userRepository.findByNameAndBirth(name, birth)
                 .orElseThrow(() -> new ResourceNotFoundException("해당 계정이 없습니다."));
 
         // question 필드가 숫자 문자열인 경우 Integer로 파싱
-        Integer questionIndex = Integer.parseInt(user.getQuestion());
+        Integer questionIndex = user.getQuestion();
         QuestionDto data = new QuestionDto(user.getId(), questionIndex);
         return ResponseEntity.ok(new ApiResponse<>("success", "확인성공", data));
     }
@@ -131,10 +139,23 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(user.getEmail()));
     }
 
-    // 11. 비밀번호 찾기 (GET)
+    // 11. 비밀번호 질문
+    @GetMapping("/recovery_question")
+    public ResponseEntity<ApiResponse<QuestionDto>> checkPQuestion(@RequestParam String email,
+            @RequestParam String name, @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate birth) {
+        User user = userRepository.findByEmailAndNameAndBirth(email, name, birth)
+                .orElseThrow(() -> new ResourceNotFoundException("해당 계정이 없습니다."));
+
+        // question 필드가 숫자 문자열인 경우 Integer로 파싱
+        Integer questionIndex = user.getQuestion();
+        QuestionDto data = new QuestionDto(user.getId(), questionIndex);
+        return ResponseEntity.ok(new ApiResponse<>("success", "확인성공", data));
+    }
+
+    // 12. 비밀번호 찾기 (POST)
     @PostMapping("/reset_password")
     public ResponseEntity<ApiResponse<Object>> resetPassword(@RequestBody ResetPasswordRequest rpr) {
-        String password = userService.resetPassword(rpr.getEmail(), rpr.getName(), rpr.getAnswer(), rpr.getBirth());
+        userService.resetPassword(rpr.getEmail(), rpr.getName(), rpr.getAnswer(), rpr.getBirth());
         return ResponseEntity.ok(ApiResponse.success("임시 비밀번호가 발급 되었습니다."));
     }
 }

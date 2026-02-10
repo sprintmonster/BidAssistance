@@ -23,6 +23,8 @@ public class BoardListItemResponse {
     private Boolean likedByMe;
     private Integer commentCount;
     private Integer attachmentCount;
+    private Integer authorExpertLevel; // 작성자 등급 (1~5)
+    private Integer adoptedCommentId; // 채택된 댓글 ID
 
     public static BoardListItemResponse from(Board board, Boolean likedByMe, Integer commentCount) {
         String preview = board.getContent();
@@ -42,7 +44,9 @@ public class BoardListItemResponse {
                 .likes(board.getLikeCount())
                 .likedByMe(likedByMe)
                 .commentCount(commentCount)
-                .attachmentCount(board.getFilePath() != null && !board.getFilePath().isEmpty() ? 1 : 0)
+                .attachmentCount(board.getAttachments() != null ? board.getAttachments().size() : 0)
+                .authorExpertLevel(board.getUser().getExpertLevel() != null ? board.getUser().getExpertLevel() : 1)
+                .adoptedCommentId(board.getAdoptedCommentId())
                 .build();
     }
 }

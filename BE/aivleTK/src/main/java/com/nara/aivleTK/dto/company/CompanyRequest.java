@@ -9,6 +9,5 @@ import lombok.*;
 @Builder
 public class CompanyRequest {
     private String name;
-    private String license;
-    private String performanceHistory;
+    private String position; // 직책
 }

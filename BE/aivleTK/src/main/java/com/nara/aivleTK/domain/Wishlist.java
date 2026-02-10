@@ -23,6 +23,6 @@ public class Wishlist {
     @JoinColumn(name = "bid_id")
     private Bid bid;
 
-    @Column(name = "wishlist_content", length = 100)
-    private String content;
+    @Column(name = "wishlist_stage")
+    private Integer stage;
 }

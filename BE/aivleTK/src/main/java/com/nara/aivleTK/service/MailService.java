@@ -19,4 +19,13 @@ public class MailService {
                 "로그인 후 비밀번호를 변경해 주세요.");
         mailSender.send(message);
     }
+
+    // 알림 이메일 발송 메서드
+    public void sendAlarmNotification(String email, String subject, String content) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(email);
+        message.setSubject(subject);
+        message.setText(content);
+        mailSender.send(message);
+    }
 }

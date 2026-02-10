@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name="comment")
+@Table(name = "comment")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -21,17 +21,17 @@ public class Comment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name="comment_id")
+    @Column(name = "comment_id")
     private Integer commentId;
 
-    @Column(name="comment_content", columnDefinition = "TEXT", nullable = false)
+    @Column(name = "content", columnDefinition = "TEXT", nullable = false)
     private String commentContent;
 
-    @Column(name="comment_date",nullable = false)
+    @Column(name = "comment_date", nullable = false)
     private LocalDateTime commentCreateAt;
 
     @ManyToOne
-    @JoinColumn(name="bid_id",nullable = true)
+    @JoinColumn(name = "bid_id", nullable = true)
     private Bid bid;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -39,17 +39,29 @@ public class Comment {
     private Board board;
 
     @ManyToOne
-    @JoinColumn(name="users_user_id",nullable = false)
+    @JoinColumn(name = "users_user_id", nullable = false)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_comment_id")
     private Comment parent;
 
+    @Builder.Default
+    @Column(name = "is_adopted")
+    private Boolean isAdopted = false; // 답변 채택 여부
 
-    @PrePersist
+    @Column(name = "comment_content", nullable = true)
+    private String backupContent;
+
+    @Column(name = "user_user_id", nullable = true)
+    private Integer backupUserId;
+
+    @PrePersist // 에러 방지용
     public void onCreate() {
         this.commentCreateAt = LocalDateTime.now();
+        this.backupContent = this.commentContent;
+        if (this.user != null) {
+            this.backupUserId = this.user.getId();
+        }
     }
 }
-

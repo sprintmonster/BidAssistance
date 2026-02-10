@@ -23,4 +23,7 @@ public interface BoardRepository extends JpaRepository<Board, Integer>, BoardRep
     @Transactional
     @Query("update Board b set b.likeCount = b.likeCount-1 where b.id =:id")
     void discardLikeCount(@Param("id") Integer id);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "user" })
+    java.util.List<Board> findAllByCreatedAtAfter(java.time.LocalDateTime createdAt);
 }

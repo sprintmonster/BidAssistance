@@ -2,92 +2,138 @@ package com.nara.aivleTK.repository;
 
 import com.nara.aivleTK.domain.board.Board;
 import com.nara.aivleTK.domain.board.QBoard;
+import com.nara.aivleTK.domain.user.QUser;
 import com.nara.aivleTK.dto.board.BoardListRequest;
-import com.nara.aivleTK.dto.board.BoardResponse;
 import com.nara.aivleTK.dto.board.CategoryCountsResponse;
+import com.querydsl.core.types.Order;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 public class BoardRepositoryCustomImpl implements BoardRepositoryCustom {
 
-        private final JPAQueryFactory queryFactory;
+    private final JPAQueryFactory queryFactory;
 
-        @Override
-        public Page<BoardResponse> search(BoardListRequest condition, Pageable pageable) {
-                // Q클래스 가져오기 (QueryDSL 설정 되어 있어야 함)
-                QBoard board = QBoard.board;
+    @Override
+    public Page<Board> search(BoardListRequest condition, Pageable pageable) {
+        QBoard board = QBoard.board;
+        QUser user = QUser.user;
 
-                // 1. 컨텐츠 조회
-                List<Board> content = queryFactory
-                                .selectFrom(board)
-                                .where(
-                                                categoryEq(condition.getCategory()), // 카테고리 조건
-                                                titleOrContentContains(condition.getQ()) // 검색어 조건
-                                )
-                                .offset(pageable.getOffset())
-                                .limit(pageable.getPageSize())
-                                .orderBy(
-                                                // 정렬은 QueryDSL 동적 정렬 유틸을 쓰거나,
-                                                // 여기서 간단히 board.createdAt.desc() 등으로 처리
-                                                board.createdAt.desc())
-                                .fetch();
+        List<OrderSpecifier<?>> orders = getOrderSpecifiers(pageable);
 
-                // 2. 전체 개수 조회 (페이징 위해 필요)
-                long total = queryFactory
-                                .selectFrom(board)
-                                .where(
-                                                categoryEq(condition.getCategory()),
-                                                titleOrContentContains(condition.getQ()))
-                                .fetch()
-                                .stream()
-                                .count();
+        List<Board> content = queryFactory
+                .selectFrom(board)
+                .leftJoin(board.user, user).fetchJoin()
+                .where(
+                        categoryEq(condition.getCategory()),
+                        titleOrContentContains(condition.getQ()))
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .orderBy(orders.toArray(OrderSpecifier[]::new))
+                .fetch();
 
-                List<BoardResponse> responses = content.stream()
-                                .map(BoardResponse::new)
-                                .collect(Collectors.toList());
+        Long total = queryFactory
+                .select(board.count())
+                .from(board)
+                .where(
+                        categoryEq(condition.getCategory()),
+                        titleOrContentContains(condition.getQ()))
+                .fetchOne();
 
-                return new PageImpl<>(responses, pageable, total);
+        if (total == null) {
+            total = 0L;
         }
 
-        @Override
-        public CategoryCountsResponse getCategoryCounts() {
-                QBoard board = QBoard.board;
+        return new PageImpl<>(content, pageable, total);
+    }
 
-                List<Board> allBoards = queryFactory
-                                .selectFrom(board)
-                                .fetch();
+    @Override
+    public CategoryCountsResponse getCategoryCounts() {
+        QBoard board = QBoard.board;
 
-                long all = allBoards.size();
-                long question = allBoards.stream().filter(b -> "1".equals(b.getCategory())).count();
-                long info = allBoards.stream().filter(b -> "2".equals(b.getCategory())).count();
-                long review = allBoards.stream().filter(b -> "3".equals(b.getCategory())).count();
-                long discussion = allBoards.stream().filter(b -> "4".equals(b.getCategory())).count();
+        List<com.querydsl.core.Tuple> results = queryFactory
+                .select(board.category, board.count())
+                .from(board)
+                .groupBy(board.category)
+                .fetch();
 
-                return CategoryCountsResponse.builder()
-                                .all(all)
-                                .question(question)
-                                .info(info)
-                                .review(review)
-                                .discussion(discussion)
-                                .build();
+        long all = 0;
+        long question = 0;
+        long info = 0;
+        long review = 0;
+        long discussion = 0;
+
+        for (com.querydsl.core.Tuple t : results) {
+            String cat = t.get(board.category);
+            Long count = t.get(board.count());
+            if (count == null)
+                count = 0L;
+
+            all += count;
+            if ("question".equals(cat) || "1".equals(cat))
+                question += count;
+            else if ("info".equals(cat) || "2".equals(cat))
+                info += count;
+            else if ("review".equals(cat) || "3".equals(cat))
+                review += count;
+            else if ("discussion".equals(cat) || "4".equals(cat))
+                discussion += count;
         }
 
-        private BooleanExpression categoryEq(String category) {
-                return StringUtils.hasText(category) ? QBoard.board.category.eq(category) : null;
-        }
+        return CategoryCountsResponse.builder()
+                .all(all)
+                .question(question)
+                .info(info)
+                .review(review)
+                .discussion(discussion)
+                .build();
+    }
 
-        private BooleanExpression titleOrContentContains(String q) {
-                return StringUtils.hasText(q)
-                                ? QBoard.board.title.contains(q).or(QBoard.board.content.contains(q))
-                                : null;
+    private BooleanExpression categoryEq(String category) {
+        return StringUtils.hasText(category) ? QBoard.board.category.eq(category) : null;
+    }
+
+    private BooleanExpression titleOrContentContains(String q) {
+        return StringUtils.hasText(q)
+                ? QBoard.board.title.contains(q).or(QBoard.board.content.contains(q))
+                : null;
+    }
+
+    private List<OrderSpecifier<?>> getOrderSpecifiers(Pageable pageable) {
+        List<OrderSpecifier<?>> orders = new ArrayList<>();
+        if (!pageable.getSort().isEmpty()) {
+            for (Sort.Order order : pageable.getSort()) {
+                Order direction = order.getDirection().isAscending() ? Order.ASC : Order.DESC;
+                switch (order.getProperty()) {
+                    case "viewCount":
+                        orders.add(new OrderSpecifier<>(direction, QBoard.board.viewCount));
+                        orders.add(new OrderSpecifier<>(Order.DESC, QBoard.board.createdAt));
+                        break;
+                    case "likeCount":
+                        orders.add(new OrderSpecifier<>(direction, QBoard.board.likeCount));
+                        orders.add(new OrderSpecifier<>(Order.DESC, QBoard.board.createdAt));
+                        break;
+                    case "commentCount":
+                        orders.add(new OrderSpecifier<>(direction, QBoard.board.commentCount));
+                        orders.add(new OrderSpecifier<>(Order.DESC, QBoard.board.createdAt));
+                        break;
+                    case "createdAt":
+                    default:
+                        orders.add(new OrderSpecifier<>(direction, QBoard.board.createdAt));
+                        break;
+                }
+            }
         }
+        return orders;
+    }
 }

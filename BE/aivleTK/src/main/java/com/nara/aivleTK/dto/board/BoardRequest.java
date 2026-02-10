@@ -3,12 +3,14 @@ package com.nara.aivleTK.dto.board;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 public class BoardRequest {
     private String title;
     private String content;
-    private Integer userId; // 유저
+    private Integer userId;
     private String category;
-    private String filePath;
+    private List<Long> attachmentIds;
 }

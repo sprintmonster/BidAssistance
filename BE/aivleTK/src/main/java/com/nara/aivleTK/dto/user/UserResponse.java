@@ -15,16 +15,16 @@ public class UserResponse {
     private Integer id;
     private String email;
     private String name;
-    private String password;
     private LocalDate birth;
-    private Integer tag;
+
+    private Integer role;
 
     public UserResponse(User user) {
         this.id = user.getId();
         this.email = user.getEmail();
         this.name = user.getName();
-        this.password = user.getPassword();
         this.birth = user.getBirth();
-        this.tag = user.getTag();
+
+        this.role = user.getRole();
     }
 }

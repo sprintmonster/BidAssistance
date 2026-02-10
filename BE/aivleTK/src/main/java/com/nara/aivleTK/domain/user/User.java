@@ -24,26 +24,39 @@ public class User {
     @JoinColumn(name = "company_id")
     private Company company;
 
-    @Column(length=25, nullable=false)
+    @Column(length = 25, nullable = false)
     private String email;
 
-    @Column(length=10, nullable=false)
+    @Column(length = 10, nullable = false)
     private String name;
 
-    @Column(length=255, nullable=false)
+    @Column(length = 255, nullable = false)
     private String password;
 
-    @Column(length=50, nullable=false)
-    private String question;
+    @Column(name = "question", nullable = false)
+    private Integer question;
 
-    @Column(length=50, nullable=false)
+    @Column(length = 50, nullable = false)
     private String answer;
 
     private LocalDate birth;
 
-    @Column(name = "role", columnDefinition = "BIT(2)")
+    @Column(name = "role")
     private Integer role; // 00: 일반 유저 01: 기업 10: 관리자 11: 휴면
 
-    @Column(name = "tag", columnDefinition = "BIT(4)")
-    private Integer tag; // 0000~0111: 일반 유저 태그, 1000~1111: 기업 유저 태그
+    @Builder.Default
+    @Column(name = "expert_level")
+    private Integer expertLevel = 1; // 1: 곡괭이, 2: 굴삭기, 3: 지게차, 4: 불도저, 5: 포크레인
+
+    @Builder.Default
+    @Column(name = "expert_points")
+    private Integer expertPoints = 0; // 활동 포인트
+
+    /**
+     * 포인트 추가 및 레벨 자동 계산
+     */
+    public void addExpertPoints(int points) {
+        this.expertPoints = (this.expertPoints == null ? 0 : this.expertPoints) + points;
+        this.expertLevel = Math.min(5, (this.expertPoints / 100) + 1);
+    }
 }

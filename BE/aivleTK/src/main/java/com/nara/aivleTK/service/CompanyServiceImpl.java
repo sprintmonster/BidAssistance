@@ -23,14 +23,10 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     @Transactional
     public CompanyResponse createCompany(CompanyRequest request) {
-        companyRepository.findByName(request.getName())
-                .ifPresent(c -> {
-                    throw new IllegalStateException("이미 등록된 이름");
-                });
+        // 이미 있는 회사명이어도 새로운 회사(새로운 로우)를 생성합니다.
         Company company = Company.builder()
                 .name(request.getName())
-                .license(request.getLicense())
-                .performanceHistory(request.getPerformanceHistory())
+                .position(request.getPosition())
                 .build();
         return CompanyResponse.from(companyRepository.save(company));
     }
@@ -39,7 +35,7 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     public CompanyResponse getCompany(Integer id) {
         Company company = companyRepository.findById(id)
-                .orElseThrow(()->new ResourceNotFoundException("회사를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("회사를 찾을 수 없습니다."));
 
         return CompanyResponse.from(company);
     }
@@ -53,11 +49,11 @@ public class CompanyServiceImpl implements CompanyService {
     // 회사 정보 수정
     @Override
     @Transactional
-    public CompanyResponse updateprofile(Integer id, String license, String performanceHistory) {
+    public CompanyResponse updateCompany(Integer id, String name, String position) {
         Company company = companyRepository.findById(id)
-                .orElseThrow(()->new ResourceNotFoundException("회사를 찾을 수 없습니다."));
-        company.setLicense(license);
-        company.setPerformanceHistory(performanceHistory);
+                .orElseThrow(() -> new ResourceNotFoundException("회사를 찾을 수 없습니다."));
+        company.setName(name);
+        company.setPosition(position);
         return CompanyResponse.from(company);
     }
 }

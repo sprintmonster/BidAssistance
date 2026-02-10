@@ -7,8 +7,10 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "alarm")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class Alarm {
 
@@ -27,6 +29,9 @@ public class Alarm {
 
     @Column(name = "alarm_content", length = 100, nullable = false)
     private String content; // 알림 내용
+
+    @Column(name = "alarm_type", length = 20, nullable = false)
+    private String alarmType; // 알림 유형 (KEYWORD, SYSTEM 등)
 
     @Column(name = "alarm_date")
     private LocalDateTime date; // 알림 생성 일시: TIMESTAMP(1)

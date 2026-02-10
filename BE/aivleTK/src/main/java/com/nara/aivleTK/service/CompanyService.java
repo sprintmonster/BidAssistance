@@ -7,7 +7,10 @@ import java.util.List;
 
 public interface CompanyService {
     CompanyResponse createCompany(CompanyRequest request);
+
     CompanyResponse getCompany(Integer id);
+
     List<CompanyResponse> getAllCompanies();
-    CompanyResponse updateprofile(Integer id, String license, String performanceHistory);
+
+    CompanyResponse updateCompany(Integer id, String name, String position);
 }

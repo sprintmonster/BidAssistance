@@ -42,7 +42,7 @@ public class UserServiceImpl implements UserService {
                 .password(encodedPassword)
                 .role(0)
                 .birth(request.getBirth())
-                .tag(request.getTag())
+
                 .question(request.getQuestion())
                 .answer(request.getAnswer())
                 .build();
@@ -61,11 +61,14 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        // UserResponse에 내 정보와 책 목록을 담아서 반환
+        // UserResponse에 내 정보를 담아서 반환
         return UserResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
                 .name(user.getName())
+                .birth(user.getBirth())
+
+                .role(user.getRole())
                 .build();
     }
 
@@ -91,8 +94,8 @@ public class UserServiceImpl implements UserService {
     }
 
     // 아이디 찾기
-    public String findEmail(String name, String answer, LocalDate birth) {
-        return userRepository.findAllByNameAndQuestionAndBirth(name, answer, birth)
+    public String findEmail(String name, Integer question, String answer, LocalDate birth) {
+        return userRepository.findAllByNameAndQuestionAndBirth(name, question, birth)
                 .map(User::getEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("해당 정보와 일치하는 회원이 없습니다."));
     }
@@ -100,7 +103,7 @@ public class UserServiceImpl implements UserService {
     // 비밀번호 초기화
     @Transactional
     public String resetPassword(String email, String name, String answer, LocalDate birth) {
-        User user = userRepository.findByEmailAndNameAndQuestionAndBirth(email, name, answer, birth)
+        User user = userRepository.findByEmailAndNameAndAnswerAndBirth(email, name, answer, birth)
                 .orElseThrow(() -> new ResourceNotFoundException("정보가 일치하는 회원이 없습니다."));
 
         // 8자리 암호화
@@ -134,7 +137,7 @@ public class UserServiceImpl implements UserService {
             validatePassword(request.getPassword());
             user.setPassword(passwordEncoder.encode(request.getPassword()));
         }
-        if (request.getQuestion() != null && !request.getQuestion().isBlank()) {
+        if (request.getQuestion() != null) {
             user.setQuestion(request.getQuestion());
         }
 

@@ -14,7 +14,7 @@ public class BidAnalysisRequestDto {
     private String bidRealId;
     private BigInteger basicPrice;
     private BigInteger estimatePrice;
-    private Double successBidRate;
+    private Double minimumBidRate;
     private Double bidRange;
 
     public static BidAnalysisRequestDto from(Bid bid){
@@ -23,7 +23,7 @@ public class BidAnalysisRequestDto {
                 .bidRealId(bid.getBidRealId())
                 .basicPrice(bid.getBasicPrice())
                 .estimatePrice(bid.getEstimatePrice())
-                .successBidRate(bid.getSuccessBidRate())
+                .minimumBidRate(bid.getMinimumBidRate())
                 .bidRange(bid.getBidRange())
                 .build();
     }

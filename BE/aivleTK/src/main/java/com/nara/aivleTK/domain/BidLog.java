@@ -3,13 +3,14 @@ package com.nara.aivleTK.domain;
 import com.nara.aivleTK.domain.user.User;
 import jakarta.persistence.*;
 import lombok.*;
-import java.math.BigInteger;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "bid_log")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class BidLog {
 
@@ -29,6 +30,4 @@ public class BidLog {
     @Column(nullable = false)
     private LocalDateTime date; // 입찰 일시
 
-    @Column(nullable = false)
-    private BigInteger price; // 입찰 금액
 }

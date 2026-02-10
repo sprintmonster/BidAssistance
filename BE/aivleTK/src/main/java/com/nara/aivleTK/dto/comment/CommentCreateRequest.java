@@ -6,7 +6,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class CommentCreateRequest {
-    private String Content;
+    private String content;
     private Integer userId;
     private String bidId;
     private Integer parentId;

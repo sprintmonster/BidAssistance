@@ -12,40 +12,47 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.math.BigInteger;
+
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class BidLogServiceImpl implements BidLogService {
-    private final BidLogRepository bidLogRepository;
-    private final UserRepository userRepository;
-    private final BidRepository bidRepository;
+        private final BidLogRepository bidLogRepository;
+        private final UserRepository userRepository;
+        private final BidRepository bidRepository;
 
-    @Override
-    @Transactional
-    public void recordBid(Integer userId, Integer bidId, BigInteger price) { // ★ Long -> Integer로 수정
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        @Override
+        @Transactional
+        public void logView(Integer userId, Integer bidId) { // 공고 조회 기록
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+                Bid bid = bidRepository.findById(bidId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Bid not found"));
 
-        Bid bid = bidRepository.findById(bidId)
-                .orElseThrow(() -> new ResourceNotFoundException("Bid not found"));
+                // Check if log already exists for today? Or just append?
+                // Requirement implies history. Since BidLog has ID, let's just append new log
+                // or update existing if very recent?
+                // Simple approach: Always insert new log for history tracking.
+                // Better for recommendations: If user views same bid multiple times, maybe just
+                // update timestamp?
+                // Let's go with: Insert new log.
 
-        BidLog log = BidLog.builder()
-                .user(user)
-                .bid(bid)
-                .price(price)
-                .date(LocalDateTime.now())
-                .build();
-        bidLogRepository.save(log);
-    }
+                BidLog log = BidLog.builder()
+                                .user(user)
+                                .bid(bid)
+                                // .price(price) removed
+                                .date(LocalDateTime.now())
+                                .build();
+                bidLogRepository.save(log);
+        }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<BidLog> getUserBidLogs(Integer userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        return bidLogRepository.findByUserOrderByDateDesc(user);
-    }
+        @Override
+        @Transactional(readOnly = true)
+        public List<BidLog> getUserBidLogs(Integer userId) {
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                return bidLogRepository.findByUserOrderByDateDesc(user);
+        }
 }
