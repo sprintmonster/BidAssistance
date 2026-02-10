@@ -41,11 +41,14 @@ export function get_password_rules(password: string, ctx?: PasswordPolicyContext
 	const d = has_digit(p);
 	const sp = has_special(p);
 	const space_ok = !has_space(p);
-	const kinds = [a, d, sp].filter(Boolean).length;
 
-	// 가이드라인: (영문/숫자/특수 중) 2종 조합이면 10자리 이상, 3종이면 8자리 이상
-	const length_ok = (kinds >= 3 && p.length >= 8) || (kinds >= 2 && p.length >= 10);
-	const combo_ok = kinds >= 2;
+	// ✅ 서버 에러 메시지 기준으로 정렬:
+	// - 8자 이상
+	// - 영문/숫자/특수문자 각각 1개 이상 포함
+	const length_ok = p.length >= 8;
+	const combo_ok = a && d && sp;
+
+	// ✅ 기존 방어 로직 유지
 	const repeat_ok = !has_repeated_char(p, 4);
 
 	const user_id = normalize(ctx?.user_id || "");
@@ -62,12 +65,12 @@ export function get_password_rules(password: string, ctx?: PasswordPolicyContext
 		},
 		{
 			key: "length",
-			label: "길이: 2종 조합은 10자 이상, 3종 조합은 8자 이상",
+			label: "길이: 8자 이상",
 			ok: length_ok,
 		},
 		{
 			key: "combo",
-			label: "영문/숫자/특수문자 중 2종 이상 포함",
+			label: "영문/숫자/특수문자 각각 1개 이상 포함",
 			ok: combo_ok,
 		},
 		{
