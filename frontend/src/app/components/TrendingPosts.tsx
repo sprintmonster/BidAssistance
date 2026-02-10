@@ -2,6 +2,7 @@ import type { FC } from "react";
 import { Flame, Crown } from "lucide-react";
 import type { Post } from "../types/community";
 import { ExpertBadge } from "./ExpertBadge";
+import { mask_name } from "../utils/masking";
 
 interface TrendingPostsProps {
 	posts: Post[];
@@ -38,7 +39,7 @@ export const TrendingPosts: FC<TrendingPostsProps> = ({ posts, onClickPost }) =>
 						</h4>
 
 						<div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-							<span>{post.authorName}</span>
+							<span>{mask_name(post.authorName)}</span>
 							{post.authorExpertLevel && (
 								<ExpertBadge level={post.authorExpertLevel} />
 							)}
