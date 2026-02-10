@@ -27,7 +27,7 @@ import { CustomerSupportPage } from "./components/CustomerSupport";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 
 import { Toast } from "./components/ui/Toast";
-import { useToast } from "./components/ui/useToast";
+import {ToastType, useToast} from "./components/ui/useToast";
 import {BidSummary} from "./components/BidSummary";
 
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
@@ -79,15 +79,19 @@ function isOperatorAccount(): boolean {
 	return !!email && allow.includes(email);
 }
 
-function SignupRoute() {
-	const navigate = useNavigate();
-	return (
-		<SignupPage
-			onSignup={() => navigate("/login")}
-			onNavigateToLogin={() => navigate("/login")}
-			onNavigateToHome={() => navigate("/")}
-		/>
-	);
+function SignupRoute({showToast,}: {
+    showToast: (message: string, type: ToastType) => void;
+}) {
+    const navigate = useNavigate();
+
+    return (
+        <SignupPage
+            onSignup={() => navigate("/login")}
+            onNavigateToLogin={() => navigate("/login")}
+            onNavigateToHome={() => navigate("/")}
+            showToast={showToast}
+        />
+    );
 }
 
 function FindAccountRoute() {
@@ -113,7 +117,7 @@ function ResetPasswordRoute() {
 
 export default function App() {
 	const [globalLoading, setGlobalLoading] = useState(false);
-	const { toast, showToast } = useToast();
+    const { toast, showToast } = useToast();
 
 	// ✅ 운영자만 공지 작성/삭제 가능
 	const canManageNotices = isOperatorAccount();
@@ -267,7 +271,7 @@ export default function App() {
 				</Route>
 
 				<Route path="/login" element={<LoginPage />} />
-				<Route path="/signup" element={<SignupRoute />} />
+                <Route path="/signup" element={<SignupRoute showToast={showToast} />} />
 				<Route path="/find-account" element={<FindAccountRoute />} />
 				<Route path="/reset-password" element={<ResetPasswordRoute />} />
 			</Routes>

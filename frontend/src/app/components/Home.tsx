@@ -21,6 +21,8 @@ import { SimpleCaptcha } from "./SimpleCaptcha";
 import { ENABLE_TEST_LOGIN, TEST_LOGIN } from "../utils/testLogin";
 import { mark_reco_popup_trigger } from "./RecommendedBidsModal";
 
+
+
 function DashboardIcon() {
 	return (
 		<svg
@@ -279,7 +281,29 @@ function parse_user_id(res: any): string | null {
 	if (typeof cand === "string" && cand.trim()) return cand.trim();
 	return null;
 }
+function cleanLoginErrorMessage(input: unknown) {
+    let msg =
+        typeof input === "string"
+            ? input
+            : typeof (input as any)?.message === "string"
+                ? (input as any).message
+                : "";
 
+    try {
+        const parsed = JSON.parse(msg);
+        if (parsed?.message) msg = String(parsed.message);
+    } catch {
+        // msg가 JSON이 아니면 무시
+    }
+
+    msg = msg.replace(/^서버 내부 오류가 발생했습니다:\s*/g, "").trim();
+
+    if (msg.includes("비밀번호가 일치하지 않습니다")) return "비밀번호가 올바르지 않습니다.";
+    if (msg.includes("존재하지") || msg.includes("계정을 찾을 수")) return "등록되지 않은 이메일입니다.";
+    if (!msg) return "로그인에 실패했습니다. 다시 시도해 주세요.";
+
+    return msg;
+}
 export function Home() {
 	const navigate = useNavigate();
 
@@ -447,7 +471,8 @@ export function Home() {
 					return;
 				}
 				const remaining = Math.max(0, 5 - st.count);
-				setErrorMsg((res.message || "로그인 실패") + ` (남은 시도: ${remaining}회)`);
+                const clean = cleanLoginErrorMessage(res);
+                setErrorMsg(`${clean} (남은 시도: ${remaining}회)`);
 				return;
 			}
 
@@ -491,8 +516,9 @@ export function Home() {
 				);
 			} else {
 				const remaining = Math.max(0, 5 - st.count);
-				setErrorMsg((err?.message || "로그인 중 오류가 발생했습니다.") + ` (남은 시도: ${remaining}회)`);
-			}
+                const clean = cleanLoginErrorMessage(err);
+                setErrorMsg(`${clean} (남은 시도: ${remaining}회)`);
+            }
 		} finally {
 			setSubmitting(false);
 		}

@@ -34,6 +34,11 @@ export function updateUserProfile(
 export function deleteUserAccount(userId: string) {
 	return api<ApiResponse<{ message?: string }>>(`/users/${userId}`, {
 	});
+
+}export function deleteUser(userId: string | number) {
+    return api<{ status: "success" | "error"; message: string; data?: any }>(`/users/${userId}`, {
+        method: "DELETE",
+    });
 }
 
 export function checkLogin() {

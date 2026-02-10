@@ -954,7 +954,6 @@ export function BidSummary() {
                         <div className="flex-1">
                             <div className="flex items-center gap-2 mb-3">
                                 <Badge>{bid.type}</Badge>
-                                <Badge variant="outline">{bid.status}</Badge>
                                 {!isEnded && (
                                     <Badge variant="outline">{bid.status}</Badge>
                                 )}
