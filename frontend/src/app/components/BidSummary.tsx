@@ -603,7 +603,7 @@ export function BidSummary() {
             checkLogin()
                 .then((res) => {
                     const profile = res.data;
-                    const userId = Number(profile.userId);
+                    const userId = Number(profile.userId ?? profile.id);
 
                    if (Number.isFinite(numericBidId) && Number.isFinite(userId) && userId > 0 && loggedBidIdRef.current !== numericBidId) {
                         logBidView(numericBidId, userId).catch(console.error);

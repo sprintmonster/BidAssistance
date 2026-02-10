@@ -9,6 +9,7 @@ export interface ApiResponse<T> {
 }
 
 export interface UserProfile {
+	id?: number;
 	userId: string;
 	name: string;
 	nickname?: string;
