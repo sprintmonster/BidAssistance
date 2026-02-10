@@ -71,7 +71,7 @@
         <img src="./ops/images/team/윤성빈.jpg" width="120px" alt="윤성빈"/><br>
         <b>윤성빈</b><br>
         <sub>AI</sub><br>
-        <a href="https://github.com/0azzpll">@0azzpll</a>
+        <a href="https://github.com/ysb1208">@ysb1208</a>
       </td>
       <td align="center" width="200px">
         <img src="./ops/images/team/이세용.jpg" width="120px" alt="이세용"/><br>
@@ -283,35 +283,36 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 
 <img src="https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white">
 <img src="https://img.shields.io/badge/azure-%230072C6.svg?style=for-the-badge&logo=microsoftazure&logoColor=white">
+<img src="https://img.shields.io/badge/YAML-CB171E?style=for-the-badge&logo=yaml&logoColor=white">
 
 </div>
 
 ---
 
-## 🏗️ 시스템 아키텍처
+## 🏗️ 상세 구현 내용
 
-### 📊 전체 시스템 아키텍쳐
+### 📊 서비스 플로우
 
 <div align="center">
-  <img src="./ops/images/시스템아키텍쳐.png" alt="UI/UX 플로우" width="800"/>
+  <img src="./ops/images/서비스 플로우.png" alt="서비스 플로우" width="800"/>
 </div><br>
 
-### 📋 RAG 시스템 구조
+### 📋 시스템 아키텍처
 
 <div align="center">
-  <img src="./ops/images/동성로챗봇 아키텍쳐.png" alt="시스템 아키텍처" width="800"/>
+  <img src="./ops/images/시스템 아키텍처.png" alt="시스템 아키텍처" width="800"/>
 </div><br>
 
-### 📊 UI/UX 플로우
+### 📊 ERD
 
 <div align="center">
-  <img src="./ops/images/UXUI플로우차트.png" alt="UI/UX 플로우" width="800"/>
+  <img src="./ops/images/ERD.png" alt="ERD" width="800"/>
 </div><br>
 
-### 📊 CI/CD 플로우
+### 📊 AI 모델 플로우
 
 <div align="center">
-  <img src="./ops/images/CICD.png" alt="CICD.png" width="800"/>
+  <img src="./ops/images/AI 모델 플로우.png" alt="AI 모델 플로우.png" width="800"/>
 </div><br>
 
 ---
