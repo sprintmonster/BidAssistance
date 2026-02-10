@@ -39,6 +39,7 @@ import {
 	TableRow,
 } from "./ui/table";
 import { cn } from "./ui/utils";
+import {is_reco_popup_suppressed_today, RecommendedBidsModal} from "./RecommendedBidsModal";
 
 type SortKey = "deadline_asc" | "deadline_desc" | "title_asc";
 
@@ -57,15 +58,25 @@ function parseDate(value: string) {
 
     const v = value.trim();
 
-    // YYYY.MM.DD or YYYY-MM-DD
-    const m = v.match(/^(\d{4})[.-](\d{2})[.-](\d{2})$/);
+    // YYYY.MM.DD or YYYY-MM-DD (시간 없음)
+    let m = v.match(/^(\d{4})[.-](\d{2})[.-](\d{2})$/);
     if (m) {
         const [, y, mo, d] = m;
+        return new Date(Number(y), Number(mo) - 1, Number(d), 23, 59, 59, 999);
+    }
+
+    // YYYY.MM.DD HH:mm or YYYY-MM-DD HH:mm
+    m = v.match(/^(\d{4})[.-](\d{2})[.-](\d{2})\s+(\d{2}):(\d{2})$/);
+    if (m) {
+        const [, y, mo, d, h, mi] = m;
         return new Date(
             Number(y),
             Number(mo) - 1,
             Number(d),
-            23, 59, 59, 999 // 마감일은 하루 끝으로 통일
+            Number(h),
+            Number(mi),
+            0,
+            0
         );
     }
 
@@ -433,8 +444,23 @@ export function BidDiscovery({
         return diffDays >= 0 && diffDays <= 3;
     }
 
+
+    const [recoOpen, setRecoOpen] = useState(false);
+    useEffect(() => {
+        if (!is_reco_popup_suppressed_today()) {
+            setRecoOpen(true);
+        }
+    }, []);
+
+
+
 	return (
+
 		<div className="space-y-4">
+            <RecommendedBidsModal
+                open={recoOpen}
+                onOpenChange={setRecoOpen}
+            />
 			<Card>
 				<CardHeader className="space-y-1">
 					<CardTitle className="text-xl">공고 찾기</CardTitle>
