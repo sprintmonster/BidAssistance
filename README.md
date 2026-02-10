@@ -6,7 +6,7 @@
 
 <!-- 프로젝트 대표 이미지 추가해야함 -->
 <div align="center">
-  <img src="./ops/images/Screenshot/반응형UI.png" alt="AI 기반 입찰 인텔리전스 플랫폼 메인 화면" width="800"/>
+  <img src="./ops/images/Screenshot/썸네일.jpg" alt="AI 기반 입찰 인텔리전스 플랫폼 메인 화면" width="800"/>
   
   <!-- 배지들, 최종이후에 올릴예정-->
   [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://python.org)
@@ -43,7 +43,7 @@
         <img src="./ops/images/team/전보윤.jpg" width="120px" alt="전보윤"/><br>
         <b>전보윤</b><br>
         <sub>PM, AI</sub><br>
-        <a href="https://github.com/0azzpll">@0azzpll</a>
+        <a href="https://github.com/sprintmonster">@sprintmonster</a>
       </td>
       <td align="center" width="200px">
         <img src="./ops/images/team/강버들.jpg" width="120px" alt="강버들"/><br>
@@ -55,7 +55,7 @@
         <img src="./ops/images/team/김형모.jpg" width="120px" alt="김형모"/><br>
         <b>김형모</b><br>
         <sub>BE</sub><br>
-        <a href="https://github.com/pla2n">@pla2n</a>
+        <a href="https://github.com/HyeongmoKim">@HyeongmoKim</a>
       </td>
       <td align="center" width="200px">
         <img src="./ops/images/team/공동욱.jpg" width="120px" alt="공동욱"/><br>
@@ -77,19 +77,19 @@
         <img src="./ops/images/team/이세용.jpg" width="120px" alt="이세용"/><br>
         <b>이세용</b><br>
         <sub>BE</sub><br>
-        <a href="https://github.com/LxNx-Hn">@LxNx-Hn</a>
+        <a href="https://github.com/pla2n">@pla2n</a>
       </td>
       <td align="center" width="200px">
         <img src="./ops/images/team/장우진.jpg" width="120px" alt="장우진"/><br>
         <b>장우진</b><br>
         <sub>AI</sub><br>
-        <a href="https://github.com/pla2n">@pla2n</a>
+        <a href="https://github.com/jwj9456">@jwj9456</a>
       </td>
       <td align="center" width="200px">
         <img src="./ops/images/team/황도윤.jpg" width="120px" alt="황도윤"/><br>
         <b>황도윤</b><br>
         <sub>BE</sub><br>
-        <a href="https://github.com/cos65536">@cos65536</a>
+        <a href="https://github.com/HDYee">@HDYee</a>
       </td>
     </tr>
   </table>
@@ -247,14 +247,14 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 ### Frontend
 
 <img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black">
-<img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black">
+<img src="https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white">
 <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white">
 
 ### Backend
 
 <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white">
 <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white">
-<img src="https://img.shields.io/badge/Uvicorn-FF6F00?style=for-the-badge&logo=gunicorn&logoColor=white">
+<img src="https://img.shields.io/badge/spring-%236DB33F.svg?style=for-the-badge&logo=spring&logoColor=white">
 
 ### AI/ML Framework
 
@@ -278,13 +278,11 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 
 <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white">
 <img src="https://img.shields.io/badge/Docker_Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white">
-<img src="https://img.shields.io/badge/Netlify-00C7B7?style=for-the-badge&logo=netlify&logoColor=white">
-<img src="https://img.shields.io/badge/Runpod-6366F1?style=for-the-badge&logo=pytorch&logoColor=white">
 
 ### CI/CD
 
 <img src="https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white">
-<img src="https://img.shields.io/badge/YAML-CB171E?style=for-the-badge&logo=yaml&logoColor=white">
+<img src="https://img.shields.io/badge/azure-%230072C6.svg?style=for-the-badge&logo=microsoftazure&logoColor=white">
 
 </div>
 
