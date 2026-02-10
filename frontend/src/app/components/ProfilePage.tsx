@@ -24,7 +24,9 @@ import {
 	is_password_expired,
 	set_password_changed_now_for_user,
 } from "../utils/accessControl";
-
+import { deleteUser } from "../api/users";
+import { toast } from "sonner";
+import {logout} from "../api/auth";
 interface ProfilePageProps {
 	userEmail?: string;
 }
@@ -105,7 +107,42 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 	const [companyName, setCompanyName] = useState("");
 	const [companyPosition, setCompanyPosition] = useState("");
 
-	const isExpired = useMemo(() => {
+    const onWithdraw = async () => {
+        if (!userId) {
+            toast.error("로그인이 필요합니다.");
+            return;
+        }
+
+        const uid = Number(userId);
+        if (!Number.isFinite(uid)) {
+            toast.error("잘못된 사용자 정보입니다.");
+            return;
+        }
+
+        if (!window.confirm("정말 탈퇴하시겠습니까?\n탈퇴 시 계정 정보가 삭제됩니다.")) return;
+
+        try {
+            setLoading(true);
+
+            const res = await deleteUser(uid);
+            if ((res as any)?.status && (res as any).status !== "success") {
+                toast.error((res as any)?.message || "탈퇴에 실패했습니다.");
+                return;
+            }
+
+            //  세션/스토리지 정리 (서버 세션도 종료)
+            await logout();
+
+            toast.success("회원 탈퇴가 완료되었습니다.");
+            navigate("/login", { replace: true });
+        } catch (e: any) {
+            toast.error(e?.message || "탈퇴에 실패했습니다.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const isExpired = useMemo(() => {
 		if (!userId) return false;
 		return is_password_expired(userId);
 	}, [userId, saving, loading]);
@@ -461,6 +498,24 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 							</div>
 						</CardContent>
 					</Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-red-600">위험 영역</CardTitle>
+                            <CardDescription>계정 삭제는 되돌릴 수 없습니다.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex items-center justify-between gap-4">
+                            <div className="text-sm text-muted-foreground">
+                                탈퇴 시 계정 정보가 삭제되며 복구할 수 없습니다.
+                            </div>
+                            <Button
+                                variant="destructive"
+                                onClick={onWithdraw}
+                                disabled={loading}
+                            >
+                                {loading ? "처리 중..." : "회원 탈퇴"}
+                            </Button>
+                        </CardContent>
+                    </Card>
 				</TabsContent>
 
 				<TabsContent value="company" className="space-y-4">

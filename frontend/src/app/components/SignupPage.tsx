@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { PasswordRules } from "./PasswordRules";
 import { is_password_valid } from "../utils/password";
 import { api } from "../api/client";
+import {ToastType} from "./ui/useToast";
 
 function sanitize_birth_date_input(raw: string) {
 	// YYYY-MM-DD 형태로만 입력되도록 강제 (모바일/브라우저별 date fallback 대응)
@@ -50,6 +51,7 @@ interface SignupPageProps {
 	onSignup: (email: string) => void;
 	onNavigateToLogin: () => void;
 	onNavigateToHome: () => void;
+    showToast: (message: string, type: ToastType) => void;
 }
 
 // ====== 질문(0~3 고정 매핑) ======
@@ -60,8 +62,13 @@ const SECURITY_QUESTIONS = [
 	"가장 좋아하는 음식은?",
 ] as const;
 
-export function SignupPage({ onSignup, onNavigateToLogin, onNavigateToHome }: SignupPageProps) {
-	const [formData, setFormData] = useState({
+export function SignupPage({
+                               onSignup,
+                               onNavigateToLogin,
+                               onNavigateToHome,
+                               showToast,
+                           }: SignupPageProps) {
+    const [formData, setFormData] = useState({
 		email: "",
 		password: "",
 		confirmPassword: "",
@@ -175,10 +182,9 @@ export function SignupPage({ onSignup, onNavigateToLogin, onNavigateToHome }: Si
 
 			};
 
-			await api("/users", {
-				method: "POST",
-				body: JSON.stringify(payload),
-			});
+            await api("/users", { method: "POST", body: JSON.stringify(payload) });
+
+            showToast("회원가입에 성공했습니다 🎉", "success");
 
 			set_password_changed_now_for_email(payload.email);
 
