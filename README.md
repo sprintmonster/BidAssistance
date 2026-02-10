@@ -264,8 +264,8 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 
 ### AI Models & Systems
 
-<img src="https://img.shields.io/badge/ko--sroberta-Embedding-FF6F00?style=for-the-badge">
-<img src="https://img.shields.io/badge/Midm--2.0--Mini-LLM-4285F4?style=for-the-badge">
+<img src="https://img.shields.io/badge/text--embedding--3-Embedding-FF6F00?style=for-the-badge">
+<img src="https://img.shields.io/badge/gpt--5--nano-LLM-4285F4?style=for-the-badge">
 <img src="https://img.shields.io/badge/RAG-System-00C853?style=for-the-badge">
 
 ### Data Processing
@@ -404,7 +404,7 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 ## 👨‍💻 팀원별 상세 업무
 
 <details>
-<summary><b>🎯 윤서진 - ProductManager</b></summary>
+<summary><b>🎯 전보윤 - ProductManager, AI</b></summary>
 
 ### 담당 업무
 
@@ -454,7 +454,7 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 </details>
 
 <details>
-<summary><b>🏗️ 문종건 - ProjectLeader</b></summary>
+<summary><b>🏗️ 강버들 - FrontEnd</b></summary>
 
 ### 담당 업무
 
@@ -502,7 +502,7 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 </details>
 
 <details>
-<summary><b>⚡ 이세용 - Dev_Main</b></summary>
+<summary><b>⚡ 김형모 - BackEnd</b></summary>
 
 ### 담당 업무
 
@@ -542,7 +542,7 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 
 <details>
 
-<summary><b>🗄️ 이재홍 - DB_Main</b></summary>
+<summary><b>🗄️ 공동욱 - BackEnd</b></summary>
 
 ### 담당 업무
 
@@ -578,7 +578,115 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 </details>
 
 <details>
-<summary><b>🔗 황용선 - Linker</b></summary>
+<summary><b>🔗 윤성빈 - AI</b></summary>
+
+### 담당 업무
+
+- **시스템 연동 및 데이터 파이프라인 설계**
+- **분류 모델 성능 개선 및 운영**
+- **데이터 구축 및 정제**
+- **프롬프트 하이퍼파라미터 튜닝**
+- **임베딩모듈 구현**
+
+### 주요 성과
+
+- **분류 모델 하이퍼 파라미터 튜닝** : 하이퍼파라미터, 프롬포트 미세조정을 통해 정확도 14%향상, F-1 Score 8%향상
+- **데이터 전처리를 통한 임베딩시스템 구현** : 데이터 가공 및 키워드 추출을 통한 임베딩 효율 향상 및 답변 일관성 유지
+- **키워드 추출모델 제작** : 질문에서 키워드를 추출할수있는 모델 제작 및 프롬포트 엔지니어링
+- **핵심기능별 임베딩 로직 구체화** : 3가지 핵심기능별 맞춤형 데이터 전처리 기능 개발
+- **계층적 검색 시스템 구축** : 핵심 업종 파악 후 LLM응답에 벡터 검색 결과를 추가하는 계층적 검색 방식 구현
+
+### 사용 기술
+
+**AI & Data**
+
+- `Python`, `Pandas`, `PyTorch`
+- `Transformers`, `Sentence-Transformers`
+
+**Data Processing**
+
+- `Regex`, `CSV`
+
+**Version Control**
+
+- `Git`, `GitHub`
+
+</details>
+
+<details>
+<summary><b>🏛️ 이세용 - BackEnd</b></summary>
+
+### 담당 업무
+
+- **시스템 연동 및 데이터 파이프라인 설계**
+- **분류 모델 성능 개선 및 운영**
+- **데이터 구축 및 정제**
+- **프롬프트 하이퍼파라미터 튜닝**
+- **임베딩모듈 구현**
+
+### 주요 성과
+
+- **분류 모델 하이퍼 파라미터 튜닝** : 하이퍼파라미터, 프롬포트 미세조정을 통해 정확도 14%향상, F-1 Score 8%향상
+- **데이터 전처리를 통한 임베딩시스템 구현** : 데이터 가공 및 키워드 추출을 통한 임베딩 효율 향상 및 답변 일관성 유지
+- **키워드 추출모델 제작** : 질문에서 키워드를 추출할수있는 모델 제작 및 프롬포트 엔지니어링
+- **핵심기능별 임베딩 로직 구체화** : 3가지 핵심기능별 맞춤형 데이터 전처리 기능 개발
+- **계층적 검색 시스템 구축** : 핵심 업종 파악 후 LLM응답에 벡터 검색 결과를 추가하는 계층적 검색 방식 구현
+
+### 사용 기술
+
+**AI & Data**
+
+- `Python`, `Pandas`, `PyTorch`
+- `Transformers`, `Sentence-Transformers`
+
+**Data Processing**
+
+- `Regex`, `CSV`
+
+**Version Control**
+
+- `Git`, `GitHub`
+
+</details>
+
+<details>
+<summary><b>🚧 장우진 - AI</b></summary>
+
+### 담당 업무
+
+- **시스템 연동 및 데이터 파이프라인 설계**
+- **분류 모델 성능 개선 및 운영**
+- **데이터 구축 및 정제**
+- **프롬프트 하이퍼파라미터 튜닝**
+- **임베딩모듈 구현**
+
+### 주요 성과
+
+- **분류 모델 하이퍼 파라미터 튜닝** : 하이퍼파라미터, 프롬포트 미세조정을 통해 정확도 14%향상, F-1 Score 8%향상
+- **데이터 전처리를 통한 임베딩시스템 구현** : 데이터 가공 및 키워드 추출을 통한 임베딩 효율 향상 및 답변 일관성 유지
+- **키워드 추출모델 제작** : 질문에서 키워드를 추출할수있는 모델 제작 및 프롬포트 엔지니어링
+- **핵심기능별 임베딩 로직 구체화** : 3가지 핵심기능별 맞춤형 데이터 전처리 기능 개발
+- **계층적 검색 시스템 구축** : 핵심 업종 파악 후 LLM응답에 벡터 검색 결과를 추가하는 계층적 검색 방식 구현
+
+### 사용 기술
+
+**AI & Data**
+
+- `Python`, `Pandas`, `PyTorch`
+- `Transformers`, `Sentence-Transformers`
+
+**Data Processing**
+
+- `Regex`, `CSV`
+
+**Version Control**
+
+- `Git`, `GitHub`
+
+</details>
+
+<details>
+<summary><b>🏢 황도윤 - FrontEnd</b></summary>
 
 ### 담당 업무
 
