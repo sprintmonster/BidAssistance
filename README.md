@@ -261,14 +261,18 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 ### AI/ML Framework
 
 <img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white">
+<img src="https://img.shields.io/badge/pydantic-%23E92063.svg?style=for-the-badge&logo=pydantic&logoColor=white">
+<img src="https://img.shields.io/badge/faiss-9eb7e5?style=for-the-badge"><br>
 <img src="https://img.shields.io/badge/Transformers-FF6F00?style=for-the-badge&logo=huggingface&logoColor=white">
 <img src="https://img.shields.io/badge/Sentence_Transformers-4285F4?style=for-the-badge">
 
 ### AI Models & Systems
 
 <img src="https://img.shields.io/badge/text--embedding--3-Embedding-FF6F00?style=for-the-badge">
-<img src="https://img.shields.io/badge/gpt--5--nano-LLM-4285F4?style=for-the-badge">
+<img src="https://img.shields.io/badge/gpt--5--nano-LLM-4285F4?style=for-the-badge"><br>
 <img src="https://img.shields.io/badge/RAG-System-00C853?style=for-the-badge">
+<img src="https://img.shields.io/badge/langchain-%231C3C3C.svg?style=for-the-badge&logo=langchain&logoColor=white">
+<img src="https://img.shields.io/badge/langgraph-%231C3C3C.svg?style=for-the-badge&logo=langgraph&logoColor=white">
 
 ### Data Processing
 
