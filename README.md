@@ -180,13 +180,13 @@ chatbot-with-kt-dgucenter/
 
 AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지 저비용으로 간편하게 정보를 얻는 입찰 플랫폼 구축​
 
-#### 챗봇 예시화면
+#### 프로젝트 구동 화면
 
 > **🏠 메인화면**
 >
 > <div align="center">
->     <img src="./ops/images/Screenshot/LIGHT.png" alt="데스크탑 라이트" width="400"/>
->     <img src="./ops/images/Screenshot/DARK.png" alt="데스크탑 다크" width="400"/> 
+>     <img src="./ops/images/Screenshot/Light.png" alt="데스크탑 라이트" width="400"/>
+>     <img src="./ops/images/Screenshot/Dark.png" alt="데스크탑 다크" width="400"/> 
 > </div>
 > <br>
 
