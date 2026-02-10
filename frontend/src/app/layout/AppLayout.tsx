@@ -49,6 +49,8 @@ export function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [recoOpen, setRecoOpen] = useState(false);
 
+  const [authTick, setAuthTick] = useState(0);
+
   const NOTIFICATION_READ_KEY = "notifications.read.v1";
   const NOTICE_LAST_SEEN_KEY = "notice.last_seen_id.v1";
 
@@ -73,6 +75,21 @@ export function AppLayout() {
     return Number.isFinite(n) ? n : 0;
   };
 
+  // ✅ 뒤로가기(bfcache) 복원/다중 탭 변경 등에서 로그인 UI가 과거 상태로 남는 것을 방지
+  useEffect(() => {
+    const sync = () => setAuthTick((v) => v + 1);
+
+    window.addEventListener("pageshow", sync);
+    window.addEventListener("focus", sync);
+    window.addEventListener("storage", sync);
+
+    return () => {
+      window.removeEventListener("pageshow", sync);
+      window.removeEventListener("focus", sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
   useEffect(() => {
     let ignore = false;
 
@@ -90,24 +107,26 @@ export function AppLayout() {
 
   const isAuthed = useMemo(
     () => !!localStorage.getItem("userId"),
-    [location.pathname]
+    [location.pathname, authTick]
   );
 
-  // ✅ "로그인 직후 1회"만 팝업 오픈
-  useEffect(() => {
-    if (!localStorage.getItem("userId")) return;
-
-    if (is_reco_popup_suppressed_today()) {
-      // 트리거가 있더라도 오늘은 안 띄움 (한 번 소비 처리)
-      consume_reco_popup_trigger();
-      return;
-    }
-
-    // 세션 트리거가 있으면 1회만 오픈
-    if (consume_reco_popup_trigger()) {
-      setRecoOpen(true);
-    }
-  }, [location.pathname]);
+  // // ✅ "로그인 직후 1회"만 팝업 오픈
+  // useEffect(() => {
+  //   if (!localStorage.getItem("userId")) return;
+  //   if (!location.pathname.startsWith("/bids")) return;
+  //
+  //
+  //     if (is_reco_popup_suppressed_today()) {
+  //     // 트리거가 있더라도 오늘은 안 띄움 (한 번 소비 처리)
+  //     consume_reco_popup_trigger();
+  //     return;
+  //   }
+  //
+  //   // 세션 트리거가 있으면 1회만 오픈
+  //   if (consume_reco_popup_trigger()) {
+  //     setRecoOpen(true);
+  //   }
+  // }, [location.pathname]);
 
   // ✅ 공지/알림 빨간점(뱃지) 갱신
   useEffect(() => {
@@ -185,9 +204,11 @@ export function AppLayout() {
     navigate(`/bids?q=${encodeURIComponent(q)}`);
   };
 
-  const onLogout = async () => {
-    await apiLogout();
-    navigate("/", { replace: true });
+  const onLogout = () => {
+    // 서버 세션/토큰까지 정리해야 뒤로가기에서 checkLogin으로 자동 복구되지 않습니다.
+    void apiLogout();
+    window.dispatchEvent(new Event("auth:changed"));
+    window.location.replace("/");
   };
 
   const sideItems: SideItem[] = [
@@ -438,7 +459,7 @@ function SideBarContent({
   items: SideItem[];
   pathname: string;
   isAuthed: boolean;
-  onLogout: () => void;
+  onLogout: () => void | Promise<void>;
   onNavigate: (to: string) => void;
 }) {
   return (

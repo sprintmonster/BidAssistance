@@ -39,6 +39,7 @@ import {
 	TableRow,
 } from "./ui/table";
 import { cn } from "./ui/utils";
+import {is_reco_popup_suppressed_today, RecommendedBidsModal} from "./RecommendedBidsModal";
 
 type SortKey = "deadline_asc" | "deadline_desc" | "title_asc";
 
@@ -53,12 +54,61 @@ type UiBid = {
 };
 
 function parseDate(value: string) {
-	const trimmed = (value || "").trim();
-	if (!trimmed) return null;
-	const d = new Date(trimmed);
-	if (!Number.isFinite(d.getTime())) return null;
-	return d;
+    if (!value) return null;
+
+    const v = value.trim();
+
+    // YYYY.MM.DD or YYYY-MM-DD (시간 없음)
+    let m = v.match(/^(\d{4})[.-](\d{2})[.-](\d{2})$/);
+    if (m) {
+        const [, y, mo, d] = m;
+        return new Date(Number(y), Number(mo) - 1, Number(d), 23, 59, 59, 999);
+    }
+
+    // YYYY.MM.DD HH:mm or YYYY-MM-DD HH:mm
+    m = v.match(/^(\d{4})[.-](\d{2})[.-](\d{2})\s+(\d{2}):(\d{2})$/);
+    if (m) {
+        const [, y, mo, d, h, mi] = m;
+        return new Date(
+            Number(y),
+            Number(mo) - 1,
+            Number(d),
+            Number(h),
+            Number(mi),
+            0,
+            0
+        );
+    }
+
+    const parsed = new Date(v);
+    return Number.isFinite(parsed.getTime()) ? parsed : null;
 }
+
+function getDateOnlyMs(ms: number) {
+    const d = new Date(ms);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+}
+
+function getDeadlineDateMs(deadline: string) {
+    const d = parseDate(deadline);
+    if (!d) return null;
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+}
+
+function getDDay(deadline: string, nowMs: number) {
+    const endMs = getDeadlineDateMs(deadline);
+    if (endMs == null) return null;
+
+    const todayMs = getDateOnlyMs(nowMs);
+    const diffDays = Math.round((endMs - todayMs) / 86400000);
+
+    if (diffDays === 0) return "D-DAY";
+    if (diffDays > 0) return `D-${diffDays}`;
+    return `D+${Math.abs(diffDays)}`;
+}
+
 
 function diffDays(nowMs: number, to: Date) {
 	const ms = to.getTime() - nowMs;
@@ -77,9 +127,9 @@ function formatDday(deadline: string, nowMs: number) {
 }
 
 function isEnded(deadline: string, nowMs: number) {
-	const d = parseDate(deadline);
-	if (!d) return false;
-	return d.getTime() < nowMs;
+    const endMs = getDeadlineDateMs(deadline);
+    if (endMs == null) return false;
+    return endMs < getDateOnlyMs(nowMs);
 }
 
 export function BidDiscovery({
@@ -338,26 +388,27 @@ export function BidDiscovery({
 		return numbers;
 	}, [safePage, totalPages]);
 
-	function formatDateTimeLines(dateStr: string) {
-		if (!dateStr) return { dateLine: "-", timeLine: "" };
+    function formatDateTimeLines(dateStr: string) {
+        if (!dateStr) return { dateLine: "-", timeLine: "" };
 
-		const d = new Date(dateStr);
-		if (!Number.isFinite(d.getTime())) return { dateLine: "-", timeLine: "" };
+        const d = new Date(dateStr);
+        if (!Number.isFinite(d.getTime())) return { dateLine: "-", timeLine: "" };
 
-		const dateLine = d.toLocaleDateString("ko-KR", {
-			year: "numeric",
-			month: "2-digit",
-			day: "2-digit",
-		});
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
 
-		const timeLine = d.toLocaleTimeString("ko-KR", {
-			hour: "2-digit",
-			minute: "2-digit",
-			hour12: true,
-		});
+        const dateLine = `${yyyy}-${mm}-${dd}`;
 
-		return { dateLine, timeLine };
-	}
+        const timeLine = d.toLocaleTimeString("ko-KR", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+        });
+
+        return { dateLine, timeLine };
+    }
+
     function startOfTodayMs(nowMs: number) {
         const d = new Date(nowMs);
         d.setHours(0, 0, 0, 0);
@@ -384,14 +435,32 @@ export function BidDiscovery({
     }
 
     function isClosingSoon(deadline: string, nowMs: number) {
-        const d = parseDate(deadline);
-        if (!d) return false;
-        const t = d.getTime();
-        return t >= nowMs && t <= addDaysMs(nowMs, 3);
+        const endMs = getDeadlineDateMs(deadline);
+        if (endMs == null) return false;
+
+        const todayMs = getDateOnlyMs(nowMs);
+        const diffDays = Math.round((endMs - todayMs) / 86400000);
+
+        return diffDays >= 0 && diffDays <= 3;
     }
 
+
+    const [recoOpen, setRecoOpen] = useState(false);
+    useEffect(() => {
+        if (!is_reco_popup_suppressed_today()) {
+            setRecoOpen(true);
+        }
+    }, []);
+
+
+
 	return (
+
 		<div className="space-y-4">
+            <RecommendedBidsModal
+                open={recoOpen}
+                onOpenChange={setRecoOpen}
+            />
 			<Card>
 				<CardHeader className="space-y-1">
 					<CardTitle className="text-xl">공고 찾기</CardTitle>
@@ -542,7 +611,7 @@ export function BidDiscovery({
 									</TableRow>
 								) : (
 									paged.map((b) => {
-										const dday = formatDday(b.deadline, nowMs);
+                                        const dday = getDDay(b.deadline, nowMs);
 										const alreadyAdded = addedIds.has(b.bidId);
 
 										const statusVariant = dday === "D-DAY" ? "destructive" : "secondary";
