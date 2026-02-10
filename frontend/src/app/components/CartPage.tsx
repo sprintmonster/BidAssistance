@@ -38,10 +38,19 @@ function parse_time(v: string): number {
 }
 
 function is_past_bid(bidEnd: string, nowMs: number): boolean {
-	const t = parse_time(String(bidEnd));
-	if (t <= 0) return false;
-	return t < nowMs;
+    const end = new Date(bidEnd);
+    if (!Number.isFinite(end.getTime())) return false;
+
+    const today = new Date(nowMs);
+    today.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(end);
+    endDate.setHours(0, 0, 0, 0);
+
+    // 마감일이 오늘보다 "이전 날짜"면 past
+    return endDate.getTime() < today.getTime();
 }
+
 
 function formatAmount(value: unknown): string {
 	if (value == null || value === "") return "-";
