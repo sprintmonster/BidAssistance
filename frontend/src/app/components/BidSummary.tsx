@@ -597,18 +597,27 @@ export function BidSummary() {
     const loggedBidIdRef = useRef<number | null>(null);
 
     useEffect(() => {
-        // Azure 등 쿠키 인증 환경에서는 localStorage에 userId가 없을 수 있음.
-        // checkLogin()을 통해 서버 세션에서 userId를 확인.
+        if (!Number.isFinite(numericBidId) || loggedBidIdRef.current === numericBidId) return;
+
+        // 1) localStorage 우선 (로그인 시 auth.ts가 저장)
+        const localId = Number(localStorage.getItem("userId"));
+        if (Number.isFinite(localId) && localId > 0) {
+            logBidView(numericBidId, localId).catch(console.error);
+            loggedBidIdRef.current = numericBidId;
+            return;
+        }
+
+        // 2) localStorage에 없으면 checkLogin으로 시도 (쿠키 기반 인증)
         import("../api/users").then(({ checkLogin }) => {
             checkLogin()
                 .then((res) => {
                     const profile = res.data;
                     const userId = Number(profile.userId ?? profile.id);
 
-                   if (Number.isFinite(numericBidId) && Number.isFinite(userId) && userId > 0 && loggedBidIdRef.current !== numericBidId) {
+                    if (Number.isFinite(userId) && userId > 0 && loggedBidIdRef.current !== numericBidId) {
                         logBidView(numericBidId, userId).catch(console.error);
                         loggedBidIdRef.current = numericBidId;
-                    } 
+                    }
                 })
                 .catch(() => {
                     // 비로그인 상태: 로그 남기지 않음
