@@ -193,29 +193,29 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 > **💼 대시보드 & 맞춤형 추천**
 >
 > <div align="center">
->   <img src="./ops/images/Screenshot/대시보드.png" alt="대시보드" width="800"/>
->  <img src="./ops/images/Screenshot/맞춤형 추천.png" alt="맞춤형 추천" width="800"/>
+>   <img src="./ops/images/Screenshot/대시보드.png" alt="대시보드" width="400"/>
+>  <img src="./ops/images/Screenshot/맞춤형 추천.png" alt="맞춤형 추천" width="400"/>
 > </div>
 > <br>
 
 > **📋 지능형 검색**
 >
 > <div align="center">
->   <img src="./ops/images/Screenshot/지능형 검색.png" alt="지능형 검색" width="800"/>
+>   <img src="./ops/images/Screenshot/지능형 검색.png" alt="지능형 검색" width="400"/>
 > </div>
 > <br>
 
 > **📈 AI 요약 보고서**
 >
 > <div align="center">
->   <img src="./ops/images/Screenshot/AI 요약 보고서.png" alt="AI 요약 보고서" width="800"/>
+>   <img src="./ops/images/Screenshot/AI 요약 보고서.png" alt="AI 요약 보고서" width="400"/>
 > </div>
 > <br>
 
 > **📱 커뮤니티**
 >
 > <div align="center">
->   <img src="./ops/images/Screenshot/커뮤니티.png" alt="커뮤니티" width="800"/>
+>   <img src="./ops/images/Screenshot/커뮤니티.png" alt="커뮤니티" width="400"/>
 > </div>
 > <br>
 
@@ -296,25 +296,25 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 ### 📊 서비스 플로우
 
 <div align="center">
-  <img src="./ops/images/서비스 플로우.png" alt="서비스 플로우" width="800"/>
+  <img src="./ops/images/서비스 플로우.png" alt="서비스 플로우" width="500"/>
 </div><br>
-
+ 
 ### 📋 시스템 아키텍처
 
 <div align="center">
-  <img src="./ops/images/시스템 아키텍처.png" alt="시스템 아키텍처" width="800"/>
+  <img src="./ops/images/시스템 아키텍처.png" alt="시스템 아키텍처" width="500"/>
 </div><br>
 
 ### 📊 ERD
 
 <div align="center">
-  <img src="./ops/images/ERD.png" alt="ERD" width="800"/>
+  <img src="./ops/images/ERD.png" alt="ERD" width="500"/>
 </div><br>
 
 ### 📊 AI 모델 플로우
 
 <div align="center">
-  <img src="./ops/images/AI 모델 플로우.png" alt="AI 모델 플로우.png" width="800"/>
+  <img src="./ops/images/AI 모델 플로우.png" alt="AI 모델 플로우.png" width="500"/>
 </div><br>
 
 ---
