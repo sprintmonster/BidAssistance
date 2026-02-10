@@ -19,6 +19,7 @@ const categoryLabels: Record<NonNullable<Post["category"]>, string> = {
     info: "정보",
     review: "후기",
     discussion: "토론",
+    notice: "공지",
 };
 
 function CategoryBadge({ category }: { category: Post["category"] }) {

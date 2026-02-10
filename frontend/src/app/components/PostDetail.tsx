@@ -465,6 +465,7 @@ export function PostDetail({
                     </div>
                 )}
 
+                {categoryKey !== "notice" && (
                 <div className="flex items-center gap-4 pt-6 border-t border-gray-200">
                     <button
                         type="button"
@@ -486,8 +487,10 @@ export function PostDetail({
             </span>
                     </button>
                 </div>
+                )}
             </div>
 
+            {categoryKey !== "notice" && (
             <div className="bg-white rounded-lg border border-gray-200 p-8">
                 <div className="flex items-center gap-2 mb-6">
                     <MessageSquare className="w-5 h-5 text-gray-700" />
@@ -597,6 +600,7 @@ export function PostDetail({
                     {comments.length === 0 && <p className="text-center text-gray-500 py-8">첫 번째 댓글을 작성해보세요!</p>}
                 </div>
             </div>
+            )}
         </div>
     );
 }

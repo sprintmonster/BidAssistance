@@ -17,6 +17,14 @@ interface ExpertBadgeProps {
 }
 
 export const ExpertBadge: FC<ExpertBadgeProps> = ({ level = 1 }) => {
+	if (level === 0) {
+		return (
+			<span className="inline-flex items-center px-1.5 py-0.5 border-2 rounded border-purple-500 text-purple-600 dark:text-purple-400 text-xs font-semibold bg-white dark:bg-gray-800">
+				관리자
+			</span>
+		);
+	}
+
 	const safeLevel = Math.max(1, Math.min(5, level)) - 1;
 	const { name, borderColor, textColor } = LEVELS[safeLevel];
 
