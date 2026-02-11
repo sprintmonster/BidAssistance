@@ -359,10 +359,9 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 
 ## 🚀 Azure Container Apps를 이용한 배포
 
-<img src="./ops/images/Azure Container Apps 1.png" width="49%" style="float: left;">
-<img src="./ops/images/Azure Container Apps 2.png" width="49%" style="float: right;">
-
-<div style="clear: both;"></div><br>
+<p align="center">
+<img src="./ops/images/Azure Container Apps 1.png" width="380" style="margin-right: 10px"> <img src="./ops/images/Azure Container Apps 2.png" width="380" style="margin-left: 10px">
+</p>
 
 - 기존의 고정적으로 비용이 청구되는 App Service와 다르게 요청이 적을 때에는 복제본을 줄여 자본 운용이 효율적
 - App Service는 코드를 변경할때마다 잠시간 서비스가 종료되지만 Container의 경우 패치 중에도 서비스 운영 가능
@@ -370,10 +369,9 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 
 ## 🗄️ Container 선택이유
 
-<img src="./ops/images/Container 선정이유 1.png" width="49%" style="float: left;">
-<img src="./ops/images/Container 선정이유 2.png" width="49%" style="float: right;">
-
-<div style="clear: both;"></div><br>
+<p align="center">
+<img src="./ops/images/Container 선정이유 1.png" width="380" style="margin-right: 10px"> <img src="./ops/images/Container 선정이유 2.png" width="380" style="margin-left: 10px">
+</P>
 
 - 기존의 App Service와 다르게 요청이 적을 때에는 복제본을 줄여 자본 운용이 효율적
 - App Service는 코드를 변경할때마다 잠시간 서비스가 종료되지만 Container의 경우 패치 중에도 서비스 운영 가능
