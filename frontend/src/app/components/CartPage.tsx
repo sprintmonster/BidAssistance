@@ -41,15 +41,10 @@ function is_past_bid(bidEnd: string, nowMs: number): boolean {
     const end = new Date(bidEnd);
     if (!Number.isFinite(end.getTime())) return false;
 
-    const today = new Date(nowMs);
-    today.setHours(0, 0, 0, 0);
-
-    const endDate = new Date(end);
-    endDate.setHours(0, 0, 0, 0);
-
-    // 마감일이 오늘보다 "이전 날짜"면 past
-    return endDate.getTime() < today.getTime();
+    // 마감은 시간 기준
+    return end.getTime() <= nowMs;
 }
+
 
 
 function formatAmount(value: unknown): string {
