@@ -508,17 +508,26 @@ const DEFAULT_CHECKLIST: Array<{ item: string; checked: boolean }> = [
 ];
 
 function getDDayNumber(deadline: string) {
-    const d = new Date(deadline);
-    if (!Number.isFinite(d.getTime())) return null;
+    const end = new Date(deadline);
+    if (!Number.isFinite(end.getTime())) return null;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const now = new Date();
 
-    const end = new Date(d);
-    end.setHours(0, 0, 0, 0);
+    // 마감 여부는 시간 기준
+    const isEnded = end.getTime() <= now.getTime();
 
-    return Math.round((end.getTime() - today.getTime()) / 86400000);
+    // D-day 숫자는 "날짜" 기준(라벨용)
+    const today0 = new Date(now);
+    today0.setHours(0, 0, 0, 0);
+
+    const end0 = new Date(end);
+    end0.setHours(0, 0, 0, 0);
+
+    const days = Math.round((end0.getTime() - today0.getTime()) / 86400000);
+
+    return { days, isEnded };
 }
+
 function checklistStorageKey(bidId: number) {
     return `bid-checklist-${bidId}`;
 }
@@ -916,13 +925,11 @@ export function BidSummary() {
     const actions72h = structured?.actions72h ?? [];
     const topBands = structured?.pricePrediction?.topBands ?? [];
 
-    const ddayNumber = bid?.deadline ? getDDayNumber(bid.deadline) : null;
+    const dday = bid?.deadline ? getDDayNumber(bid.deadline) : null;
 
+    const isEnded = !!dday?.isEnded;
     const isClosingSoon =
-        typeof ddayNumber === "number" && ddayNumber >= 0 && ddayNumber <= 3;
-
-    const isEnded =
-        typeof ddayNumber === "number" && ddayNumber < 0;
+        !isEnded && typeof dday?.days === "number" && dday.days >= 0 && dday.days <= 3;
 
 
     return (
