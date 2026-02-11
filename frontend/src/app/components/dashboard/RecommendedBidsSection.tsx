@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Star, Sparkles, ArrowRight, Check, CheckCircle2 } from "lucide-react";
 
 import { fetchBids, fetchRecommendedBids, type Bid } from "../../api/bids";
-import { toggleWishlist } from "../../api/wishlist";
 import { Button } from "../ui/button";
+import { fetchWishlist, toggleWishlist } from "../../api/wishlist";
 
 function parse_deadline_date(raw: string): Date | null {
 	const s = String(raw || "").trim();
@@ -74,6 +74,35 @@ export function RecommendedBidsSection() {
 
 	const [notice, setNotice] = useState<string | null>(null);
 	const [togglingId, setTogglingId] = useState<number | null>(null);
+    const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
+    const [wishlistSynced, setWishlistSynced] = useState(false);
+
+
+    useEffect(() => {
+        const syncAddedFromServer = async () => {
+            setWishlistSynced(false);
+
+            const userIdStr = localStorage.getItem("userId");
+            const userId = Number(userIdStr);
+
+            if (!userIdStr || !Number.isFinite(userId)) {
+                setAddedIds(new Set());
+                setWishlistSynced(true);
+                return;
+            }
+
+            try {
+                const items = await fetchWishlist(userId);
+                setAddedIds(new Set(items.map((it) => it.bidId)));
+            } catch {
+                setAddedIds(new Set());
+            } finally {
+                setWishlistSynced(true);
+            }
+        };
+
+        void syncAddedFromServer();
+    }, []);
 
 	useEffect(() => {
 		let ignore = false;
@@ -135,35 +164,50 @@ export function RecommendedBidsSection() {
 		navigate(`/bids/${id}`);
 	};
 
-	const on_toggle_wishlist = async (bid: Bid) => {
-		const raw = localStorage.getItem("userId");
-		const userId = raw ? Number(raw) : NaN;
-		if (!Number.isFinite(userId)) {
-			setNotice("로그인이 필요합니다.");
+    const on_toggle_wishlist = async (bid: Bid) => {
+        const raw = localStorage.getItem("userId");
+        const userId = raw ? Number(raw) : NaN;
+
+        if (!Number.isFinite(userId)) {
+            setNotice("로그인이 필요합니다.");
             setTimeout(() => setNotice(null), 3000);
-			return;
-		}
+            return;
+        }
 
-		const bidId = pick_bid_id(bid);
-		if (!bidId) return;
+        const bidId = pick_bid_id(bid);
+        if (!bidId) return;
 
-		try {
-			setNotice(null);
-			setTogglingId(bidId);
-			const res = await toggleWishlist(userId, bidId);
-			if (res.status === "success") {
+        // 이미 담긴 경우
+        if (addedIds.has(bidId)) {
+            setNotice("이미 담긴 공고입니다.");
+            setTimeout(() => setNotice(null), 3000);
+            return;
+        }
+
+        try {
+            setNotice(null);
+            setTogglingId(bidId);
+
+            const res = await toggleWishlist(userId, bidId);
+
+            if (res.status === "success") {
+                setAddedIds(prev => new Set(prev).add(bidId)); // 담김 처리
+                const items = await fetchWishlist(userId);
+                setAddedIds(new Set(items.map((it) => it.bidId)));
                 setNotice("장바구니에 반영했습니다.");
             } else {
                 setNotice(res.message || "장바구니 처리에 실패했습니다.");
             }
+
             setTimeout(() => setNotice(null), 3000);
-		} catch (e) {
-			setNotice(e instanceof Error ? e.message : "장바구니 처리 중 오류가 발생했습니다.");
+        } catch (e) {
+            setNotice("장바구니 처리 중 오류가 발생했습니다.");
             setTimeout(() => setNotice(null), 3000);
-		} finally {
-			setTogglingId(null);
-		}
-	};
+        } finally {
+            setTogglingId(null);
+        }
+    };
+
 
     if (loading) {
         return (
@@ -214,6 +258,7 @@ export function RecommendedBidsSection() {
                         const bidId = pick_bid_id(b);
                         const dleft = days_left(String((b as any).endDate ?? ""));
                         const dText = dleft === null ? "-" : dleft <= 0 ? "마감" : `D-${dleft}`;
+                        const alreadyAdded = addedIds.has(bidId);
 
                         const badgeCls =
                             dleft !== null && dleft > 0
@@ -250,15 +295,31 @@ export function RecommendedBidsSection() {
                                             {format_krw_eok((b as any).estimatePrice)}
                                         </div>
                                         <div className="flex items-center gap-2 justify-end">
-                                             <Button
-                                                variant="outline"
+                                            <Button
+                                                variant={alreadyAdded ? "secondary" : "outline"}
                                                 size="sm"
-                                                className="h-9 px-3 hover:bg-slate-50 hover:text-slate-900"
-                                                onClick={() => void on_toggle_wishlist(b)}
-                                                disabled={togglingId === bidId && bidId !== 0}
+                                                className="h-9 px-3"
+                                                disabled={togglingId === bidId || !wishlistSynced}
+                                                onClick={() => {
+                                                    if (!wishlistSynced) {
+                                                        setNotice("장바구니 상태를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.");
+                                                        setTimeout(() => setNotice(null), 3000);
+                                                        return;
+                                                    }
+
+                                                    if (alreadyAdded) {
+                                                        setNotice("이미 담긴 공고입니다.");
+                                                        setTimeout(() => setNotice(null), 3000);
+                                                        return;
+                                                    }
+
+                                                    void on_toggle_wishlist(b);
+                                                }}
                                             >
-                                                {togglingId === bidId ? "처리중" : "담기"}
+                                                {togglingId === bidId ? "처리중" : alreadyAdded ? "담김" : "담기"}
                                             </Button>
+
+
                                             <Button
                                                 variant="default"
                                                 size="sm"
