@@ -78,6 +78,7 @@ export function clearLogin() {
 	localStorage.removeItem("role");
 	localStorage.removeItem("accessToken");
 	localStorage.removeItem("refreshToken");
+	localStorage.removeItem("chatbot_messages"); // 챗봇 대화 내용도 삭제
 }
 
 export function login(email: string, password: string) {
