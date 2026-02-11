@@ -475,40 +475,89 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 <details>
 <summary><b>🎯 전보윤 - ProductManager, AI</b></summary>
 
+### 담당 업무
+
+- **Quantile Regression 모델로부터 확률이 높은 상위 3위 사정율 구간 추출**
+- **AI 요약 보고서, Chatbot 파이프라인 설계**
+- **모델 EndPoint 생성 후 FastAPI 서빙**
+
 </details>
 
 <details>
 <summary><b>🏗️ 강버들 - FrontEnd</b></summary>
 
-</details>
+### 담당 업무
 
-<details>
-<summary><b>⚡ 김형모 - BackEnd</b></summary>
+- **UI/UX 설계**
+- **AI 초기 모델 설계 및 비교**
 
 </details>
 
 <details>
 <summary><b>🗄️ 공동욱 - BackEnd</b></summary>
 
+### 담당 업무
+
+- **Spring 입찰영역 MVC/CRUD 설계**
+- **Azure Container 설계 배포 관리**
+- **DB 스키마 설계,FastAPI 서버 파이프라인설계 및 CI/CD 관리**
+
+</details>
+
+<details>
+<summary><b>⚡ 김형모 - BackEnd</b></summary>
+
+### 담당 업무
+
+- **Spring 공고영역 MVC/CRUD 설계**
+- **Github Action CI/CD 관리**
+- **Azure Container 및 보안 설계 관리**
+
 </details>
 
 <details>
 <summary><b>🔗 윤성빈 - AI</b></summary>
+
+### 담당 업무
+
+- **나라장터 데이터 분석 및 전처리**
+- **Chatbot EndPoint 세부 구현**
+- **Chatbot 공고 조회 기능 설계**
+- **Chatbot Toolnode 기능 개선**
+- **웹사이트 QA**
 
 </details>
 
 <details>
 <summary><b>🏛️ 이세용 - BackEnd</b></summary>
 
+### 담당 업무
+
+- **Spring MVC/CRUD 설계**
+- **Github Action CI/CD 관리**
+- **Frontend 설계 및 BackEnd와의 연동**
+- **DB 스키마 설계**
+
 </details>
 
 <details>
 <summary><b>🚧 장우진 - AI</b></summary>
 
+### 담당 업무
+
+- **사이트 이용 안내 Toolnode 설계 및 구현**
+- **FAISS 기반 Vector DB 구축**
+- **멀티모달 데이터(이미지, Excel) 임베딩**
+
 </details>
 
 <details>
 <summary><b>🏢 황도윤 - FrontEnd</b></summary>
+
+### 담당 업무
+
+- **프론트엔드 - 백엔드 API 연동 및 데이터 흐름 관리**
+- **React 기반 입찰 관리 서비스 기획 및 개발**
 
 </details>
 
@@ -533,14 +582,14 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 
 > "프로젝트를 진행하면서 느낀 점이나 소감을 작성해주세요."
 
+### 🗄️ 공동욱 - BackEnd
+
+> "프로젝트를 진행하면서 느낀 점이나 소감을 작성해주세요."
+
 ### ⚡ 김형모 - BackEnd
 
 > "이 프로젝트를 하면서 평소 관심이 있었던 클라우드를 깊게 실습해볼 수 있어서 좋았습니다.
 > 비용적으로 그리고 성능적으로 가장 효율적인 서비스를 선택할 수 있도록 팀원들과 고민하며 여러 방식을 시도했던게 기억에 남습니다.  도메인도 구매해서 사용해 볼 수 있어서 좋았으나 컨테이너 간의 연결속도를 개선하지 못해서 아쉬웠습니다."
-
-### 🗄️ 공동욱 - BackEnd
-
-> "프로젝트를 진행하면서 느낀 점이나 소감을 작성해주세요."
 
 ### 🔗 윤성빈 - AI
 
