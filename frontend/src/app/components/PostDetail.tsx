@@ -215,25 +215,19 @@ export function PostDetail({
         }
     }, [postId, is_editing, post]);
 
-    // 채택 상태 관리
-    const [adoptedCommentId, setAdoptedCommentId] = useState<number | null>(
-        (post as any).adoptedCommentId ?? null
-    );
-    
-    useEffect(() => {
-        setAdoptedCommentId((post as any).adoptedCommentId ?? null);
-    }, [post]);
-
     const handleAdopt = async (commentId: number) => {
         const ok = window.confirm("이 답변을 채택하시겠습니까? 채택 후에는 취소할 수 없습니다.");
         if (!ok) return;
         
         try {
-            await adoptComment(commentId);
-            setAdoptedCommentId(commentId);
-            onAdopt?.(postId, commentId);
-        } catch (e: any) {
-            alert(e?.message || "채택에 실패했습니다.");
+            await adoptComment(postId, commentId);
+            alert("답변이 채택되었습니다!");
+            // Reload to get updated comment data with isAdopted flag
+            window.location.reload();
+        } catch (err: any) {
+            console.error("채택 오류:", err);
+            const msg = err?.message || "채택에 실패했습니다.";
+            alert(msg);
         }
     };
 
@@ -304,7 +298,8 @@ export function PostDetail({
     const categoryKey = ((post as any).category as PostCategory) ?? "question";
     
     // 채택 가능 여부: 질문글 + 내가 작성자 + 아직 채택되지 않음
-    const canAdopt = canEdit && categoryKey === "question" && adoptedCommentId === null;
+    const hasAdoptedComment = post.comments?.some((c: any) => c.isAdopted) ?? false;
+    const canAdopt = canEdit && categoryKey === "question" && !hasAdoptedComment;
 
     return (
         <div className="space-y-6">
@@ -334,7 +329,7 @@ export function PostDetail({
                             <span className={`px-3 py-1 rounded text-sm font-medium ${category_colors[categoryKey]}`}>
                               {category_labels[categoryKey]}
                             </span>
-                            {adoptedCommentId && (
+                            {hasAdoptedComment && (
                                 <Badge variant="outline" className="border-green-500 text-green-600 bg-green-50 gap-1">
                                     <CheckCircle className="w-3 h-3" /> 해결됨
                                 </Badge>
@@ -528,7 +523,7 @@ export function PostDetail({
                         const can_delete_this_comment =
                             !!canInteract && (!!isAdmin || !!canEdit || (!!comment_author_id && !!me && comment_author_id === me));
                         
-                        const isAdopted = Number(comment.id) === adoptedCommentId;
+                        const isAdopted = comment.isAdopted ?? false;
                         const canNotAdoptSelf = comment_author_id !== me;
 
                         return (

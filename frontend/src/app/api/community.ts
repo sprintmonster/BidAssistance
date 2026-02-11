@@ -352,7 +352,7 @@ export async function fetchTrendingPosts(): Promise<Post[]> {
 /**
  * 답변 채택 API
  */
-export async function adoptComment(commentId: number): Promise<Comment> {
+export async function adoptComment(postId: number, commentId: number): Promise<Comment> {
 	const userId = localStorage.getItem("userId");
 	if (!userId) throw new Error("로그인이 필요합니다.");
 
