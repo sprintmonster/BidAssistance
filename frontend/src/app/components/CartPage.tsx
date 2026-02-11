@@ -38,10 +38,14 @@ function parse_time(v: string): number {
 }
 
 function is_past_bid(bidEnd: string, nowMs: number): boolean {
-	const t = parse_time(String(bidEnd));
-	if (t <= 0) return false;
-	return t < nowMs;
+    const end = new Date(bidEnd);
+    if (!Number.isFinite(end.getTime())) return false;
+
+    // 마감은 시간 기준
+    return end.getTime() <= nowMs;
 }
+
+
 
 function formatAmount(value: unknown): string {
 	if (value == null || value === "") return "-";
