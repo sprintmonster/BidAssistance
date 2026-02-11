@@ -25,7 +25,7 @@
 4. [🎯 서비스 핵심 기능](#-서비스-핵심-기능)
 5. [🛠️ 기술 스택](#️-기술-스택)
 6. [🏗️ 상세 구현 내용](#️-상세-구현-내용)
-7. [🚀 배포 가이드](#-배포-가이드)
+7. [🚀 배포 상세](#-배포-상세)
 8. [👨‍💻 팀원별 상세 업무](#-팀원별-상세-업무)<!-- 9. [📝 회의록 및 개발 과정](#-회의록-및-개발-과정) -->
 9. [💬 프로젝트 소감](#-프로젝트-소감)
 
@@ -339,28 +339,47 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 
 ---
 
-# 🚀 배포 가이드
+# 🚀 배포 상세
 
-## 🚀 소스코드 / 이미지기반 가이드
+<!-- - 📖 **[소스코드 기반- 설치 및 실행 가이드](https://github.com/LxNx-Hn/chatbot-with-kt-dgucenter/wiki/%EC%86%8C%EC%8A%A4%EC%BD%94%EB%93%9C%EA%B8%B0%EB%B0%98-%EB%B0%B0%ED%8F%AC%EA%B0%80%EC%9D%B4%EB%93%9C)** - 시스템 요구사항, Docker 설치, 트러블슈팅 포함
 
-- 📖 **[소스코드 기반- 설치 및 실행 가이드](https://github.com/LxNx-Hn/chatbot-with-kt-dgucenter/wiki/%EC%86%8C%EC%8A%A4%EC%BD%94%EB%93%9C%EA%B8%B0%EB%B0%98-%EB%B0%B0%ED%8F%AC%EA%B0%80%EC%9D%B4%EB%93%9C)** - 시스템 요구사항, Docker 설치, 트러블슈팅 포함
+- 📖 **[이미지 기반- 설치 및 실행 가이드](https://github.com/LxNx-Hn/chatbot-with-kt-dgucenter/wiki/%EC%9D%B4%EB%AF%B8%EC%A7%80-%EA%B8%B0%EB%B0%98-%EB%B0%B0%ED%8F%AC-%EA%B0%80%EC%9D%B4%EB%93%9C)** - 컨테이너 실행, 환경변수 주입 , 트러블슈팅 포함 -->
 
-- 📖 **[이미지 기반- 설치 및 실행 가이드](https://github.com/LxNx-Hn/chatbot-with-kt-dgucenter/wiki/%EC%9D%B4%EB%AF%B8%EC%A7%80-%EA%B8%B0%EB%B0%98-%EB%B0%B0%ED%8F%AC-%EA%B0%80%EC%9D%B4%EB%93%9C)** - 컨테이너 실행, 환경변수 주입 , 트러블슈팅 포함
+## 🔄 배포 CI/CD 파이프라인
+
+<div align="center">
+  <img src="./ops/images/CICD 파이프라인.png" alt="CICD 파이프라인.png" width="500"/>
+</div><br>
+
+- **자동화** : GitHub에 Push시 빌드부터 배포까지 자동화 구현
+- **표준화** : Docker 컨테이너로 표준화하여 배포 일관성 확보
+- **클라우드** : Azure Cloud에 컨테이너를 호스팅하여 확장성과 안정성 확보
 
 ---
 
-## 🚀CI/CD (자동 배포 시스템)
+## 🚀 Azure Container Apps를 이용한 배포
 
-### 🔄 자동 배포 파이프라인
+<img src="./ops/images/Azure Container Apps 1.png" width="49%" style="float: left;">
+<img src="./ops/images/Azure Container Apps 2.png" width="49%" style="float: right;">
 
-GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구축했습니다.
+<div style="clear: both;"></div><br>
 
-- **태그 기반 배포**: `v*` 태그 푸시 시 자동 빌드/배포 실행
-- **멀티 플랫폼 지원**: 백엔드(RunPod), 프론트엔드(Netlify) 동시 배포
-- **컨테이너 이미지 관리**: GitHub Container Registry(GHCR) 활용
-- **환경별 배포**: Production/Development 환경 분리
+- 기존의 고정적으로 비용이 청구되는 App Service와 다르게 요청이 적을 때에는 복제본을 줄여 자본 운용이 효율적
+- App Service는 코드를 변경할때마다 잠시간 서비스가 종료되지만 Container의 경우 패치 중에도 서비스 운영 가능
+- Kubenetes의 기능을 챙기며 관리의 전문성과 어려움을 줄여 관리가 쉬우며 추후 Kubernetes로 확장도 간편
 
-### 📦 배포 환경
+## 🗄️ Container 선택이유
+
+<img src="./ops/images/Container 선정이유 1.png" width="49%" style="float: left;">
+<img src="./ops/images/Container 선정이유 2.png" width="49%" style="float: right;">
+
+<div style="clear: both;"></div><br>
+
+- 기존의 App Service와 다르게 요청이 적을 때에는 복제본을 줄여 자본 운용이 효율적
+- App Service는 코드를 변경할때마다 잠시간 서비스가 종료되지만 Container의 경우 패치 중에도 서비스 운영 가능
+- App Service의 경우 서버에서 Crash가 있으면 사람이 직접 조치를 취해야하지만 Container의 경우 자동으로 재부팅
+
+<!-- ### 📦 배포 환경
 
 <div align="center">
   <table>
@@ -389,9 +408,9 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
       <td>공개 이미지, 버전 관리</td>
     </tr>
   </table>
-</div>
+</div> -->
 
-### 🛠️ CI/CD 워크플로우
+<!-- ### 🛠️ CI/CD 워크플로우
 
 **📋 [GitHub Actions 워크플로우 코드](https://github.com/LxNx-Hn/chatbot-with-kt-dgucenter/blob/main/.github/workflows/deploy.yml)** - 전체 빌드/배포 자동화 스크립트
 
@@ -420,7 +439,7 @@ GitHub Actions 기반의 완전 자동화된 빌드 및 배포 시스템을 구�
 - **⚙️ 백엔드 API**: [RunPod 서비스](https://your-api.runpod.io)
 - **🐳 Docker 이미지**:
 - Backend: [`ghcr.io/lxnx-hn/chatbot-with-kt-dgucenter-backend:latest`](https://github.com/LxNx-Hn/chatbot-with-kt-dgucenter/pkgs/container/chatbot-with-kt-dgucenter-backend)
-- Frontend: [`ghcr.io/lxnx-hn/chatbot-with-kt-dgucenter-frontend:latest`](https://github.com/LxNx-Hn/chatbot-with-kt-dgucenter/pkgs/container/chatbot-with-kt-dgucenter-frontend)
+- Frontend: [`ghcr.io/lxnx-hn/chatbot-with-kt-dgucenter-frontend:latest`](https://github.com/LxNx-Hn/chatbot-with-kt-dgucenter/pkgs/container/chatbot-with-kt-dgucenter-frontend) -->
 
 ## 👨‍💻 팀원별 상세 업무
 
