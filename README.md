@@ -360,7 +360,7 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 ## 🚀 Azure Container Apps를 이용한 배포
 
 <p align="center">
-<img src="./ops/images/Azure Container Apps 1.png" width="380" style="margin-right: 10px"> <img src="./ops/images/Azure Container Apps 2.png" width="380" style="margin-left: 10px">
+<img src="./ops/images/Azure Container Apps 1.png" width="380" style="margin-right: 5px"> <img src="./ops/images/Azure Container Apps 2.png" width="380" style="margin-left: 5px">
 </p>
 
 - 기존의 고정적으로 비용이 청구되는 App Service와 다르게 요청이 적을 때에는 복제본을 줄여 자본 운용이 효율적
@@ -370,7 +370,7 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 ## 🗄️ Container 선택이유
 
 <p align="center">
-<img src="./ops/images/Container 선정이유 1.png" width="380" style="margin-right: 10px"> <img src="./ops/images/Container 선정이유 2.png" width="380" style="margin-left: 10px">
+<img src="./ops/images/Container 선정이유 1.png" width="380" style="margin-right: 5px"> <img src="./ops/images/Container 선정이유 2.png" width="380" style="margin-left: 5px">
 </P>
 
 - 기존의 App Service와 다르게 요청이 적을 때에는 복제본을 줄여 자본 운용이 효율적
