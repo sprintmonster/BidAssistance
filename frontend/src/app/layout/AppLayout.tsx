@@ -7,6 +7,8 @@ import {
   type ReactNode,
 } from "react";
 import { ChatbotFloatingButton } from "../components/ChatbotFloatingButton";
+import { ChatbotModal } from "../components/ChatbotModal";
+import { X } from "lucide-react";
 import {
   consume_reco_popup_trigger,
   is_reco_popup_suppressed_today,
@@ -48,6 +50,7 @@ export function AppLayout() {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [recoOpen, setRecoOpen] = useState(false);
+  const [chatbotOpen, setChatbotOpen] = useState(false);
 
   const [authTick, setAuthTick] = useState(0);
 
@@ -409,8 +412,50 @@ export function AppLayout() {
         </div>
       </footer>
 
-      <ChatbotFloatingButton />
+      <ChatbotFloatingButton onClick={() => setChatbotOpen(!chatbotOpen)} />
       <RecommendedBidsModal open={recoOpen} onOpenChange={setRecoOpen} />
+
+      {/* Chatbot Floating Panel */}
+      {chatbotOpen && (
+        <>
+          {/* Overlay */}
+          <button
+            type="button"
+            onClick={() => setChatbotOpen(false)}
+            className="fixed inset-0 bg-black/20 z-[70] transition-opacity"
+            aria-label="챗봇 닫기"
+          />
+
+          {/* Floating Chat Panel at Bottom-Right */}
+          <div
+            className="fixed bottom-[calc(env(safe-area-inset-bottom)+6.5rem)] right-4 md:right-6 
+                       w-[calc(100vw-2rem)] md:w-[739px] lg:w-[893px]
+                       h-[min(680px,calc(100vh-10rem))]
+                       z-[80] bg-white shadow-2xl rounded-2xl
+                       transform transition-all duration-300 ease-out"
+            style={{
+              transform: chatbotOpen ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(20px)',
+              opacity: chatbotOpen ? 1 : 0
+            }}
+          >
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setChatbotOpen(false)}
+              className="absolute right-4 top-4 z-10 rounded-md bg-white/90 p-2 shadow-md hover:bg-slate-50
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+              aria-label="AI 도우미 닫기"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            {/* Chatbot Content */}
+            <div className="h-full">
+              <ChatbotModal onClose={() => setChatbotOpen(false)} />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

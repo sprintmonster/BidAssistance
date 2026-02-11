@@ -560,7 +560,9 @@ export function BidDiscovery({
                                 <span className="text-sm text-muted-foreground">
                                     {selectedIds.size}개 선택됨
                                 </span>
-                                {selectedIds.size > 0 && (
+                            </div>
+                            <div className="flex items-center gap-2 pr-2">
+                                {selectedIds.size > 0 ? (
                                     <Button
                                         size="sm"
                                         variant="default"
@@ -572,6 +574,10 @@ export function BidDiscovery({
                                     >
                                         비교하기 ({selectedIds.size})
                                     </Button>
+                                ) : (
+                                    <span className="text-sm text-muted-foreground">
+                                        공고를 선택하여 비교하기
+                                    </span>
                                 )}
                             </div>
                         </div>

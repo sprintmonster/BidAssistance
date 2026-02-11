@@ -81,10 +81,21 @@ function Bubble({
 	);
 }
 
-export function ChatbotModal({ onClose }: { onClose: () => void }) {
-	void onClose;
+const CHATBOT_STORAGE_KEY = "chatbot_messages";
 
-	const [messages, setMessages] = useState<Message[]>([
+const loadMessages = (): Message[] => {
+	try {
+		const saved = localStorage.getItem(CHATBOT_STORAGE_KEY);
+		if (saved) {
+			const parsed = JSON.parse(saved) as Message[];
+			if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+		}
+	} catch {
+		// 파싱 실패 시 기본값 사용
+	}
+
+	// 기본 환영 메시지
+	return [
 		{
 			id: 1,
 			sender: "bot",
@@ -92,7 +103,13 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
 			timestamp: nowTime(),
 			suggestions: ["서울 지역 공고 알려줘", "30억 이하 공사 찾아줘", "마감 임박 공고는?"],
 		},
-	]);
+	];
+};
+
+export function ChatbotModal({ onClose }: { onClose: () => void }) {
+	void onClose;
+
+	const [messages, setMessages] = useState<Message[]>(loadMessages);
 
 	const [input, setInput] = useState("");
 	const [isTyping, setIsTyping] = useState(false);
@@ -100,6 +117,15 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
 
 	const bottomRef = useRef<HTMLDivElement | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	// 메시지 변경 시 localStorage에 저장
+	useEffect(() => {
+		try {
+			localStorage.setItem(CHATBOT_STORAGE_KEY, JSON.stringify(messages));
+		} catch {
+			// 저장 실패 시 무시 (용량 초과 등)
+		}
+	}, [messages]);
 
 	useEffect(() => {
 		bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -179,9 +205,9 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
 	};
 
 	return (
-		<div className="w-full h-[min(760px,calc(100vh-2rem))] max-w-[980px] bg-white border rounded-2xl shadow-2xl overflow-hidden flex">
+		<div className="w-full h-full bg-slate-50 rounded-2xl overflow-hidden flex">
 			<div className="flex-1 min-w-0 flex flex-col min-h-0">
-				<div className="px-5 py-4 bg-slate-950 text-white flex items-center justify-between shrink-0">
+				<div className="px-5 py-4 bg-slate-950 text-white flex items-center justify-between shrink-0 rounded-t-2xl">
 					<div className="flex items-center gap-3">
 						<div className="h-10 w-10 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center">
 							<Sparkles className="h-5 w-5" />
@@ -278,7 +304,7 @@ export function ChatbotModal({ onClose }: { onClose: () => void }) {
 				</div>
 			</div>
 
-			<div className="hidden lg:flex w-[320px] border-l bg-slate-50 flex-col min-h-0">
+			<div className="hidden lg:flex w-[269px] border-l bg-slate-50 flex-col min-h-0">
 				<div className="p-5 shrink-0">
 					<div className="text-sm font-semibold text-slate-900">빠른 질문</div>
 					<div className="mt-1 text-xs text-slate-600">자주 쓰는 질문을 한 번에 보내세요.</div>
