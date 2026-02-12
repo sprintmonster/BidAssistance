@@ -114,7 +114,7 @@ def build_api_faiss():
         output_data = str(row["반환데이터"])
         error_data = str(row["오류데이터"])
 
-    content = f"""
+        content = f"""
         [API URL]
         {rest_api}
 
@@ -174,18 +174,27 @@ def parse_manual_txt(filepath: str) -> List[Document]:
     # ["", "전체 페이지 공통 사항", "내용...", "게시글 페이지", "내용...", ...]
 
     for i in range(1, len(splits), 2):
-        page_title = splits[i].strip()
-        page_content = splits[i + 1].strip()
+        header = splits[i].strip()
+        content = splits[i + 1].strip()
 
-        if not page_content:
+        if not content:
             continue
+        
+        # 페이지 / 섹션 분리
+        if " - " in header:
+            page, section = header.split(" - ", 1)
+        else:
+            page = header
+            section = "개요"
 
         documents.append(
             Document(
-                page_content=page_content,
+                page_content=content,
                 metadata={
                     "source": "homepage_manual",
-                    "page": page_title
+                    "page": page.strip(),
+                    "section":section.strip(),
+                    "title":header
                 }
             )
         )
@@ -210,7 +219,10 @@ def build_text_faiss():
     for idx, doc in enumerate(documents):
         doc.metadata.update({
             "source": "homepage_manual",
-            "element_id": idx
+            "element_id": idx,
+            "page": doc.metadata.get("page"),
+            "section": doc.metadata.get("section"),
+            "type": "ui_manual"
         })
     # 3️⃣ FAISS 생성
     faiss = FAISS.from_documents(documents, embeddings)
@@ -255,17 +267,20 @@ def load_text_faiss(text_db_path: str) -> FAISS:
 # =========================
 # 벡터 검색 (목적 분리)
 # =========================
-def search_image_context(image_faiss: FAISS, query: str, k: int = 3) -> List[Document]:
+def search_image_context(image_faiss: FAISS, query: str, k: int = 5) -> List[Document]:
     """UI / 화면 / 사용자 동작 관점 검색"""
-    return image_faiss.similarity_search(query, k=k)
+    results=image_faiss.similarity_search_with_score(query, k=k)
+    return [doc for doc, score in results]
 
-def search_api_context(api_faiss: FAISS, query: str, k: int = 3) -> List[Document]:
+def search_api_context(api_faiss: FAISS, query: str, k: int = 5) -> List[Document]:
     """API 기능 / 요청 / 응답 / 필드 관점 검색"""
-    return api_faiss.similarity_search(query, k=k)
+    results=api_faiss.similarity_search_with_score(query, k=k)
+    return [doc for doc, score in results]
 
-def search_text_context(text_faiss: FAISS, query: str, k: int = 3) -> List[Document]:
+def search_text_context(text_faiss: FAISS, query: str, k: int = 5) -> List[Document]:
     """홈페이지 기능 검색"""
-    return text_faiss.similarity_search(query, k=k)
+    results=text_faiss.similarity_search_with_score(query, k=k)
+    return [doc for doc, score in results]
 
 
 # =========================
@@ -313,7 +328,8 @@ def build_context(img_docs: List[Document], api_docs: List[Document], text_docs:
 # # =========================
 # # main
 # # =========================
-# if __name__ == "__main__":      # Python 스크립트가 직접 실행될 때만 작성된 세 개의 함수를 순차적으로 호출.
-#     build_image_faiss()
-#     build_api_faiss()
-#     test_usage_tool()
+if __name__ == "__main__":      # Python 스크립트가 직접 실행될 때만 작성된 세 개의 함수를 순차적으로 호출.
+    # build_image_faiss()
+    # build_api_faiss()
+    #test_usage_tool()
+    build_text_faiss()

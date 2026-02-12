@@ -412,7 +412,19 @@ async def chat_endpoint(req: ChatRequest):
         if s.startswith("{") and s.endswith("}"):
             resp_type = "search"
         '''
-
+        # 🔥 pydantic 에러 감지
+        parsed=None
+        try:
+            parsed = json.loads(final_text)
+        except:
+            pass
+        if isinstance(parsed, dict) and parsed.get("__error__") == "pydantic_validation":
+            return {
+                "type": resp_type,
+                "response": "질문이 조금 모호합니다. \n원하시는 조건을 조금 더 자세히 말씀해 주시길바랍니다.",
+                "thread_id": req.thread_id
+        }
+        
         return {
             "type": resp_type,
             "response": final_text,

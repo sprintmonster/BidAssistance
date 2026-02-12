@@ -1,6 +1,174 @@
 from langchain.tools import tool
 from langchain_openai import ChatOpenAI
+from pydantic import BaseModel, Field, model_validator
+from typing import Optional, List, Literal
+import json
+from langchain_core.messages import SystemMessage, HumanMessage
 
+OpFrom = Literal["gte", "gt", "eq"]
+OpTo   = Literal["lte", "lt"]
+
+AggOp  = Literal["min", "max", "avg", "sum", "count"]
+OutType = Literal["all", "field", "agg", "error"]
+
+DateBase = Literal["startDate", "endDate", "openDate"]
+Kind = Literal["absolute", "calendar"]
+Unit = Literal["day", "week", "month", "year"]
+Position = Literal["start", "end"]
+
+class RangeFrom(BaseModel):
+    op: OpFrom
+    value: float
+
+
+class RangeTo(BaseModel):
+    op: OpTo
+    value: float
+
+
+class Range(BaseModel):
+    from_: Optional[RangeFrom] = Field(None, alias="from")
+    to: Optional[RangeTo] = None
+
+    @model_validator(mode="after")
+    def check_range(cls, values:dict)->dict:
+        f, t = values.from_, values.to
+
+        if not f and not t:
+            return values
+
+        # eq는 단독 비교만 허용
+        if f and f.op == "eq" and t is not None:
+            raise ValueError("eq comparison must not include to")
+
+        return values
+
+class TimePoint(BaseModel):
+    kind: Kind
+    value: Optional[int]
+    unit: Optional[Unit]
+    offset: Optional[int]
+    position: Optional[Position]
+
+    @model_validator(mode="after")
+    def check_kind_rules(self):
+
+        if self.kind == "absolute":
+            if self.value is None:
+                raise ValueError("absolute kind requires value")
+            if any(
+                getattr(self, field) is not None
+                for field in ("unit", "offset", "position")
+            ):
+                raise ValueError("absolute kind cannot have unit/offset/position")
+
+        if self.kind == "calendar":
+            if self.value is not None:
+                raise ValueError("calendar kind cannot have value")
+            if (
+                self.unit is None
+                and self.offset is None
+                and self.position is None
+            ):
+                raise ValueError(
+                    "calendar kind requires at least one of unit/offset/position"
+                )
+
+        return self
+
+class TimeRange(BaseModel):
+    base: DateBase
+    from_: Optional[TimePoint] = Field(None, alias="from")
+    to: Optional[TimePoint] = None
+
+
+class Filter(BaseModel):
+    bidRealId: Optional[str]
+    name: Optional[str]
+    region: Optional[str]
+    organization: Optional[str]
+
+    estimatePrice: Optional[Range]
+    basicPrice: Optional[Range]
+    minimumBidRate: Optional[Range]
+    bidRange: Optional[Range]
+
+    timeRange: Optional[TimeRange]
+
+    
+class OutputItem(BaseModel):
+    type: OutType
+    field: Optional[str]
+    op: Optional[AggOp]
+
+    @model_validator(mode="after")
+    def validate_output(cls, values:dict)->dict:
+        t, field, op = values.type, values.field, values.op
+
+        if t == "all":
+            if field is not None or op is not None:
+                raise ValueError("all type must have null field and op")
+
+        if t == "field":
+            if field is None or op is not None:
+                raise ValueError("field type requires field and null op")
+
+        if t == "agg":
+            if op is None:
+                raise ValueError("agg type requires op")
+            if op != "count" and field is None:
+                raise ValueError("agg type requires field unless op is count")
+
+        if t == "error":
+            if field is not None or op is not None:
+                raise ValueError("error type must have null field and op")
+
+        return values
+    
+class Query(BaseModel):
+    limit: Optional[int]=None
+    filter: Optional[Filter]=None
+    output: List[OutputItem]
+
+    @model_validator(mode="after")
+    def final_checks(cls, values):
+        output = values.output
+        limit = values.limit
+        filter_ = values.filter
+
+        #output은 비면 안됨
+        if not output:
+            raise ValueError("output cannot be empty")
+        
+        #types = {o.type for o in output}
+        
+        has_agg = any(o.type == "agg" for o in output)
+        has_non_agg = any(o.type in ("all", "field") for o in output)
+
+        # agg + all/field 혼합 금지
+        if has_agg and has_non_agg:
+          raise ValueError("agg cannot be mixed with all/field")
+
+        # error면 limit은 null
+        if any(o.type == "error" for o in output):
+          if limit is not None:
+              raise ValueError("limit must be null when output type is error")
+          return values
+        
+        if filter_ is None:
+            raise ValueError("filter is required for notice query")
+
+        # agg only → limit null
+        if has_agg:
+          if limit is not None:
+              raise ValueError("limit must be null for agg queries")
+        else:
+            # 🔥 일반 조회는 limit 필수
+            if limit is None:
+                raise ValueError("limit is required for non-agg queries")
+
+        return values
+    
 llm = ChatOpenAI(model="gpt-5-nano", temperature=1)
 
 @tool
@@ -194,6 +362,7 @@ def extract_notice_query(user_query: str) -> dict:
 
     - limit은 row 조회(all/field)일 때만 의미가 있다.
     - output에 agg만 있는 경우 limit은 반드시 null이다.
+    - 집계(count, avg, sum 등) 질문에는 limit을 절대 포함하지 않는다.
     - 사용자가 단일 공고를 특정하면 limit=1로 설정한다.
     - 사용자가 개수 제한을 말하지 않고 row 조회(all/field)인 경우 limit=3로 둔다.
     - output이 error인 경우 limit은 반드시 null이다.
@@ -401,12 +570,352 @@ def extract_notice_query(user_query: str) -> dict:
       ]
     }
     """ 
-    prompt+=f"""
+
+    #Pydantic 기반용
+    prompt_pydantic_kor="""
+    당신은 엄격한 JSON 생성기입니다.
+
+    당신의 임무는 사용자의 자연어 질문을 제공된 스키마에 엄격히 맞는 JSON 객체로 변환하는 것입니다.
+
+    다음 규칙을 반드시 따라야 합니다:
+
+    1. 출력 형식
+      - 출력은 단일 유효한 JSON 객체여야 합니다.
+      - 설명, 주석, 마크다운을 포함하지 마세요.
+      - JSON 외의 텍스트는 절대 포함하지 마세요.
+
+    2. 스키마 준수
+      - JSON 구조는 스키마와 정확히 일치해야 합니다.
+      - 새로운 필드를 추가하지 마세요.
+      - 필수 필드를 생략하지 마세요.
+      - 확신이 없는 경우 값은 반드시 null로 설정하세요.
+
+    3. 허구 금지
+      - 사용자가 명시적으로 말하거나 강하게 암시한 것만 추출하세요.
+      - 추측하지 마세요.
+      - 조건이 모호하거나 충분히 명시되지 않은 경우 null로 설정하세요.
+      - region과 organization 해석은 아래 규칙을 따르세요.
+
+    4. 필터
+      - 모든 검색 조건은 "filter" 아래에 포함되어야 합니다.
+      - 여러 조건을 동시에 적용할 수 있습니다.
+      - 필터 조건이 없는 경우 "filter"를 null로 설정하세요.
+
+    5. 범위 필드 (estimatePrice, basicPrice, minimumBidRate, bidRange)
+      - 사용자가 명시적으로 범위를 암시한 경우에만 "from"과/또는 "to"를 사용하세요.
+      - 연산자 선택은 오직 문장 표현에 따라 gte / gt / eq / lte / lt로 제한합니다.
+      - 범위의 한쪽만 언급된 경우, 다른 쪽은 null로 설정하세요.
+
+    6. 시간 범위 처리
+      - 모든 날짜 관련 표현은 "timeRange"로 표현해야 합니다.
+      - "base"는 startDate, endDate, openDate 중 하나여야 합니다.
+      - 구체적인 타임스탬프를 지정한 경우 "absolute"를 사용하세요.
+      - 상대적 표현 (예: last month, this week)에는 "calendar"를 사용하세요.
+      - 시작 또는 끝만 언급된 경우, 다른 쪽은 null로 설정하세요.
+      - 날짜 참조가 불분명하면 "timeRange"를 null로 설정하세요.
+
+    7. 출력 필드
+      - 사용자가 전체 레코드를 원하거나 출력 필드를 지정하지 않은 경우:
+        { "type": "all", "field": null, "op": null }를 사용하세요.
+      - 특정 필드를 요청하면 type = "field"를 사용하세요.
+      - 집계(count, min, max, avg, sum)를 요청하면 type = "agg"를 사용하세요.
+      - 데이터베이스 쿼리로 실행할 수 없는 경우(명확한 대상 없음, 출력 유형 충돌, 비쿼리 의도 등)는 output.type = "error"로 설정하세요.
+      - 필터 없이 단순 조회 의도(예: "show anything", "recent notices")는 유효한 쿼리로 간주하며 error로 처리하지 마세요.
+
+    8. Limit
+      - 사용자가 개수를 명시적으로 지정한 경우에만 limit을 설정하세요.
+      - 단순 조회 의도에서 개수를 지정하지 않은 경우 limit은 null로 두어도 되며, 서버에서 기본 제한을 적용할 수 있습니다.
+
+    9. 낮은 신뢰도 처리
+      - 잘못된 추론보다는 null을 선호하세요.
+      - 대부분 null로 이루어진 JSON 객체를 반환하는 것도 허용됩니다.
+
+    10. 지역 vs 기관 해석 (한국어 규칙)
+      - 표현이 명확하게 위치나 장소를 나타내면 filter.region으로 매핑하세요.
+        예:
+          - "서울 공고"
+          - "서울에서 한 공사"
+          - "부산 지역 공사"
+        → region = "<location>", organization = null
+      - 표현이 명확하게 발주 기관이나 기관을 나타내면 filter.organization으로 매핑하세요.
+        예:
+          - "서울시 공고"
+          - "국토교통부 공사"
+          - "조달청 발주"
+        → organization = "<institution>", region = null
+      - 위치와 기관이 모두 명시된 경우 둘 다 설정할 수 있습니다.
+      - 위치 이름만으로 기관을 추론하지 마세요.
+
+    11. 출력 일관성 규칙
+      - "output" 필드는 여러 결과를 허용하기 위해 배열이어야 합니다.
+      - 모든 객체는 동일한 "type"을 가져야 합니다.
+      - 서로 다른 출력 유형(all과 agg 등)을 혼합하지 마세요.
+      - 여러 집계 결과를 요청하는 경우, output 배열에 여러 "agg" 객체를 사용하세요.
+      - output.type = "all"이면 배열에 정확히 하나의 객체만 포함해야 합니다.
+      - output.type = "field"이면 배열에 여러 객체를 포함할 수 있지만, 모두 type = "field"여야 합니다.
+      - 그룹화 쿼리 또는 field+agg 혼합 쿼리는 지원되지 않습니다. 요청 시 output.type = "error"로 설정하세요.
+
+    마지막으로 너는 이 json 스키마에 맞춰서 json을 생성해야한다.
+
+    {
+    "limit": number | null,
+    "filter": {
+      "bidRealId": string | null,
+      "name": string | null,
+      "region": string | null,
+      "organization": string | null,
+
+
+    "estimatePrice": {
+      "from": { "op": "gte" | "gt" | "eq", "value": number } | null,
+      "to":   { "op": "lte" | "lt",        "value": number } | null
+    } | null,
+
+
+    "basicPrice": {
+      "from": { "op": "gte" | "gt" | "eq", "value": number } | null,
+      "to":   { "op": "lte" | "lt",        "value": number } | null
+    } | null,
+
+
+    "minimumBidRate": {
+      "from": { "op": "gte" | "gt" | "eq", "value": number } | null,
+      "to":   { "op": "lte" | "lt",        "value": number } | null
+    } | null,
+
+
+    "bidRange": {
+      "from": { "op": "gte" | "gt" | "eq", "value": number } | null,
+      "to":   { "op": "lte" | "lt",        "value": number } | null
+    } | null,
+
+
+    "timeRange": {
+      "base": "startDate" | "endDate" | "openDate",
+      "from": {
+        "kind": "absolute" | "calendar",
+        "value": number | null,
+        "unit": "day" | "week" | "month" | "year" | null,
+        "offset": number | null,
+        "position": "start" | "end" | null
+      },
+      "to": {
+        "kind": "absolute" | "calendar",
+        "value": number | null,
+        "unit": "day" | "week" | "month" | "year" | null,
+        "offset": number | null,
+        "position": "start" | "end" | null
+      }
+    } | null
+  },
+  "output": [
+  {
+    "type": "all" | "field" | "agg" | "error",
+    "field": "bidRealId" | "name" | "region" | "organization" | "estimatePrice" | "basicPrice" | "minimumBidRate" | "bidRange" | "startDate" | "endDate" | "openDate" | null,
+    "op": "min" | "max" | "avg" | "sum" | "count" | null
+  }
+]
+}
+
+    }
+"""
+    prompt_pydantic_eng="""
+    You are a strict JSON generator.
+
+Your task is to convert a user's natural language query into a JSON object
+that strictly conforms to the provided schema.
+
+You MUST follow these rules:
+
+1. Output format
+   - Output must be a single valid JSON object.
+   - Do NOT include explanations, comments, or markdown.
+   - Do NOT include any text outside the JSON.
+
+2. Schema compliance
+   - The JSON structure MUST exactly match the schema.
+   - Do NOT add new fields.
+   - Do NOT omit required fields.
+   - Use null explicitly when a value cannot be confidently determined.
+
+3. No hallucination
+   - Extract only what the user explicitly states or strongly implies.
+   - Do NOT guess.
+   - If a condition is ambiguous or underspecified, set it to null.
+   - When interpreting region vs organization, follow the rules defined below.
+   
+4. Filters
+   - All search conditions belong under "filter".
+   - Multiple conditions may be applied simultaneously.
+   - If no filtering condition is specified, set "filter" to null.
+
+5. Range fields (estimatePrice, basicPrice, minimumBidRate, bidRange)
+   - Use "from" and/or "to" ONLY when the user explicitly implies a range.
+   - Choose operators strictly based on wording: gte / gt / eq / lte / lt
+   - If only one side of the range is mentioned, the other side must be null.
+
+6. Time range handling:
+   - All date-related expressions MUST be represented using "timeRange".
+   - "base" must be one of: startDate, endDate, openDate.
+   - Use "absolute" when the user specifies a concrete timestamp.
+   - Use "calendar" when the user uses relative expressions (e.g. last month, this week).
+   - If only a start or end is mentioned, the other side must be null.
+   - If the date reference is unclear, set "timeRange" to null.
+
+7. Output field:
+   - If the user wants full records or does not specify output fields, use: { "type": "all", "field": null, "op": null }
+   - If the user asks for specific fields, use type = "field".
+   - If the user asks for aggregation (count, min, max, avg, sum), use type = "agg".
+   - If the user's query cannot be executed as a database query
+    (e.g. no clear target, conflicting output types, or non-query intent), set output.type = "error".
+  -Browsing intent without filters (e.g. "show anything", "any notice", "recent notices") is considered a valid query and MUST NOT be treated as an error.
+
+8. Limit:
+   - Set "limit" only if the user explicitly specifies a count.
+   - If the user expresses browsing intent without specifying a count, limit may remain null. A default limit may be applied by the server.
+
+9. Low-confidence handling
+   - Prefer null over incorrect inference.
+   - It is always acceptable to return a mostly-null JSON object.
+
+10. Region vs Organization interpretation (Korean language rules)
+   - If the expression clearly indicates a physical location or place,
+     map it to filter.region.
+     Examples:
+       - "서울 공고"
+       - "서울에서 한 공사"
+       - "부산 지역 공사"
+     → region = "<location>", organization = null
+   - If the expression clearly indicates an issuing authority or institution,
+     map it to filter.organization.
+     Examples:
+       - "서울시 공고"
+       - "국토교통부 공사"
+       - "조달청 발주"
+     → organization = "<institution>", region = null
+   - If BOTH a location and an institution are explicitly mentioned,
+     it is allowed to set BOTH region and organization.
+   - Do NOT infer organization from a location name alone.
+
+  11. Output consistency rules
+   - The "output" field MUST be an array to allow multiple results.
+   - All objects inside "output" MUST have the same "type".
+   - Mixing different output types (e.g. "all" with "agg") is NOT allowed.
+   - If multiple aggregation results are requested, use multiple "agg" objects inside the output array.
+   - If output.type = "all", the output array MUST contain exactly one object.
+   - If output.type = "field", the output array may contain multiple objects, but all MUST have type = "field".
+   - Group-by queries or field+agg mixed queries are NOT supported.
+     If the user requests them, set output.type = "error".
+You must strictly follow this schema:
+
+    {
+    "limit": number | null,
+    "filter": {
+      "bidRealId": string | null,
+      "name": string | null,
+      "region": string | null,
+      "organization": string | null,
+
+
+    "estimatePrice": {
+      "from": { "op": "gte" | "gt" | "eq", "value": number } | null,
+      "to":   { "op": "lte" | "lt",        "value": number } | null
+    } | null,
+
+
+    "basicPrice": {
+      "from": { "op": "gte" | "gt" | "eq", "value": number } | null,
+      "to":   { "op": "lte" | "lt",        "value": number } | null
+    } | null,
+
+
+    "minimumBidRate": {
+      "from": { "op": "gte" | "gt" | "eq", "value": number } | null,
+      "to":   { "op": "lte" | "lt",        "value": number } | null
+    } | null,
+
+
+    "bidRange": {
+      "from": { "op": "gte" | "gt" | "eq", "value": number } | null,
+      "to":   { "op": "lte" | "lt",        "value": number } | null
+    } | null,
+
+
+    "timeRange": {
+      "base": "startDate" | "endDate" | "openDate",
+      "from": {
+        "kind": "absolute" | "calendar",
+        "value": number | null,
+        "unit": "day" | "week" | "month" | "year" | null,
+        "offset": number | null,
+        "position": "start" | "end" | null
+      },
+      "to": {
+        "kind": "absolute" | "calendar",
+        "value": number | null,
+        "unit": "day" | "week" | "month" | "year" | null,
+        "offset": number | null,
+        "position": "start" | "end" | null
+      }
+    } | null
+  },
+  "output": [
+  {
+    "type": "all" | "field" | "agg" | "error",
+    "field": "bidRealId" | "name" | "region" | "organization" | "estimatePrice" | "basicPrice" | "minimumBidRate" | "bidRange" | "startDate" | "endDate" | "openDate" | null,
+    "op": "min" | "max" | "avg" | "sum" | "count" | null
+  }
+]
+}
+
+    }"""
+    '''
+    prompt=prompt_pydantic_kor+f"""
     질문:
     {user_query}
     
-    출력은 json 객체 하나만 반환한다.
+    출력은 json 객체 하나만 반환해라.
     """
+    '''
+    messages=[SystemMessage(content=prompt),
+    HumanMessage(content=user_query)]
+    import time
+    start=time.time()
+    response = llm.invoke(messages)
+    end=time.time()
+    print("응답시간:",end-start)
+    
+    raw = response.content.strip()
 
-    response = llm.invoke(prompt)
-    return response.content
+    try:
+      raw_json = json.loads(raw)
+    except json.JSONDecodeError:
+        # JSON이 아니면 error 반환
+        return {
+            "limit": None,
+            "filter": None,
+            "output": [{"type": "error", "field": None, "op": None}]
+        }
+  
+
+    try:
+        parsed = Query.model_validate(raw_json)
+        result_dict = parsed.model_dump(by_alias=True)
+
+        pretty_json_string = json.dumps(
+            result_dict,
+            indent=2,
+            ensure_ascii=False
+        )
+
+        # 👉 문자열 그대로 반환
+        return pretty_json_string
+    except Exception as e:
+      print("❌ Pydantic error:", e)
+      print("❌ Raw JSON:", raw_json)
+      error_json = {
+                "__error__": "pydantic_validation",
+                "__raw__": raw_json
+            }
+      return error_json
+    #return response.content
