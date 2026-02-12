@@ -39,25 +39,25 @@
       <td align="center" width="200px">
         <img src="./ops/images/team/전보윤.jpg" width="120px" alt="전보윤"/><br>
         <b>전보윤</b><br>
-        <sub>PM, AI</sub><br>
+        <sub>ProjectManager, AI</sub><br>
         <a href="https://github.com/sprintmonster">@sprintmonster</a>
       </td>
       <td align="center" width="200px">
         <img src="./ops/images/team/강버들.jpg" width="120px" alt="강버들"/><br>
         <b>강버들</b><br>
-        <sub>FE</sub><br>
+        <sub>FrontEnd</sub><br>
         <a href="https://github.com/LxNx-Hn">@LxNx-Hn</a>
       </td>
       <td align="center" width="200px">
         <img src="./ops/images/team/김형모.jpg" width="120px" alt="김형모"/><br>
         <b>김형모</b><br>
-        <sub>BE</sub><br>
+        <sub>BackEnd</sub><br>
         <a href="https://github.com/HyeongmoKim">@HyeongmoKim</a>
       </td>
       <td align="center" width="200px">
         <img src="./ops/images/team/공동욱.jpg" width="120px" alt="공동욱"/><br>
         <b>공동욱</b><br>
-        <sub>BE</sub><br>
+        <sub>BackEnd</sub><br>
         <a href="https://github.com/cos65536">@cos65536</a>
       </td>
     </tr>
@@ -73,7 +73,7 @@
       <td align="center" width="200px">
         <img src="./ops/images/team/이세용.jpg" width="120px" alt="이세용"/><br>
         <b>이세용</b><br>
-        <sub>BE</sub><br>
+        <sub>BackEnd</sub><br>
         <a href="https://github.com/pla2n">@pla2n</a>
       </td>
       <td align="center" width="200px">
@@ -85,7 +85,7 @@
       <td align="center" width="200px">
         <img src="./ops/images/team/황도윤.jpg" width="120px" alt="황도윤"/><br>
         <b>황도윤</b><br>
-        <sub>BE</sub><br>
+        <sub>FrontEnd</sub><br>
         <a href="https://github.com/HDYee">@HDYee</a>
       </td>
     </tr>
@@ -490,7 +490,7 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 
 </details> -->
 <details>
-<summary><b>🎯 전보윤 - ProductManager, AI</b></summary>
+<summary><b>🎯 전보윤 - ProjectManager, AI</b></summary>
 
 ### 담당 업무
 
@@ -589,7 +589,7 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 
 ## 💬 프로젝트 소감
 
-### 🎯 전보윤 - ProductManager, AI
+### 🎯 전보윤 - ProjectManager, AI
 
 > "사용자 입장에서 결과값을 받았을 때 어떻게 하면 신뢰할 수 있는지 고민해볼 수 있었던 프로젝트였습니다. 
 > 그 결과 조건부 분위수 함수로부터 확률 추출이라는 문제를 직면했고,  부족했던 부분을 공부해볼 수 있어서 좋았습니다. 
