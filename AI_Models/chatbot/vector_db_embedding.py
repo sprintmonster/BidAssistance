@@ -300,7 +300,11 @@ def build_context(img_docs: List[Document], api_docs: List[Document], text_docs:
             api_context.append(d.page_content)
     if text_docs:
         for d in text_docs:
-            text_context.append(d.page_content)
+            text_context.append(
+                f"[페이지명: {d.metadata.get('page','')}]\n"
+                f"[섹션: {d.metadata.get('section','')}]\n"
+                f"{d.page_content}"
+            )
 
     return {
         "image": "\n\n".join(image_context),
