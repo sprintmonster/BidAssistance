@@ -182,16 +182,16 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 > **🏠 메인화면**
 >
 > <div align="center">
->     <img src="./ops/images/Screenshot/Light.png" alt="데스크탑 라이트" width="400"/>
->     <img src="./ops/images/Screenshot/Dark.png" alt="데스크탑 다크" width="400"/> 
+>     <img src="./ops/images/Screenshot/Light.png" alt="데스크탑 라이트" width="500"/>
+>     <img src="./ops/images/Screenshot/Dark.png" alt="데스크탑 다크" width="500"/> 
 > </div>
 > <br>
 
 > **💼 대시보드 & 맞춤형 추천**
 >
 > <div align="center">
->   <img src="./ops/images/Screenshot/대시보드.png" alt="대시보드" width="400"/>
->  <img src="./ops/images/Screenshot/맞춤형 추천.png" alt="맞춤형 추천" width="400"/>
+>   <img src="./ops/images/Screenshot/대시보드.png" alt="대시보드" width="500"/>
+>  <img src="./ops/images/Screenshot/맞춤형 추천.png" alt="맞춤형 추천" width="500"/>
 > </div>
 > <br>
 
@@ -212,7 +212,7 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 > **📱 커뮤니티**
 >
 > <div align="center">
->   <img src="./ops/images/Screenshot/커뮤니티.png" alt="커뮤니티" width="400"/>
+>   <img src="./ops/images/Screenshot/커뮤니티.png" alt="커뮤니티" width="500"/>
 > </div>
 > <br>
 
