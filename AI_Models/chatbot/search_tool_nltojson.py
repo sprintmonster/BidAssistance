@@ -163,7 +163,7 @@ class Query(BaseModel):
           if limit is not None:
               raise ValueError("limit must be null for agg queries")
         else:
-            # 🔥 일반 조회는 limit 필수
+            # 일반 조회는 limit 필수
             if limit is None:
                 raise ValueError("limit is required for non-agg queries")
 
@@ -647,8 +647,8 @@ def extract_notice_query(user_query: str) -> dict:
     }
     """ 
 
-    #Pydantic 기반용
-    prompt_pydantic_kor="""
+    #프롬프트 짧게 짰을 때 성능 확인용
+    prompt_kor="""
     당신은 엄격한 JSON 생성기입니다.
 
     당신의 임무는 사용자의 자연어 질문을 제공된 스키마에 엄격히 맞는 JSON 객체로 변환하는 것입니다.
@@ -795,7 +795,7 @@ def extract_notice_query(user_query: str) -> dict:
 
     }
 """
-    prompt_pydantic_eng="""
+    prompt_eng="""
     You are a strict JSON generator.
 
 Your task is to convert a user's natural language query into a JSON object
@@ -953,13 +953,14 @@ You must strictly follow this schema:
     출력은 json 객체 하나만 반환해라.
     """
     '''
-    messages=[SystemMessage(content=prompt),
+    messages=[SystemMessage(content=prompt), #promt: 긴 한국어 / prompt_kor: 짧은 한국어 / prompt_eng: 짧은 영어
     HumanMessage(content=user_query)]
-    import time
-    start=time.time()
+    #아래 주석은 응답시간 테스트용
+    #import time
+    #start=time.time()
     response = llm.invoke(messages)
-    end=time.time()
-    print("응답시간:",end-start)
+    #end=time.time()
+    #print("응답시간:",end-start)
     
     raw = response.content.strip()
 
@@ -984,7 +985,7 @@ You must strictly follow this schema:
             ensure_ascii=False
         )
 
-        # 👉 문자열 그대로 반환
+        # 문자열 그대로 반환
         return pretty_json_string
     except Exception as e:
       print("❌ Pydantic error:", e)

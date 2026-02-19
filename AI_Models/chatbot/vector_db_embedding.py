@@ -22,14 +22,6 @@ IMAGE_DIR = os.path.join(BASE_DIR, "usage_data", "images")
 API_EXCEL_DIR = os.path.join(BASE_DIR, "usage_data", "api정의서.xlsx")
 TEXT_DIR=os.path.join(BASE_DIR,"usage_data","홈페이지 사용 설명서.txt")
 
-'''
-IMAGE_FAISS_DIR = "faiss_db/image_faiss"     # 웹페이지 스크린샷 FAISS 저장 경로
-API_FAISS_DIR = "faiss_db/api_faiss"         # API 정의서 FAISS 저장 경로
-TEXT_FAISS_DIR = "faiss_db/txt_faiss"
-# faiss_db 내부에서 image_faiss와 api_faiss 폴더가 각각 생성된다.
-os.makedirs("faiss_db", exist_ok=True)        # faiss_db 폴더 생성(이미 있으면 생성하지 않음)
-'''
-
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -37,28 +29,9 @@ IMAGE_FAISS_DIR = BASE_DIR / "faiss_db" / "image_faiss"
 API_FAISS_DIR= BASE_DIR / "faiss_db" / "api_faiss"
 TEXT_FAISS_DIR= BASE_DIR / "faiss_db" / "txt_faiss"
 
-
-#로컬 테스트용, 경로에 한글이 있으면 C드라이브로 옮겨서 진행할 것
-BASE_DIR = Path("C:/faiss_db")
-IMAGE_FAISS_DIR = BASE_DIR / "image_faiss"
-API_FAISS_DIR= BASE_DIR / "api_faiss"
-TEXT_FAISS_DIR= BASE_DIR / "txt_faiss"
-
-
 # =========================
 # FAISS 생성 임베딩 모델 설정
 # =========================
-'''
-def load_api_keys(filepath="api_key.txt"): 
-    with open(filepath, "r") as f:
-        for line in f:
-            line = line.strip()
-            if line and "=" in line:
-                key, value = line.split("=", 1)
-                os.environ[key.strip()] = value.strip()
-        
-load_api_keys(os.path.join(BASE_DIR, "usage_api.txt"))   # API 키 로드 및 환경변수 설정
-'''
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -332,8 +305,8 @@ def build_context(img_docs: List[Document], api_docs: List[Document], text_docs:
 # # =========================
 # # main
 # # =========================
-if __name__ == "__main__":      # Python 스크립트가 직접 실행될 때만 작성된 세 개의 함수를 순차적으로 호출.
+#if __name__ == "__main__":      # Python 스크립트가 직접 실행될 때만 작성된 세 개의 함수를 순차적으로 호출.
     # build_image_faiss()
     # build_api_faiss()
     #test_usage_tool()
-    build_text_faiss()
+    #build_text_faiss()
