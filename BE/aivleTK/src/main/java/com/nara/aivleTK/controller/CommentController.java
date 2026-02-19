@@ -55,9 +55,6 @@ public class CommentController {
         return ResponseEntity.ok(ApiResponse.success("댓글이 삭제되었습니다."));
     }
 
-    /**
-     * 답변 채택 (질문 카테고리에서만 가능)
-     */
     @PutMapping("/comments/{commentId:\\d+}/adopt")
     public ResponseEntity<ApiResponse<CommentResponse>> adoptComment(
             @PathVariable int commentId,

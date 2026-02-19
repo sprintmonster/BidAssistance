@@ -38,11 +38,8 @@ public class AnalysisService {
                 .orElseThrow(() -> new IllegalArgumentException("Invalid bid ID: " + bidId));
 
         try {
-            // 2. Python 서버에 보낼 텍스트 생성 (Bid 객체 -> String 변환)
-            // RAG 모델은 텍스트를 분석하므로, DB 정보를 문장으로 만들어줍니다.
+            // 2. Python 서버에 보낼 텍스트 생성
             String bidText = createPromptFromBid(bid);
-
-            ///첨부파일 url 꺼내오기
 
             List<String> fileUrls = new ArrayList<>();
             if (bid.getAttachments() != null) {

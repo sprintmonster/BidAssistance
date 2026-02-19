@@ -70,8 +70,8 @@ public class ChatBotService {
                 return new ChatResponse("AI 서버로부터 응답이 없습니다.");
             }
 
-            String respType = String.valueOf(body.get("type"));      // ✅ Python이 내려주는 타입
-            String respText = String.valueOf(body.get("response"));  // ✅ 실제 내용
+            String respType = String.valueOf(body.get("type"));      // Python이 내려주는 타입
+            String respText = String.valueOf(body.get("response"));  // 실제 내용
 
             // ★ 1. 마크다운 제거 (안정성 강화)
             if ("search".equals(respType)) {
@@ -105,7 +105,7 @@ public class ChatBotService {
         return sanitized.trim();
     }
 
-    // ★ 의도 파악 조건 수정 (intent 키 삭제)
+    // 의도 파악 조건 수정
     private boolean isSearchIntent(String response) {
         try {
             JsonNode node = objectMapper.readTree(response);
@@ -179,15 +179,15 @@ public class ChatBotService {
                 return new ChatResponse("조건에 맞는 공고가 없습니다.");
             }
 
-            // ✅ (추가) 엔티티 -> DTO 변환 (핵심)
+            // 엔티티 -> DTO 변환
             List<BidChatDto> dtoList = searchResults.stream()
                     .map(this::toBidChatDto)
                     .toList();
 
-            // ✅ (변경) postprocess도 DTO로 전달
+            // postprocess도 DTO로 전달
             String summary = callPythonPostprocess(originalPrompt, threadId, dtoList);
 
-            // ✅ (변경) 응답 data도 DTO로 내려줌
+            // 응답 data도 DTO로 내려줌
             return new ChatResponse(summary, "list", dtoList);
 
         } catch (Exception e) {
@@ -231,7 +231,7 @@ public class ChatBotService {
                 return null;
             }
         }
-        // ★ 3. 상대 날짜(calendar) 처리 로직 추가
+        // 3. 상대 날짜(calendar) 처리 로직 추가
         else if ("calendar".equals(kind)) {
             String unit = node.path("unit").asText();
             int offset = node.path("offset").asInt();
@@ -241,7 +241,7 @@ public class ChatBotService {
         return null;
     }
 
-    // ★ 상대 날짜 계산 헬퍼 메서드 추가
+    // 상대 날짜 계산 헬퍼 메서드 추가
     private LocalDateTime calculateCalendarDate(String unit, int offset, String position) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime targetDate = now;
@@ -293,8 +293,8 @@ public class ChatBotService {
             payload.put("count", results.size());
             payload.put("results", results);
             PythonChatRequest req = PythonChatRequest.builder()
-                    .type("notice_result")     // ✅ query가 아닌 다른 타입이면 main.py가 payload json으로 넣어줌 :contentReference[oaicite:3]{index=3}
-                    .query("")                 // 의미 없음
+                    .type("notice_result")     // query가 아닌 다른 타입이면 main.py가 payload json으로 넣어줌
+                    .query("")
                     .payload(payload)
                     .thread_id(threadId)
                     .build();
@@ -340,7 +340,7 @@ public class ChatBotService {
         try {
             return v.longValueExact();
         } catch (ArithmeticException e) {
-            // Long 범위 초과 대비 (현실적으로 거의 없음)
+            // Long 범위 초과 대비
             return v.longValue();
         }
     }

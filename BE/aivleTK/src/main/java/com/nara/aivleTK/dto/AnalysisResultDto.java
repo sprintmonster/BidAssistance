@@ -19,7 +19,6 @@ public class AnalysisResultDto {
     private String pdfUrl;          // PDF 다운로드 링크
     private LocalDateTime analysisDate; // 분석 시각
 
-    // ★ 핵심: 엔티티를 DTO로 변환하는 메서드
     public static AnalysisResultDto from(AnalysisResult entity) {
         return AnalysisResultDto.builder()
                 .id(entity.getAnalysisResultId())

@@ -40,7 +40,7 @@ public class BidApiService {
 
     public String fetchAndSaveBidData() {
         try {
-            // === 1. [공고 목록 API 호출] ===
+            // 1.공고 목록 API 호출
             LocalDateTime now = LocalDateTime.now();
             LocalDateTime start = now.minusHours(12);
             LocalDateTime end = now.plusHours(12);
@@ -67,7 +67,7 @@ public class BidApiService {
             if (itemsNode.isMissingNode() || itemsNode.isEmpty())
                 return "데이터 없음";
 
-            // [수정] DTO 원본을 담을 리스트 (URL 정보 보존용)
+            // DTO 원본을 담을 리스트 (URL 정보 보존용)
             List<BidApiDto> validDtos = new ArrayList<>();
 
             if (itemsNode.isArray()) {
@@ -82,11 +82,9 @@ public class BidApiService {
                     validDtos.add(dto);
             }
 
-            // === 2. [중복 제거] ===
-            // DTO에서 realId를 만들어내서 중복 체크 (DTO의 toEntity 로직과 동일하게 생성해야 함)
-            // 보통: dto.getBidNtceNo() + "-" + dto.getBidNtceOrd()
+            // 2. 중복 제거
 
-            // DTO를 쉽게 찾기 위한 Map 생성 (Key: RealId, Value: DTO)
+            // DTO를 쉽게 찾기 위한 Map 생성
             Map<String, BidApiDto> dtoMap = new HashMap<>();
             for (BidApiDto dto : validDtos) {
                 String realId = dto.getBidNtceNo() + "-" + dto.getBidNtceOrd();
@@ -103,7 +101,7 @@ public class BidApiService {
                     .map(BidApiDto::toEntity)
                     .collect(Collectors.toList());
 
-            // === 3. [상세 정보 병합 Loop] ===
+            // 3. 상세 정보 병합 Loop
             for (Bid bid : newBidsToSave) {
                 try {
                     // (A) 지역 정보 병합
@@ -133,14 +131,14 @@ public class BidApiService {
                 }
             }
 
-            // === 4. [최종 저장 및 후속 처리] ===
+            // 4. 최종 저장 및 후속 처리
             if (!newBidsToSave.isEmpty()) {
                 List<Bid> savedBids = bidRepository.saveAll(newBidsToSave);
 
                 int analysisCount = 0;
                 int attachmentCount = 0;
 
-                // [New] 키워드 알림 처리
+                // 키워드 알림 처리
                 try {
                     alarmService.processKeywordAlarms(savedBids);
                 } catch (Exception e) {
@@ -148,7 +146,7 @@ public class BidApiService {
                 }
 
                 for (Bid bid : savedBids) {
-                    // [Step 1] AI 분석 (실패해도 괜찮음)
+                    // [Step 1] AI 분석
                     try {
                         // analysisService.analyzeAndSave(bid.getBidId());
                         analysisCount++;
@@ -156,7 +154,7 @@ public class BidApiService {
                         log.warn("AI 분석 요청 실패 (ID: {}): {}", bid.getBidRealId(), e.getMessage());
                     }
 
-                    // [Step 2] 첨부파일 저장 (AI 성공 여부와 상관없이 실행)
+                    // [Step 2] 첨부파일 저장
                     try {
                         BidApiDto sourceDto = dtoMap.get(bid.getBidRealId());
 
@@ -167,7 +165,6 @@ public class BidApiService {
                             String urlKey = "ntceSpecDocUrl" + i;
                             String nameKey = "ntceSpecFileNm" + i;
 
-                            // 이제 i=1일 때도 map.get(urlKey)가 값을 뱉어냅니다!
                             String fileUrl = fileMap.get(urlKey);
                             String fileName = fileMap.get(nameKey);
 
@@ -193,7 +190,7 @@ public class BidApiService {
         }
     }
 
-    // === [Helper 1] 참가가능지역 조회 ===
+    // 참가가능지역 조회
     private String getPermittedRegion(String fullBidNtceNo) {
         String baseNo = fullBidNtceNo;
         String ord = "00";
@@ -242,7 +239,7 @@ public class BidApiService {
         }
     }
 
-    // === [Helper 2] ★ 기초금액/투찰범위 조회 (New!) ===
+    // 기초금액/투찰범위 조회
     private BidPriceApiDto getBidPriceInfo(String fullBidNtceNo) {
         String baseNo = fullBidNtceNo;
         String ord = "00";

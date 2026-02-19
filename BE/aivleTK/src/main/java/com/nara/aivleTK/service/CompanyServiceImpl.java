@@ -23,7 +23,7 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     @Transactional
     public CompanyResponse createCompany(CompanyRequest request) {
-        // 이미 있는 회사명이어도 새로운 회사(새로운 로우)를 생성합니다.
+        // 이미 있는 회사명이어도 새로운 회사(새로운 로우)를 생성
         Company company = Company.builder()
                 .name(request.getName())
                 .position(request.getPosition())

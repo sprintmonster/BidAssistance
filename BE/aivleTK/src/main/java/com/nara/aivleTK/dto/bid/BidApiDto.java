@@ -20,7 +20,7 @@ import java.util.Map;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class BidApiDto {
 
-    // === [ 1. 공고 기본 정보 ] ===
+    // 1. 공고 기본 정보
     @JsonProperty("bidNtceNo")
     private String bidNtceNo;
 
@@ -51,7 +51,7 @@ public class BidApiDto {
     @JsonProperty("constPlceNm")
     private String region;
 
-    // === [ 2. 금액 및 투찰 관련 정보 ] ===
+    // 2. 금액 및 투찰 관련 정보
 
     @JsonProperty("presmptPrce") // 추정가격 (Estimated Price)
     private String estimatedPriceStr;
@@ -65,13 +65,13 @@ public class BidApiDto {
     @JsonProperty("sucsfbidLwltRate") // 낙찰하한율
     private String minimumBidRate;
 
-    @JsonProperty("rsrvtnPrceRngEndRate") // ★ 투찰범위 (예: "+3")
+    @JsonProperty("rsrvtnPrceRngEndRate") // 투찰범위
     private String rangeEndStr;
 
-    @JsonProperty("cntrctCnclsMthdNm") // 계약체결방법 (예: "수의계약", "일반경쟁", "제한경쟁")
+    @JsonProperty("cntrctCnclsMthdNm") // 계약체결방법
     private String contractMethod;
 
-    @JsonProperty("sucsfbidMthdNm") // 낙찰자결정방법 (예: "수의(견적제출)", "적격심사")
+    @JsonProperty("sucsfbidMthdNm") // 낙찰자결정방법
     private String successMethod;
 
     private Map<String, String> allFileMap = new HashMap<>();
@@ -83,7 +83,7 @@ public class BidApiDto {
         }
     }
 
-    // === [ 3. DTO -> Entity 변환 ] ===
+    // 3. DTO -> Entity 변환
     public Bid toEntity() {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         String realIdCombined = this.bidNtceNo + "-" + this.bidNtceOrd;
@@ -91,15 +91,14 @@ public class BidApiDto {
         // 1. 추정가격 파싱
         BigInteger estPrice = parseBigInt(this.estimatedPriceStr);
 
-        // 2. 기초금액 결정 로직 (중요!)
-        // API에서 'bssamt'를 줬으면 그걸 쓰고, 없으면 '추정가격 + 부가세'로 계산
+        // 2. 기초금액 결정 로직, API에서 'bssamt'를 줬으면 그걸 쓰고, 없으면 '추정가격 + 부가세'로 계산
         BigInteger finalBasicPrice = parseBigInt(this.basicPriceStr);
         if (finalBasicPrice.equals(BigInteger.ZERO)) {
             BigInteger vat = parseBigInt(this.vatStr);
             finalBasicPrice = estPrice.add(vat);
         }
 
-        // 3. 투찰범위 파싱 (절댓값 변환)
+        // 3. 투찰범위 파싱
         Double rangeAbs = parseRangeToAbs(this.rangeEndStr);
 
         return Bid.builder()
@@ -116,18 +115,18 @@ public class BidApiDto {
                         : LocalDateTime.now())
                 .bidCreated(parseDate(this.bidCreated, formatter))
 
-                // ★ 금액 정보 저장
+                // 금액 정보 저장
                 .estimatePrice(estPrice) // 추정가격
-                .basicPrice(finalBasicPrice) // 기초금액 (우선순위 로직 적용됨)
+                .basicPrice(finalBasicPrice) // 기초금액
 
-                // ★ 투찰율 정보 저장
+                // 투찰율 정보 저장
                 .minimumBidRate(parseDouble(this.minimumBidRate)) // 낙찰하한율
-                .bidRange(rangeAbs) // 투찰범위 (Entity에 bidRange 필드가 있어야 함)
+                .bidRange(rangeAbs) // 투찰범위
 
                 .build();
     }
 
-    // === [ 4. Helper Methods ] ===
+    // 4. Helper Methods
 
     // BigInteger 파싱
     private BigInteger parseBigInt(String str) {
@@ -140,7 +139,7 @@ public class BidApiDto {
         }
     }
 
-    // Double 파싱 (일반)
+    // Double 파싱
     private Double parseDouble(String str) {
         if (str == null || str.trim().isEmpty())
             return 0.0;
@@ -151,7 +150,7 @@ public class BidApiDto {
         }
     }
 
-    // ★ 투찰범위 절댓값 파싱 ("+3", "-3", "3%" -> 3.0)
+    // 투찰범위 절댓값 파싱
     private Double parseRangeToAbs(String str) {
         if (str == null || str.trim().isEmpty())
             return 0.0;

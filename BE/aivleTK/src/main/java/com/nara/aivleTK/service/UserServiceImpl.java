@@ -76,7 +76,6 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponse login(LoginRequest request) {
         // 1. 이메일 검증
-        // [수정] Optional user -> User user 로 변경!
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("정보가 일치하는 회원이 없습니다."));
 
@@ -141,7 +140,6 @@ public class UserServiceImpl implements UserService {
             user.setQuestion(request.getQuestion());
         }
 
-        // Dirty checking works because of @Transactional
         return UserResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())

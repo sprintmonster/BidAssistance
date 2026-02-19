@@ -7,7 +7,4 @@ import java.util.List;
 
 public interface UserKeywordRepository extends JpaRepository<UserKeyword, Integer> {
     List<UserKeyword> findByUser(User user);
-    // findAll() is enough for batch processing if dataset is small,
-    // but optimized query might used later. Use findAll() for now or specific
-    // query.
 }

@@ -21,11 +21,11 @@ public class BidPriceApiDto {
     @JsonProperty("bssamt")
     private String basicPriceStr;
 
-    // API JSON 필드명: "rsrvtnPrceRngEndRate" -> 투찰범위 상한 (예: "+3", "3")
+    // API JSON 필드명: "rsrvtnPrceRngEndRate" -> 투찰범위 상한
     @JsonProperty("rsrvtnPrceRngEndRate")
     private String rangeEndStr;
 
-    // === [ Helper Methods: 서비스에서 갖다 쓰는 메서드들 ] ===
+    // Helper Methods: 서비스에서 갖다 쓰는 메서드들
 
     // 1. 기초금액을 BigInteger로 변환하여 반환
     public BigInteger getBasicPrice() {
@@ -40,7 +40,7 @@ public class BidPriceApiDto {
         }
     }
 
-    // 2. 투찰범위를 깔끔한 숫자(Double)로 변환하여 반환 (예: "+3" -> 3.0)
+    // 2. 투찰범위를 깔끔한 숫자(Double)로 변환하여 반환
     public Double getBidRangeAbs() {
         if (rangeEndStr == null || rangeEndStr.trim().isEmpty()) {
             return 0.0;

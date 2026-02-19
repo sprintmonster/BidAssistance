@@ -31,13 +31,6 @@ public class BidLogServiceImpl implements BidLogService {
                 Bid bid = bidRepository.findById(bidId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Bid not found"));
 
-                // Check if log already exists for today? Or just append?
-                // Requirement implies history. Since BidLog has ID, let's just append new log
-                // or update existing if very recent?
-                // Simple approach: Always insert new log for history tracking.
-                // Better for recommendations: If user views same bid multiple times, maybe just
-                // update timestamp?
-                // Let's go with: Insert new log.
 
                 BidLog log = BidLog.builder()
                                 .user(user)

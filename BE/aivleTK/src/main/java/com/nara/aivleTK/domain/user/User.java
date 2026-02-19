@@ -52,9 +52,6 @@ public class User {
     @Column(name = "expert_points")
     private Integer expertPoints = 0; // 활동 포인트
 
-    /**
-     * 포인트 추가 및 레벨 자동 계산
-     */
     public void addExpertPoints(int points) {
         this.expertPoints = (this.expertPoints == null ? 0 : this.expertPoints) + points;
         this.expertLevel = Math.min(5, (this.expertPoints / 100) + 1);
