@@ -143,14 +143,12 @@ function pickListAttachmentCount(it: any, list: any[]): number {
 	const n = Number(raw);
 	if (Number.isFinite(n) && n >= 0) return n;
 
-	// boolean/YN 플래그류 지원
 	const b1 = yn_to_bool(it?.hasAttachment ?? it?.hasAttachments ?? it?.hasFile);
 	if (b1 === true) return 1;
 
 	const b2 = yn_to_bool(it?.fileYn ?? it?.fileYN ?? it?.attachYn ?? it?.attachYN ?? it?.attchYn);
 	if (b2 === true) return 1;
 
-	// id가 있는 형태(예: atchFileId / attachmentId / fileGroupId 등) 지원
 	const idLike =
 		it?.atchFileId ??
 		it?.attachmentId ??
@@ -161,7 +159,6 @@ function pickListAttachmentCount(it: any, list: any[]): number {
 		it?.attachFileId;
 	if (idLike != null && String(idLike).trim() !== "" && String(idLike).trim() !== "0") return 1;
 
-	// 리스트 자체가 있으면 길이로 추정
 	if (Array.isArray(list) && list.length > 0) return list.length;
 
 	return 0;
@@ -191,7 +188,6 @@ function normalizePostFromList(it: any): Post {
 		commentCount: toNum(it?.commentCount ?? 0),
 		comments: it?.comments ?? [],
 		attachmentCount,
-		// 목록에서는 상세 구조가 아닐 수 있으니, 배열이 맞을 때만 넣음
 		attachments: Array.isArray(it?.attachments) ? it.attachments : [],
 		content: it?.content,
 		adoptedCommentId: it?.adoptedCommentId ?? undefined,
@@ -233,14 +229,13 @@ export function fetchCommunityPosts(opts: {
 		.then((data: any) => {
 			const items = (data?.items ?? []).map(normalizePostFromList);
 
-			// 개발 중 확인용 (원하면 지워도 됨)
 			if ((import.meta as any)?.env?.DEV) {
 				const sample = items.slice(0, 5).map((p: any) => ({
 					id: p.id,
 					title: p.title,
 					attachmentCount: p.attachmentCount,
 				}));
-				// eslint-disable-next-line no-console
+
 				console.debug("[community] list attachmentCount sample:", sample);
 			}
 
@@ -340,18 +335,14 @@ export async function uploadCommunityAttachments(files: File[]) {
 	return rawList.map(normalizeAttachment);
 }
 
-/**
- * 인기글 상위 3개 조회 (좋아요 × 시간 가중치)
- */
+
 export async function fetchTrendingPosts(): Promise<Post[]> {
 	const json = await api<ApiResponse<any[]>>("/board/trending");
 	const rawList = unwrap(json) ?? [];
 	return rawList.map(normalizePostFromList);
 }
 
-/**
- * 답변 채택 API
- */
+
 export async function adoptComment(postId: number, commentId: number): Promise<Comment> {
 	const userId = localStorage.getItem("userId");
 	if (!userId) throw new Error("로그인이 필요합니다.");
@@ -363,9 +354,7 @@ export async function adoptComment(postId: number, commentId: number): Promise<C
 }
 
 
-/**
- * 키워드 관련 API
- */
+
 export async function getUserKeywords(userId: number): Promise<UserKeyword[]> {
 	const json = await api<ApiResponse<UserKeyword[]>>(`/keywords/${userId}`);
 	return unwrap(json) ?? [];
@@ -391,9 +380,7 @@ export async function deleteUserKeyword(id: number): Promise<string> {
 	return unwrap(json);
 }
 
-/**
- * 알림 관련 API
- */
+
 export async function getMyAlarms(userId: number): Promise<Alarm[]> {
 	const json = await api<ApiResponse<Alarm[]>>(`/alarms/${userId}`);
 	return unwrap(json) ?? [];

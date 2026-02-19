@@ -44,7 +44,6 @@ export function AppLayout() {
   const [query, setQuery] = useState("");
   const [wishlistCount, setWishlistCount] = useState<number>(0);
 
-  //  NEW: 헤더 빨간점/뱃지
   const [notificationUnread, setNotificationUnread] = useState<number>(0);
   const [hasNewNotice, setHasNewNotice] = useState(false);
 
@@ -78,7 +77,6 @@ export function AppLayout() {
     return Number.isFinite(n) ? n : 0;
   };
 
-  //  뒤로가기(bfcache) 복원/다중 탭 변경 등에서 로그인 UI가 과거 상태로 남는 것을 방지
   useEffect(() => {
     const sync = () => setAuthTick((v) => v + 1);
 
@@ -114,12 +112,10 @@ export function AppLayout() {
   );
 
 
-  //  공지/알림 빨간점(뱃지) 갱신
   useEffect(() => {
     let ignore = false;
 
     const run = async () => {
-      // 공지사항: 로그인 없이도 볼 수 있으므로 항상 확인
       try {
         const notices = await fetch_notices_from_community();
         const latestId = notices.reduce(
@@ -129,7 +125,6 @@ export function AppLayout() {
         const lastSeen = loadNoticeLastSeen();
         if (!ignore) setHasNewNotice(latestId > lastSeen);
 
-        // 공지사항 페이지 진입 시 '확인'으로 간주
         if (location.pathname.startsWith("/notice") && latestId > 0) {
           saveNoticeLastSeen(latestId);
           if (!ignore) setHasNewNotice(false);
@@ -155,7 +150,6 @@ export function AppLayout() {
         if (!ignore) setNotificationUnread(0);
       }
 
-      //  알림 페이지 진입만으로 자동 읽음 처리하지 않음(사용자 액션 기반)
     };
 
     run();
@@ -191,7 +185,7 @@ export function AppLayout() {
   };
 
   const onLogout = () => {
-    // 서버 세션/토큰까지 정리해야 뒤로가기에서 checkLogin으로 자동 복구되지 않습니다.
+
     void apiLogout();
     window.dispatchEvent(new Event("auth:changed"));
     window.location.replace("/");

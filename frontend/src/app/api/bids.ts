@@ -14,11 +14,10 @@ export interface Bid {
     bidReportURL: string;
     estimatePrice : bigint;
 
-    // Additional fields for comparison
-    budget?: string; // 기초금액 (basicPrice alias)
+    budget?: string;
     basicPrice?: bigint;
-    agency?: string; // 발주기관 (organization alias)
-    bidRange?: number; // 투찰범위
+    agency?: string;
+    bidRange?: number;
 
     minimumBidRate?: number | null;
     analysisResult?: string | null;
@@ -57,7 +56,6 @@ export async function fetchBidsBatch(ids: number[]): Promise<Bid[]> {
 export async function deleteBid(bidId: number): Promise<void> {
     await api<void>(`/bids/${bidId}`, { method: 'DELETE' });
 }
-// ... existing exports ...
 
 export async function fetchBidHistory(userId: number | string): Promise<Bid[]> {
 	try {

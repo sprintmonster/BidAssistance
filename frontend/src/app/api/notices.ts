@@ -7,7 +7,7 @@ export type NoticeListItem = {
 	id: number;
 	title: string;
 	category: NoticeCategory;
-	date: string; // YYYY-MM-DD
+	date: string;
 	author: string;
 	pinned: boolean;
 	attachments: number;
@@ -32,17 +32,15 @@ function normalize_text(s: string) {
 	return (s || "").trim().toLowerCase();
 }
 
-// 공지 분류는 서버가 안 주므로, 제목/미리보기 기반 휴리스틱으로 매핑
+
 function infer_notice_category(p: Post): NoticeCategory {
 	const t = normalize_text(p.title);
 	const c = normalize_text(p.contentPreview || "");
 
 	const hay = `${t} ${c}`;
 
-	// 점검
 	if (hay.includes("점검") || hay.includes("서버 점검") || hay.includes("maintenance")) return "maintenance";
 
-	// 정책(개인정보/약관/정책)
 	if (
 		hay.includes("정책") ||
 		hay.includes("약관") ||
@@ -53,12 +51,10 @@ function infer_notice_category(p: Post): NoticeCategory {
 		return "policy";
 	}
 
-	// 업데이트
 	if (hay.includes("업데이트") || hay.includes("update") || hay.includes("개선") || hay.includes("릴리즈")) {
 		return "update";
 	}
 
-	// 기본: 서비스
 	return "service";
 }
 

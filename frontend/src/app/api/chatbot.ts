@@ -2,8 +2,7 @@ import { api } from "./client";
 
 export interface ChatRequest {
     query: string;
-    thread_id?: string; // 세션 스레드 ID
-    // payload?: any; // 파일 담기 위해
+    thread_id?: string;
 }
 
 export interface ChatResponse {
@@ -19,7 +18,6 @@ export const fetchChatResponse = async (
     if (request.file) {
         const formData = new FormData();
 
-        //  서버가 요구하는 필드명으로 맞추기
         formData.append("text", request.query || "파일 분석 요청");
 
         if (request.thread_id) {

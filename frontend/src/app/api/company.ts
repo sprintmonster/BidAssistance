@@ -13,7 +13,7 @@ export type CompanyInfo = {
 	id?: number;
 	userId?: number | string;
 	name: string;
-	position?: string; // 직책
+	position?: string;
 };
 
 function to_str(v: unknown): string {
@@ -72,7 +72,7 @@ export async function getCompanyForUser(userId: string | number): Promise<Compan
 export function upsertCompany(payload: {
 	id?: number;
 	name: string;
-	position?: string; // 직책
+	position?: string;
 }) {
 	return api<ApiResponse<CompanyInfo>>("/company", {
 		method: "POST",

@@ -5,7 +5,7 @@ export type AttachmentId = number;
 export type PostCategory = "question" | "info" | "review" | "discussion" | "notice";
 
 export interface Attachment {
-	id: AttachmentId;            // <- 변경
+	id: AttachmentId;
 	name: string;
 	type: string;
 	url: string;
@@ -14,19 +14,19 @@ export interface Attachment {
 }
 
 export interface Comment {
-	id:CommentId;            // <- 변경
+	id:CommentId;
 	authorId?: string;
 	authorName: string;
 	content: string;
 	createdAt: string;
 	likes: number;
 	likedByMe?: boolean;
-	isAdopted?: boolean;      // 채택 여부
-	userExpertLevel?: number; // 작성자 등급 (1~5)
+	isAdopted?: boolean;
+	userExpertLevel?: number;
 }
 
 export interface Post {
-	id: PostId;            // <- 변경
+	id: PostId;
 	title: string;
 
 	content?: string;
@@ -36,7 +36,7 @@ export interface Post {
 
 	authorId?: string;
 	authorName: string;
-	authorExpertLevel?: number; // 작성자 등급 (1~5)
+	authorExpertLevel?: number;
 
 	createdAt: string;
 	views: number;
@@ -49,7 +49,7 @@ export interface Post {
 	attachmentCount?: number;
 	attachments?: Attachment[];
 
-	adoptedCommentId?: number; // 채택된 댓글 ID
+	adoptedCommentId?: number;
 }
 
 export type SortKey = "latest" | "popular" | "views" | "comments";
@@ -72,7 +72,7 @@ export interface UserKeyword {
 	id: number;
 	userId?: number;
 	keyword: string;
-	minPrice: number | null; // backend sends BigInteger/Long -> number (if safe) or string? Usually string for big ints but let's assume safe for now or string
+	minPrice: number | null;
 	maxPrice: number | null;
 }
 
@@ -83,6 +83,6 @@ export interface Alarm {
 	bidName: string | null;
 	content: string;
 	alarmType: string;
-	date: string; // ISO string
+	date: string;
 }
 
