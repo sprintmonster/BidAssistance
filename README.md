@@ -372,8 +372,7 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
   - 조달청\_나라장터 입찰공고정보서비스
   - 조달청\_나라장터 낙찰정보서비스
 
-- **dataset_feature_selected.csv** : 사용한 3가지의 API를 결합한  
-   데이터
+- **dataset_feature_selected.csv** : 사용한 3가지의 API를 결합한 데이터
   </td>
     </tr>
 
