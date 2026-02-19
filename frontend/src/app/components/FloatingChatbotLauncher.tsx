@@ -41,7 +41,7 @@ export function FloatingChatbotLauncher({
     return () => window.clearTimeout(t);
   }, []);
 
-  // 첫 방문 1회 힌트 툴팁(원치 않으면 통째로 지워도 됨)
+
   useEffect(() => {
     const dismissed = localStorage.getItem(HINT_LS_KEY) === "1";
     if (!dismissed) {

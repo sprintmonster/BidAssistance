@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+ import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { fetchBidsBatch, type Bid } from "../api/bids";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";

@@ -82,7 +82,7 @@ export function ChatbotPage() {
 
     const sendMessage = async (text: string) => {
         const trimmed = text.trim();
-        if ((!trimmed && !selectedFile) || isLoading) return; // 파일만 보내는 것도 허용하려면 이렇게
+        if ((!trimmed && !selectedFile) || isLoading) return; // 파일만 보내는 것도 허용
 
         const userMessage: Message = {
             id: Date.now(),
@@ -112,7 +112,7 @@ export function ChatbotPage() {
 
             setMessages((prev) => [...prev, botMessage]);
 
-            setSelectedFile(null); //  전송 후 파일 초기화 (중요)
+            setSelectedFile(null); //  전송 후 파일 초기화
         } catch (error) {
             setMessages((prev) => [
                 ...prev,
@@ -231,7 +231,7 @@ export function ChatbotPage() {
                             onKeyDown={handleKeyPress as any} // 기존 함수 유지 시. (권장은 onKeyDown으로 바꾸기)
                         />
 
-                        {/* ✅ 파일 선택 */}
+                        {/*  파일 선택 */}
                         <input
                             type="file"
                             onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}

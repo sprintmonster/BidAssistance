@@ -203,7 +203,7 @@ export function CommunityPage() {
                 .filter((p: any) => !(p as any).thumbnailUrl);
 
 
-            // 너무 많이 동시에 치지 않게 10개씩 끊기
+            // 10개씩 끊기
             const chunkSize = 10;
             const countMap = new Map<number, number>();
 
@@ -285,7 +285,7 @@ export function CommunityPage() {
                     const found = results.find((r) => r && r[0] === pid);
                     if (!found) return p;
 
-                    return { ...p, thumbnailUrl: found[1] }; // 여기!
+                    return { ...p, thumbnailUrl: found[1] };
                 })
             );
         }
@@ -318,7 +318,7 @@ export function CommunityPage() {
                     // id 보장
                     const base = { ...p, id: p.id ?? p.postId };
 
-                    // ✅ 서버 필드명 -> UI 필드명 맞추기 (목록에서 쓰는 필드들)
+                    //  서버 필드명 -> UI 필드명 맞추기 (목록에서 쓰는 필드들)
                     const normalized = {
                         ...base,
                         authorName: base.authorName ?? base.userName ?? "",
@@ -553,7 +553,7 @@ export function CommunityPage() {
         try {
             await deleteCommunityPost(pid);
 
-            //  로컬 좋아요 기록에서도 제거(옵션이지만 깔끔)
+            //  로컬 좋아요 기록에서도 제거
             const set = loadLikedSet(current_user_id);
             set.delete(pid);
             saveLikedSet(current_user_id, set);
@@ -612,7 +612,7 @@ export function CommunityPage() {
                 return { ...setLikes(prev, nextLikes), likedByMe: !likedNow };
             });
 
-            //  느려지는 원인: 여기서 load_detail(pid) 재호출하지 않음
+            // load_detail(pid) 재호출하지 않음
         } catch (e: any) {
             alert(e?.message || "좋아요 처리에 실패했습니다.");
         } finally {

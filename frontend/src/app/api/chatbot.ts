@@ -19,7 +19,7 @@ export const fetchChatResponse = async (
     if (request.file) {
         const formData = new FormData();
 
-        // ✅ 서버가 요구하는 필드명으로 맞추기
+        //  서버가 요구하는 필드명으로 맞추기
         formData.append("text", request.query || "파일 분석 요청");
 
         if (request.thread_id) {

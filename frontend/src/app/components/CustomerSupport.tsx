@@ -48,7 +48,7 @@ function InfoRow({
 }
 
 export function CustomerSupportPage() {
-	// TODO: 실제 운영 정보로 교체하세요.
+
 	const supportEmail = "[support@mail.com]";
 	const supportPhone = "[02-0000-0000]";
 	const supportHours = "평일 09:00 ~ 18:00 (점심 12:00 ~ 13:00), 주말/공휴일 제외";

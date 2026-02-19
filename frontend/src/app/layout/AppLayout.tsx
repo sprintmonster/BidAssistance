@@ -44,7 +44,7 @@ export function AppLayout() {
   const [query, setQuery] = useState("");
   const [wishlistCount, setWishlistCount] = useState<number>(0);
 
-  // ✅ NEW: 헤더 빨간점/뱃지
+  //  NEW: 헤더 빨간점/뱃지
   const [notificationUnread, setNotificationUnread] = useState<number>(0);
   const [hasNewNotice, setHasNewNotice] = useState(false);
 
@@ -78,7 +78,7 @@ export function AppLayout() {
     return Number.isFinite(n) ? n : 0;
   };
 
-  // ✅ 뒤로가기(bfcache) 복원/다중 탭 변경 등에서 로그인 UI가 과거 상태로 남는 것을 방지
+  //  뒤로가기(bfcache) 복원/다중 탭 변경 등에서 로그인 UI가 과거 상태로 남는 것을 방지
   useEffect(() => {
     const sync = () => setAuthTick((v) => v + 1);
 
@@ -113,25 +113,8 @@ export function AppLayout() {
     [location.pathname, authTick]
   );
 
-  // // ✅ "로그인 직후 1회"만 팝업 오픈
-  // useEffect(() => {
-  //   if (!localStorage.getItem("userId")) return;
-  //   if (!location.pathname.startsWith("/bids")) return;
-  //
-  //
-  //     if (is_reco_popup_suppressed_today()) {
-  //     // 트리거가 있더라도 오늘은 안 띄움 (한 번 소비 처리)
-  //     consume_reco_popup_trigger();
-  //     return;
-  //   }
-  //
-  //   // 세션 트리거가 있으면 1회만 오픈
-  //   if (consume_reco_popup_trigger()) {
-  //     setRecoOpen(true);
-  //   }
-  // }, [location.pathname]);
 
-  // ✅ 공지/알림 빨간점(뱃지) 갱신
+  //  공지/알림 빨간점(뱃지) 갱신
   useEffect(() => {
     let ignore = false;
 
@@ -172,7 +155,7 @@ export function AppLayout() {
         if (!ignore) setNotificationUnread(0);
       }
 
-      // ⚠️ 알림 페이지 진입만으로 자동 읽음 처리하지 않음(사용자 액션 기반)
+      //  알림 페이지 진입만으로 자동 읽음 처리하지 않음(사용자 액션 기반)
     };
 
     run();

@@ -232,10 +232,7 @@ export function CommunityBoard({ posts, onSelectPost }: CommunityBoardProps) {
 
                                                 return (
                                                     <div className="space-y-1">
-                                                        {/* 1) 카테고리 배지: 기존 위치 그대로 쓰고 싶으면 여기서 빼도 됨.
-            너는 이미 왼쪽 컬럼에 배지가 있으니까, "카테고리 아래" 느낌을
-            제목 셀에서 만들려면 여기 한 번 더 보여주는 방식이 제일 직관적이야.
-            (중복이 싫으면 이 줄은 삭제해도 됨) */}
+                                                        {/* 1) 카테고리 배지 */}
                                                         {/* <CategoryBadge category={post.category} /> */}
 
                                                         {/* 2) 썸네일을 아래로 내리고 크게 */}

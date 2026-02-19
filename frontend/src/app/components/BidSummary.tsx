@@ -80,8 +80,8 @@ type AnalysisStructured = {
         region?: string;
         baseAmount?: number;
         estimatedPrice?: number;
-        priceRangePercent?: number; // 예가범위 3.0
-        lowerBoundRate?: number; // 낙찰하한율 89.745
+        priceRangePercent?: number; // 예가범위
+        lowerBoundRate?: number; // 낙찰하한율
     };
     requirements: {
         eligibility?: string[]; // 참가자격
@@ -258,8 +258,7 @@ function parseKoreanMarkdownReport(text: string): AnalysisStructured {
             .filter(Boolean);
     }
 
-    //
-    //  "- [ ] ..." 체크박스 항목 추출
+    // 체크박스 항목 추출
     function parseCheckboxItems(sectionLines: string[]) {
         return sectionLines
             .map((l) => {
@@ -277,7 +276,7 @@ function parseKoreanMarkdownReport(text: string): AnalysisStructured {
         return { eligibility, performance, documents };
     }
 
-    // 1) "- **키**: 값" 패턴 파싱 (주로 #1 공고 요약)
+    //"- **키**: 값" 패턴 파싱 (주로 #1 공고 요약)
     const kv = new Map<string, string>();
     for (const l of lines) {
         const m = l.match(/^-?\s*\*\*(.+?)\*\*:\s*(.+)$/);
@@ -288,7 +287,7 @@ function parseKoreanMarkdownReport(text: string): AnalysisStructured {
         }
     }
 
-    // 2) summary 채우기
+    //summary 채우기
     const title = kv.get("공고명");
     if (title) result.summary.title = title;
 
@@ -313,11 +312,11 @@ function parseKoreanMarkdownReport(text: string): AnalysisStructured {
     const lb = kv.get("낙찰하한율");
     if (lb) result.summary.lowerBoundRate = getFloat(lb);
 
-    //1) "지역 요건"은 공고 요약의 지역을 그대로 regionReq에 넣기
+    //"지역 요건"은 공고 요약의 지역을 그대로 regionReq에 넣기
     if (result.summary.region) {
         result.requirements.regionReq = [result.summary.region];
     }
-    // #2 참가자격 / 실적 / 제출서류 (신규 포맷)
+    // 참가자격 / 실적 / 제출서류 (신규 포맷)
     const eligibility = extractSubSection(lines, "## 가. 참가자격");
     const performance = extractSubSection(lines, "## 나. 실적");
     const documents = extractSubSection(lines, "## 다. 제출서류");
@@ -327,7 +326,7 @@ function parseKoreanMarkdownReport(text: string): AnalysisStructured {
     if (documents.length) result.requirements.documents = documents;
 
 
-    // 3-1) 사정율 구간 TOP 3 파싱 (안정화 버전)
+    // 사정율 구간 TOP 3 파싱 (안정화 버전)
     const topBands: PriceBand[] = [];
 
     const section3Start = lines.findIndex((l) => l.startsWith("# 3."));
@@ -342,12 +341,7 @@ function parseKoreanMarkdownReport(text: string): AnalysisStructured {
             // 소제목(### ...)은 건너뜀
             if (line.startsWith("##")) continue;
 
-            /**
-             * 허용 포맷:
-             * • 1순위: 구간 92.6% ~ 92.5%, 사정율 92.55%, 확률 29.50%
-             * - 1순위: ...
-             * 1. 구간 ...
-             */
+
             const m = line.match(
                 /(?:•|\-|\d+\.)?\s*.*?구간\s*([\d.]+%\s*~\s*[\d.]+%)\s*,\s*사정율\s*([\d.]+%)\s*,\s*확률\s*([\d.]+%)/
             );
@@ -369,14 +363,14 @@ function parseKoreanMarkdownReport(text: string): AnalysisStructured {
         result.pricePrediction.topBands = topBands;
     }
 
-    // 4) 리스크(기존 포맷 유지)
+    // 리스크(기존 포맷 유지)
     const riskLines: string[] = [];
     for (const l of lines) {
         const m = l.match(/^>\s*\*\*리스크\*\*:\s*(.+)$/);
         if (m) riskLines.push(m[1].trim());
     }
     if (riskLines.length) result.pricePrediction.risks = riskLines;
-    // 5) 권고 액션(#4)
+    // 권고 액션(#4)
     const actionStart = lines.findIndex((x) => x.startsWith("# 4."));
     if (actionStart >= 0) {
         for (let i = actionStart + 1; i < lines.length; i++) {
@@ -774,15 +768,10 @@ export function BidSummary() {
             setAnalyzing(true);
 
             const res = await api(`/analysis/predict/${bid.id}`, { method: "POST" });
-            // console.log("raw res:", res);
-            // console.log("res.data:", (res as any)?.data);
-            // console.log("res.data.data:", (res as any)?.data?.data);
+
 
             const dto = (res as any)?.data?.data ?? (res as any)?.data ?? (res as any);
-            //
-            // console.log("dto:", dto);
-            // console.log("dto.predictedPrice:", dto?.predictedPrice);
-            // console.log("dto.analysisContent:", dto?.analysisContent);
+
 
             const rawText = String(dto?.analysisContent ?? "");
             const parsed = rawText ? parseKoreanMarkdownReport(rawText) : null;
@@ -1356,7 +1345,7 @@ export function BidSummary() {
 
                             <div className="space-y-4">
                                 <div>
-                                    <h4 className="font-semibold mb-2">✅ 권고 액션(다음 72시간)</h4>
+                                    <h4 className="font-semibold mb-2"> 권고 액션(다음 72시간)</h4>
                                     {actions72h.length === 0 ? (
                                         <p className="text-sm text-muted-foreground">데이터 준비 중</p>
                                     ) : (

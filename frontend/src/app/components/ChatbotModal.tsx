@@ -59,7 +59,7 @@ function Bubble({
 				</div>
 				<div className="mt-1 text-[11px] text-slate-500 tabular-nums">{message.timestamp}</div>
 
-				{/* ✅ FIX: suggestions 클릭 시 실제 전송되도록 연결 */}
+				{/*  FIX: suggestions 클릭 시 실제 전송되도록 연결 */}
 				{!isUser && message.suggestions && message.suggestions.length > 0 && (
 					<div className="mt-2 flex flex-wrap gap-2">
 						{message.suggestions.map((s, idx) => (

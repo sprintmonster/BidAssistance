@@ -85,7 +85,7 @@ export async function api<T>(
 
 	if (res.status === 401) {
 		// if ((config.on401 ?? "logout") === "logout") clear_auth_storage();
-        // ✅ 기본은 ignore (자동 로그아웃 금지)
+        //  기본은 ignore (자동 로그아웃 금지)
         if ((config.on401 ?? "ignore") === "logout") clear_auth_storage();
 		throw new Error("인증이 필요합니다.");
 	}
