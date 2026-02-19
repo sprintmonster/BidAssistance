@@ -352,6 +352,43 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
   - **LLM이 공고 내용 질문에 따라 DB 조회를 위한 조건 json을 추출하고 이후 db를 통해 조회 후 공고 내용 질문에 답변**
   - **공고문 보고서 생성 Agent를 활용해 공고문 업로드 시 보고서 요약 내용을 답변**
 
+### 🔢 데이터
+
+### • 공공데이터 OpenAPI 데이터
+
+<div align="center">
+  <table>
+    <tr>
+      <td width="220" align="center">
+        <img src="./ops/images/데이터.png" alt="데이터.png" width="200">
+      </td>
+      <td align="left">
+
+- 2021.01~2025.12.31 까지 5년간 데이터 588,109건  
+  입찰 데이터 확보 (결측치 처리 후 사용)
+
+- **사용한 API**
+  - 조달청\_나라장터 공공데이터개방표준서비스
+  - 조달청\_나라장터 입찰공고정보서비스
+  - 조달청\_나라장터 낙찰정보서비스
+
+- **dataset_feature_selected.csv** : 사용한 3가지의 API를 결합한  
+   데이터
+  </td>
+    </tr>
+
+    </table>
+  </div>
+
+### • 데이터 - 모델 설계 및 고도화(사정율 예측)
+
+<div align="center">
+  <img src="./ops/images/데이터 - 모델 설계 및 고도화(사정율 예측).png" alt="데이터 - 모델 설계 및 고도화(사정율 예측).png" width="650"/>
+</div><br>
+
+- Quantile Regression에서 확률밀도함수(PDF) 구간에 따른 확률 추출  
+  ➡️ **Weighted loss 적용 및 KDE를 통해 예측 안정화**
+
 ---
 
 # 🚀 배포 상세
