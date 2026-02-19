@@ -50,7 +50,6 @@ function isOperatorAccount(): boolean {
 	const token = localStorage.getItem("accessToken");
 	if (!token) return false;
 
-	// 1) JWT payload 내 role/authorities 기반 (권장)
 	const payload = decodeJwtPayload(token);
 	const role =
 		String(
@@ -67,8 +66,6 @@ function isOperatorAccount(): boolean {
 		if (authorities.toUpperCase().includes("ADMIN")) return true;
 	}
 
-	// 2) fallback: 이메일 allowlist (Vite env)
-	// 예: VITE_ADMIN_EMAILS="admin@your.com,ops@your.com"
 	const email = (localStorage.getItem("email") || "").trim().toLowerCase();
 	const env = (import.meta.env.VITE_ADMIN_EMAILS || "") as string;
 	const allow = env
@@ -119,7 +116,6 @@ export default function App() {
 	const [globalLoading, setGlobalLoading] = useState(false);
     const { toast, showToast } = useToast();
 
-	// ✅ 운영자만 공지 작성/삭제 가능
 	const canManageNotices = isOperatorAccount();
 
 	return (
@@ -192,7 +188,7 @@ export default function App() {
 						}
 					/>
 
-					{/* ✅ 커뮤니티: 로그인 없이 접근 가능 */}
+
 					<Route
 						path="/community"
 						element={
@@ -202,7 +198,7 @@ export default function App() {
 						}
 					/>
 
-					{/* ✅ 공지사항: 로그인 없이 접근 가능 + 운영자만 작성/삭제 */}
+
 					<Route
 						path="/notice"
 						element={
