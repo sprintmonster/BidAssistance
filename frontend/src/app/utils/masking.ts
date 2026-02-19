@@ -18,7 +18,6 @@ export function mask_name(name: string): string {
 		return `${n[0]}${"*".repeat(n.length - 2)}${n[n.length - 1]}`;
 	}
 
-	// 영문/숫자 등: 앞 1글자 + *** + 뒤 1글자
 	if (n.length === 1) return "*";
 	if (n.length === 2) return `${n[0]}*`;
 	return `${n[0]}${"*".repeat(Math.max(1, n.length - 2))}${n[n.length - 1]}`;

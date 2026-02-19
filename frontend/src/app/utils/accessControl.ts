@@ -7,8 +7,8 @@ export const ACCESS_CONTROL = {
 
 type LoginGuardState = {
 	count: number;
-	lock_until?: number; // epoch ms
-	last_failed_at?: number; // epoch ms
+	lock_until?: number;
+	last_failed_at?: number;
 };
 
 function now_ms() {

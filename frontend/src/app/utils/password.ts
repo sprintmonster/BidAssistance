@@ -42,13 +42,9 @@ export function get_password_rules(password: string, ctx?: PasswordPolicyContext
 	const sp = has_special(p);
 	const space_ok = !has_space(p);
 
-	// ✅ 서버 에러 메시지 기준으로 정렬:
-	// - 8자 이상
-	// - 영문/숫자/특수문자 각각 1개 이상 포함
 	const length_ok = p.length >= 8;
 	const combo_ok = a && d && sp;
 
-	// ✅ 기존 방어 로직 유지
 	const repeat_ok = !has_repeated_char(p, 4);
 
 	const user_id = normalize(ctx?.user_id || "");
