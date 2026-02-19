@@ -353,13 +353,6 @@ export function Home() {
 		return () => window.clearInterval(id);
 	}, [email]);
 
-	// const companyLabel = useMemo(() => {
-	// 	const n = localStorage.getItem("companyName")?.trim() || "";
-	// 	const p = localStorage.getItem("companyPosition")?.trim() || "";
-	// 	if (!n && !p) return "";
-	// 	if (n && p) return `${n} · ${p}`;
-	// 	return n || p;
-	// }, []);
 
 	const [companyLabel, setCompanyLabel] = useState("");
 
@@ -530,13 +523,12 @@ export function Home() {
 	};
 
 const onLogout = () => {
-	// localStorage만 지우면 서버 세션이 남아, 다른 메뉴 이동/뒤로가기에서 checkLogin으로
-	// 다시 로그인 상태가 복구될 수 있습니다. 반드시 서버 로그아웃 로직을 호출합니다.
+
 	try {
 		void apiLogout();
 	} finally {
 		window.dispatchEvent(new Event("auth:changed"));
-		// replace로 히스토리 엔트리를 남기지 않아 뒤로가기(bfcache) 복원 이슈를 줄입니다.
+
 		window.location.replace("/");
 	}
 };
@@ -554,7 +546,7 @@ const onLogout = () => {
 					<div className="hidden md:flex gap-2"></div>
 				</div>
 
-				{/* ✅ 핵심: 왼쪽(바로가기+오늘의 추천)을 한 컬럼으로 묶고, 오른쪽(로그인)을 독립 컬럼으로 둔다 */}
+
 				<div className="grid grid-cols-12 gap-6 items-start">
 					<div className="col-span-12 lg:col-span-8 space-y-6">
 						<section className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-2xl p-5 shadow-sm h-[320px] flex flex-col">

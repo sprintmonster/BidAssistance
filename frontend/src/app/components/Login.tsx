@@ -39,7 +39,7 @@ export function LoginPage({
                             alt="입찰인사이트 로고(축소판)"
                             className="h-20 w-auto block object-contain cursor-pointer hover:opacity-80 hover:scale-105 transition-all duration-200"
                             onClick={onNavigateToHome}
-                            title="홈페이지 이동하기"  // 툴팁 추가
+                            title="홈페이지 이동하기"
                         />
                     </div>
                     <CardTitle className="text-2xl text-center">입찰인사이트</CardTitle>
@@ -91,7 +91,7 @@ export function LoginPage({
                                 회원가입
                             </button>
                         </div>
-                        {/* 계정 / 비밀번호 찾기 */}
+
                         <div className="flex justify-between gap-4 text-sm">
                             <button
                                 type="button"

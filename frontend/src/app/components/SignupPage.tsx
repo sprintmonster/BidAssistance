@@ -12,7 +12,6 @@ import { api } from "../api/client";
 import {ToastType} from "./ui/useToast";
 
 function sanitize_birth_date_input(raw: string) {
-	// YYYY-MM-DD 형태로만 입력되도록 강제 (모바일/브라우저별 date fallback 대응)
 	const digits = (raw || "").replace(/[^0-9]/g, "").slice(0, 8);
 	const y = digits.slice(0, 4);
 	const m = digits.slice(4, 6);
@@ -24,10 +23,8 @@ function sanitize_birth_date_input(raw: string) {
 }
 
 function is_valid_birth_date(value: string) {
-	// 형식 체크
 	if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
 
-	// 실제 달/일 유효성 체크
 	const [yy, mm, dd] = value.split("-").map((v) => Number(v));
 	if (!Number.isFinite(yy) || !Number.isFinite(mm) || !Number.isFinite(dd)) return false;
 	if (mm < 1 || mm > 12) return false;
@@ -39,7 +36,6 @@ function is_valid_birth_date(value: string) {
 	const ok = dt.getFullYear() === yy && dt.getMonth() + 1 === mm && dt.getDate() === dd;
 	if (!ok) return false;
 
-	// 미래 날짜 방지
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
 	if (dt.getTime() > today.getTime()) return false;
@@ -54,7 +50,6 @@ interface SignupPageProps {
     showToast: (message: string, type: ToastType) => void;
 }
 
-// ====== 질문(0~3 고정 매핑) ======
 const SECURITY_QUESTIONS = [
 	"가장 기억에 남는 선생님 성함은?",
 	"첫 반려동물 이름은?",
@@ -75,7 +70,7 @@ export function SignupPage({
 		nickName: "",
 		birthDate: "",
 		name: "",
-		recoveryQuestion: "", // "0" | "1" | "2" | "3"
+		recoveryQuestion: "",
 		recoveryAnswer: "",
 	});
 
@@ -169,7 +164,6 @@ export function SignupPage({
 				return;
 			}
 
-			// API 정의서 필드명에 맞춤
 			const payload = {
 				email: formData.email.trim(),
 				password: formData.password,

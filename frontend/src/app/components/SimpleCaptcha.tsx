@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 
 function gen_code(len: number) {
-	const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 혼동 문자 제외
+	const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 	let out = "";
 	let i = 0;
 

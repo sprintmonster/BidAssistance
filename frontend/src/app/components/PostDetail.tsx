@@ -91,22 +91,10 @@ function getLikes(post: any): number {
     return Number.isFinite(n) ? n : 0;
 }
 
-/**
- * ✅ 아주 심플한 마크다운 렌더러:
- * - ![alt](url) => 이미지
- * - [text](url) => 링크
- * - 그 외 텍스트는 줄바꿈 유지
- *
- * 라이브러리(react-markdown) 없이도 "블로그처럼" 보이게 해줌.
- */
 function renderInlineMarkdown(src: string): ReactNode[] {
     const text = src ?? "";
     const nodes: ReactNode[] = [];
 
-    // 이미지/링크를 한 번에 잡는 정규식
-    // group1: "!"면 이미지, 아니면 링크
-    // group2: alt/text
-    // group3: url
     const re = /(!?)\[(.*?)\]\((https?:\/\/[^\s)]+)\)/g;
 
     let lastIndex = 0;
@@ -116,14 +104,13 @@ function renderInlineMarkdown(src: string): ReactNode[] {
         const [whole, bang, label, url] = m;
         const start = m.index;
 
-        // 앞 텍스트(순수 텍스트) push
         if (start > lastIndex) {
             const chunk = text.slice(lastIndex, start);
-            // 줄바꿈 유지
+
             nodes.push(...chunk.split("\n").map((line, i) => (i === 0 ? [line] : [<br key={`br-${nodes.length}-${i}`} />, line])).reduce((acc, val) => acc.concat(val), []));
         }
 
-        // 매치된 마크다운 push
+
         if (bang === "!") {
             nodes.push(
                 <div key={`img-${start}`} className="my-4">
@@ -155,13 +142,12 @@ function renderInlineMarkdown(src: string): ReactNode[] {
         lastIndex = start + whole.length;
     }
 
-    // 마지막 남은 텍스트 push
+
     if (lastIndex < text.length) {
         const tail = text.slice(lastIndex);
         nodes.push(...tail.split("\n").map((line, i) => (i === 0 ? [line] : [<br key={`br-tail-${nodes.length}-${i}`} />, line])).reduce((acc, val) => acc.concat(val), []));
     }
 
-    // React가 "문자열/컴포넌트" 섞인 배열도 잘 렌더링함
     return nodes;
 }
 
@@ -273,7 +259,6 @@ export function PostDetail({
         onDeletePost(postId);
     };
 
-    /** 좋아요: 토글 + 연타방지(요청 중만 잠금) */
     const [like_busy, set_like_busy] = useState(false);
 
     const likedByMe = !!(post as any).likedByMe;
@@ -294,10 +279,9 @@ export function PostDetail({
         }
     };
 
-    // ✅ TS7053 방지: category를 PostCategory로 확정해서 안전하게 인덱싱
+
     const categoryKey = ((post as any).category as PostCategory) ?? "question";
     
-    // 채택 가능 여부: 질문글 + 내가 작성자 + 아직 채택되지 않음
     const hasAdoptedComment = post.comments?.some((c: any) => c.isAdopted) ?? false;
     const canAdopt = canEdit && categoryKey === "question" && !hasAdoptedComment;
 
@@ -394,7 +378,7 @@ export function PostDetail({
                     </div>
                 </div>
 
-                {/* ✅ 여기! 본문을 마크다운(이미지/링크) 렌더링 */}
+
                 <div className="prose max-w-none mb-6">
                     {is_editing ? (
                         <textarea

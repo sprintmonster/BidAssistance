@@ -8,7 +8,6 @@ export type NewPostDraftForm = {
     category: PostCategory;
     files: File[];
 
-    // 인라인 업로드 추적(재업로드 방지/서버로 id 보내기)
     inlineAttachmentIds?: number[];
     inlineFileKeys?: string[];
 };
@@ -17,7 +16,6 @@ interface NewPostFormProps {
     onSubmit: (draft: NewPostDraftForm) => void;
     onCancel: () => void;
 
-    // 인라인(드래그/붙여넣기) 업로드용
     onUploadInlineFile?: (file: File) => Promise<{ url: string; attachmentId: number }>;
     isAdmin?: boolean;
 }
@@ -31,7 +29,6 @@ export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile, isAdmin = 
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const [dragOver, setDragOver] = useState(false);
 
-    // 인라인 업로드 추적
     const [inlineIds, setInlineIds] = useState<number[]>([]);
     const [inlineKeys, setInlineKeys] = useState<string[]>([]);
 
@@ -55,7 +52,6 @@ export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile, isAdmin = 
 
         setContent((prev) => prev.slice(0, start) + snippet + prev.slice(end));
 
-        // 커서 위치를 삽입 뒤로 이동
         requestAnimationFrame(() => {
             const pos = start + snippet.length;
             el.focus();
@@ -63,7 +59,6 @@ export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile, isAdmin = 
         });
     }
 
-    // ✅ 첨부파일 input으로 추가(기존 방식)
     const handleFilesChange = (e: ChangeEvent<HTMLInputElement>) => {
         const selected = Array.from(e.target.files ?? []);
         if (selected.length === 0) return;
@@ -79,11 +74,9 @@ export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile, isAdmin = 
         e.target.value = "";
     };
 
-    // ✅ 인라인 업로드 + 본문 삽입 + 첨부목록 유지
     async function uploadAndInsert(file: File) {
         if (!onUploadInlineFile) {
-            // onUploadInlineFile을 안 넘겼으면 인라인 업로드를 못 함
-            // (이 경우라도 첨부파일에는 넣어주자)
+
             setFiles((prev) => {
                 const k = fileKey(file);
                 return prev.some((x) => fileKey(x) === k) ? prev : [...prev, file];
@@ -93,8 +86,7 @@ export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile, isAdmin = 
 
         const k = fileKey(file);
         if (inlineKeys.includes(k)) {
-            // 이미 인라인 업로드했던 파일이면 다시 삽입만 할지/무시할지 선택인데,
-            // 여기서는 "중복 업로드 방지" 우선으로 무시
+
             return;
         }
 
@@ -106,7 +98,6 @@ export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile, isAdmin = 
             insertAtCursor(`\n\n[${file.name}](${url})\n\n`);
         }
 
-        // 첨부파일 목록에도 유지(원하는 동작)
         setFiles((prev) => {
             const exists = prev.some((x) => fileKey(x) === k);
             return exists ? prev : [...prev, file];
@@ -116,13 +107,10 @@ export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile, isAdmin = 
         setInlineKeys((prev) => (prev.includes(k) ? prev : [...prev, k]));
     }
 
-    // ✅ “웹 이미지(링크)”를 드래그한 경우: URL만 들어오기도 함
     async function handleDropUrl(url: string) {
         const u = url.trim();
         if (!u) return;
 
-        // 그냥 본문에 이미지 링크로 삽입 (다운로드/재업로드까지 하려면 서버가 URL import 지원해야 함)
-        // 블로그 UX 느낌은 이게 제일 자연스러움.
         insertAtCursor(`\n\n![](${u})\n\n`);
     }
 
@@ -130,7 +118,6 @@ export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile, isAdmin = 
         setFiles((prev) => prev.filter((_, i) => i !== idx));
     };
 
-    // 공지사항 서브 카테고리
     const [noticeSubCategory, setNoticeSubCategory] = useState<"service" | "update" | "maintenance" | "policy">("service");
 
     const handleSubmit = (e: FormEvent) => {
@@ -139,12 +126,10 @@ export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile, isAdmin = 
 
         let finalTitle = title.trim();
         
-        // 공지사항일 경우 말머리 자동 추가
         if (category === "notice") {
             const labels = { service: "서비스", update: "업데이트", maintenance: "점검", policy: "정책" };
             const tag = `[${labels[noticeSubCategory]}]`;
             
-            // 이미 말머리가 있는지 확인 (중복 방지)
             if (!finalTitle.startsWith("[")) {
                 finalTitle = `${tag} ${finalTitle}`;
             }
@@ -217,7 +202,7 @@ export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile, isAdmin = 
                                 type="button"
                                 onClick={() => {
                                     setCategory("notice");
-                                    setNoticeSubCategory("service"); // 기본값
+                                    setNoticeSubCategory("service");
                                 }}
                                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                                     category === "notice"
@@ -230,7 +215,7 @@ export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile, isAdmin = 
                         )}
                     </div>
 
-                    {/* ✅ 공지사항 하위 카테고리 (운영자 전용) */}
+
                     {category === "notice" && (
                         <div className="mt-4 p-4 bg-red-50 rounded-lg border border-red-100">
                             <label className="block text-sm font-medium text-red-800 mb-2">공지 분류 선택</label>
@@ -270,7 +255,7 @@ export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile, isAdmin = 
                     />
                 </div>
 
-                {/* ✅ 블로그처럼: 드래그/붙여넣기 → 본문 중간 삽입 */}
+
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">내용</label>
                     <textarea
@@ -301,7 +286,7 @@ export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile, isAdmin = 
                                 return;
                             }
 
-                            // 2) URL 드롭(웹에서 이미지/링크 끌어오기)
+                            // 2) URL 드롭
                             const uri = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain");
                             if (uri) {
                                 await handleDropUrl(uri);
@@ -327,11 +312,11 @@ export function NewPostForm({ onSubmit, onCancel, onUploadInlineFile, isAdmin = 
                         }}
                     />
                     <div className="mt-2 text-xs text-gray-500">
-                        ✅ 사진을 본문에 넣으려면: 파일을 여기로 드래그하거나, 캡처 후 붙여넣기(Ctrl+V)
+                        사진을 본문에 넣으려면: 파일을 여기로 드래그하거나, 캡처 후 붙여넣기(Ctrl+V)
                     </div>
                 </div>
 
-                {/* ✅ 첨부파일은 기존대로 별도 유지 */}
+
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">첨부파일</label>
                     <input

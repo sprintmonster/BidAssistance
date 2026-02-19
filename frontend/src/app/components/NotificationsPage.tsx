@@ -180,11 +180,11 @@ function build_deadline_notifications_from_wishlist(
         if (remain == null) continue;
 
         const isExpired = remain <= 0;
-        const isImminent = remain > 0 && remain <= 7 * 24 * 60 * 60 * 1000; //  7일 이내
+        const isImminent = remain > 0 && remain <= 7 * 24 * 60 * 60 * 1000;
 
         if (!isExpired && !isImminent) continue;
 
-        // 로컬 알림 고유 ID(서버 alarmId랑 충돌 안 나게 큰 값으로)
+
         const localId = Number(`9${bidId}${isExpired ? 2 : 1}`);
 
         out.push({
@@ -208,13 +208,11 @@ export function NotificationsPage() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	// Keyword Mgmt State
     const [keywords, setKeywords] = useState<UserKeyword[]>([]);
     const [newKeyword, setNewKeyword] = useState("");
     const [minPrice, setMinPrice] = useState("");
     const [maxPrice, setMaxPrice] = useState("");
     
-    // [NEW] Settings State (Persisted)
     const [settings, setSettings] = useStickyState<NotificationSettings>({ deadline: true, correction: true }, SETTINGS_KEY);
 
     const userId = get_user_id();
@@ -303,9 +301,6 @@ export function NotificationsPage() {
 		}
 	};
 
-    // ... (markRead, markAllRead, removeOne same as before but use visibleItems where needed ?? actually handlers act on ID so fine)
-    // BUT markAllRead needs to only mark VISIBLE ones? 
-    // Usually mark all read means all visible ones.
 
 	const markRead = (id: number) => {
 		setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
@@ -315,7 +310,7 @@ export function NotificationsPage() {
 	};
 
 	const markAllRead = () => {
-        // Only mark visible items as read? Or all? User usually expects what they see.
+
         const visibleIds = new Set(visibleItems.map(n => n.id));
 		setItems((prev) => prev.map((n) => visibleIds.has(n.id) ? { ...n, read: true } : n));
 		const map = load_read_map();
@@ -325,7 +320,6 @@ export function NotificationsPage() {
 		save_read_map(map);
 	};
 
-    // ... handlers ...
 
     const removeOne = async (alarmId: number) => {
 		try {

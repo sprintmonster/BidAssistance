@@ -139,7 +139,6 @@ export function LoginPage() {
 				return;
 			}
 
-			// 핵심: accessToken/refreshToken까지 저장해야 이후 /api/board 같은 인증 API가 동작함
 			persistLogin({
 				...res.data,
 				userId,
@@ -147,7 +146,6 @@ export function LoginPage() {
 				email: String(res.data.email ?? em),
 			});
 
-			// 일부 컴포넌트가 "name" 키를 참고하므로 보강 저장(프로젝트 내 호환성)
 			localStorage.setItem("name", String(res.data.name ?? ""));
 
 			record_login_success(em);

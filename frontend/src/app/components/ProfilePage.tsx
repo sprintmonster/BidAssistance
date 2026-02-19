@@ -217,38 +217,6 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 		};
 	}, [userId]);
 
-	// useEffect(() => {
-	// 	if (!userId) return;
-	// 	if (activeTab !== "company") return;
-    //
-	// 	let ignore = false;
-	// 	setCompanyLoading(true);
-	// 	setCompanyError(null);
-	// 	setCompanyNotice(null);
-    //
-	// 	getCompany(userId)
-	// 		.then((c) => {
-	// 			if (ignore) return;
-	// 			setCompanyId(c.companyId);
-	// 			setCompanyName(c.name || "");
-	// 			setCompanyPosition(c.performanceHistory || "");
-	// 		})
-	// 		.catch((e: any) => {
-	// 			if (ignore) return;
-	// 			setCompanyError(e?.message || "회사 정보를 불러오지 못했습니다.");
-	// 			setCompanyId(undefined);
-	// 			setCompanyName("");
-	// 			setCompanyPosition("");
-	// 		})
-	// 		.finally(() => {
-	// 			if (ignore) return;
-	// 			setCompanyLoading(false);
-	// 		});
-    //
-	// 	return () => {
-	// 		ignore = true;
-	// 	};
-	// }, [activeTab, userId]);
 
 	const tabTriggerClass = useMemo(() => {
 		return [
@@ -325,11 +293,9 @@ export function ProfilePage({ userEmail }: ProfilePageProps) {
 
         try {
             if (companyId) {
-                // 기존 회사 정보 업데이트
                 await updateCompany(companyId, { name: nextName, position: nextPos });
                 setCompanyNotice("회사 정보가 업데이트되었습니다.");
             } else {
-                // 새 회사 생성
                 const res = await upsertCompany({ name: nextName, position: nextPos });
                 if (res.data?.id) {
                     setCompanyId(res.data.id);
@@ -734,7 +700,6 @@ function RecentBids({ userId }: { userId: string }) {
 	useEffect(() => {
 		fetchBidHistory(userId)
 			.then((data) => {
-				// 백엔드 재시작 전이라도 프론트에서 확실하게 중복 제거 (id 기준)
 				const uniqueBids = Array.from(new Map(data.map((item) => [item.id, item])).values());
 				setBids(uniqueBids);
 			})

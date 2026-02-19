@@ -79,7 +79,7 @@ export function ResetPasswordPage() {
             const params = new URLSearchParams({
                 email: payload.email,
                 name: payload.name,
-                birth: payload.birth, // 예: "2001-06-29"
+                birth: payload.birth,
             });
             let json: RecoveryQuestionRes;
             try {
@@ -96,26 +96,6 @@ export function ResetPasswordPage() {
                 return;
             }
 
-			// const res = await fetch("/api/users/recovery_question", {
-			// 	method: "POST",
-			// 	headers: { "Content-Type": "application/json" },
-			// 	body: JSON.stringify(payload),
-			// });
-            //
-			// const json = await res.json().catch(() => null);
-            //
-			// if (!res.ok || json?.status === "error") {
-			// 	const msg =
-			// 		json?.message ??
-			// 		(res.status === 401
-			// 			? "본인 확인에 실패했습니다."
-			// 			: res.status === 404
-			// 				? "가입된 계정을 찾을 수 없습니다."
-			// 				: "요청에 실패했습니다. 다시 시도해 주세요.");
-			// 	setMessage({ type: "error", text: msg });
-			// 	return;
-			// }
-
             const sid = json?.data?.requestId;
             const qid = json?.data?.questionIndex;
 
@@ -126,7 +106,7 @@ export function ResetPasswordPage() {
 
             setRecoverySessionId(String(sid));
 			setQuestionIndex(qid);
-			setIdentifiedEmail(formData.email.trim()); // 화면 표시용
+			setIdentifiedEmail(formData.email.trim());
 			setStep("challenge");
 
 			setMessage({ type: "success", text: "확인 완료. 가입 시 설정한 질문에 답변해 주세요." });

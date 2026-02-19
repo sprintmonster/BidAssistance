@@ -1,4 +1,3 @@
-// 입찰인사이트 개인정보처리방침 페이지
 import {
 	Accordion,
 	AccordionContent,

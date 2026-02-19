@@ -1,4 +1,3 @@
-// 입찰인사이트 서비스 이용약관 페이지
 import {
 	Accordion,
 	AccordionContent,
