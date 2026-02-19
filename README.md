@@ -40,13 +40,13 @@
         <img src="./ops/images/team/전보윤.jpg" width="120px" alt="전보윤"/><br>
         <b>전보윤</b><br>
         <sub>ProjectManager, AI</sub><br>
-        <a href="https://github.com/sprintmonster">@sprintmonster</a>
+        <a href="https://github.com/attmc">@attmc</a>
       </td>
       <td align="center" width="200px">
         <img src="./ops/images/team/강버들.jpg" width="120px" alt="강버들"/><br>
         <b>강버들</b><br>
         <sub>FrontEnd</sub><br>
-        <a href="https://github.com/LxNx-Hn">@LxNx-Hn</a>
+        <a href="https://github.com/bnsneo33-code">@bnsneo33-code</a>
       </td>
       <td align="center" width="200px">
         <img src="./ops/images/team/김형모.jpg" width="120px" alt="김형모"/><br>
@@ -58,7 +58,7 @@
         <img src="./ops/images/team/공동욱.jpg" width="120px" alt="공동욱"/><br>
         <b>공동욱</b><br>
         <sub>BackEnd</sub><br>
-        <a href="https://github.com/cos65536">@cos65536</a>
+        <a href="https://github.com/wish1124">@wish1124</a>
       </td>
     </tr>
   </table>
