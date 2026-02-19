@@ -424,7 +424,7 @@ React 웹 애플리케이션을 실행합니다.
 
 ---
 
-❓ 트러블슈팅 (Troubleshooting)
+### ❓ 트러블슈팅 (Troubleshooting)
 
 - **CORS 오류** : 프론트엔드(5173)와 백엔드(8080) 포트가 다르므로, 백엔드의 <code>WebConfig</code>에서 CORS 설정이 올바른지 확인하세요.
 - **DB 연결 실패** : MySQL 서비스가 실행 중인지, <code>application.yaml</code>의 계정 정보가 정확한지 확인하세요.
