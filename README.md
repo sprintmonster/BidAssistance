@@ -318,24 +318,39 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 <div align="center">
   <img src="./ops/images/서비스 플로우.png" alt="서비스 플로우" width="500"/>
 </div><br>
- 
+
+- 탐색부터 보고서 생성까지 이어지는 서비스 플로우
+
 ### 📋 시스템 아키텍처
 
 <div align="center">
   <img src="./ops/images/시스템 아키텍처.png" alt="시스템 아키텍처" width="500"/>
 </div><br>
 
-### 📊 ERD
+- Spring Boot의 안정적인 서비스 운용과 FastAPI의 고성능 AI 연산이 결합된  
+  **클라우드 네이티브 아키텍처**
+
+### 🖼️ ERD
 
 <div align="center">
   <img src="./ops/images/ERD.png" alt="ERD" width="500"/>
 </div><br>
 
-### 📊 AI 모델 플로우
+- AI 기반 입찰 분석 결과를 제공하기 위한 최적화된 데이터 모델링
+  - **유저 영역** : 유저의 개인정보, 키워드 알람을 위한 정보를 저장하는 부분
+  - **상호작용 영역** : 공고에 대한 편의기능을 유저 맞춤으로 제공하기 위해 존재하는 부분
+  - **공고 영역** : 공고, 공고 AI 분석 보고서 등 공고와 관련된 파일을 저장하는 부분
+
+### 📈 AI 모델 플로우
 
 <div align="center">
   <img src="./ops/images/AI 모델 플로우.png" alt="AI 모델 플로우.png" width="500"/>
 </div><br>
+
+- AI 챗봇을 위해 이어지는 세 종류의 서비스 플로우
+  - **질문 분류 후 사이트 질문에 대해 FAISS RAG 모델을 활용해 사이트 이용 방법 답변**
+  - **LLM이 공고 내용 질문에 따라 DB 조회를 위한 조건 json을 추출하고 이후 db를 통해 조회 후 공고 내용 질문에 답변**
+  - **공고문 보고서 생성 Agent를 활용해 공고문 업로드 시 보고서 요약 내용을 답변**
 
 ---
 
