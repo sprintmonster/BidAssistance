@@ -143,7 +143,7 @@ export function RecommendedBidsSection() {
 
 	const recommended = useMemo(() => {
 		const now = Date.now();
-        // 마감되지 않은 것만 필터링 후 5개만 노출 (대시보드니 너무 길지 않게)
+        // 마감되지 않은 것만 필터링 후 5개만 노출
 		return [...bids]
 			.filter((b) => {
 				const end = parse_deadline_date(String((b as any).endDate ?? ""));
@@ -225,7 +225,7 @@ export function RecommendedBidsSection() {
         );
     }
 
-    if (error) return null; // 에러 시 조용히 숨김 (대시보드는 방해 안 되게)
+    if (error) return null; // 에러 시 조용히 숨김
     if (recommended.length === 0) return null; // 추천 없으면 숨김
 
 	return (
