@@ -357,26 +357,6 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 
 ---
 
-## 🚀 Azure Container Apps를 이용한 배포
-
-<p align="center">
-<img src="./ops/images/Azure Container Apps 1.png" width="380" style="margin-right: 5px"> <img src="./ops/images/Azure Container Apps 2.png" width="380" style="margin-left: 5px">
-</p>
-
-- 기존의 고정적으로 비용이 청구되는 App Service와 다르게 요청이 적을 때에는 복제본을 줄여 자본 운용이 효율적
-- App Service는 코드를 변경할때마다 잠시간 서비스가 종료되지만 Container의 경우 패치 중에도 서비스 운영 가능
-- Kubenetes의 기능을 챙기며 관리의 전문성과 어려움을 줄여 관리가 쉬우며 추후 Kubernetes로 확장도 간편
-
-## 🗄️ Container 선택이유
-
-<p align="center">
-<img src="./ops/images/Container 선정이유 1.png" width="380" style="margin-right: 5px"> <img src="./ops/images/Container 선정이유 2.png" width="380" style="margin-left: 5px">
-</P>
-
-- 기존의 App Service와 다르게 요청이 적을 때에는 복제본을 줄여 자본 운용이 효율적
-- App Service는 코드를 변경할때마다 잠시간 서비스가 종료되지만 Container의 경우 패치 중에도 서비스 운영 가능
-- App Service의 경우 서버에서 Crash가 있으면 사람이 직접 조치를 취해야하지만 Container의 경우 자동으로 재부팅
-
 <!-- ### 📦 배포 환경
 
 <div align="center">
