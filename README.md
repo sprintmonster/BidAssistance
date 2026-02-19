@@ -370,7 +370,118 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 - **표준화** : Docker 컨테이너로 표준화하여 배포 일관성 확보
 - **클라우드** : Azure Cloud에 컨테이너를 호스팅하여 확장성과 안정성 확보
 
+## 🛠️ 설치 및 실행 가이드 (Installation & Setup)
+
+이 프로젝트는 **Backend (Java Spring Boot), Frontend (React), AI/ML (Python)** 세 가지 주요 컴포넌트로 구성되어 있습니다. 아래 순서대로 설치 및 실행을 진행해주세요.
+
+### 📋 사전 요구사항 (Prerequisites)
+
+프로젝트 실행을 위해 다음 도구들이 설치되어 있어야 합니다.
+
+- **Java JDK 17** 이상
+- **Node.js 18.x** 이상 (Front-end)
+- **Python 3.10** 이상 (AI/ML)
+- **MySQL 8.0** 이상
+
 ---
+
+### 1️⃣ 데이터베이스 설정 (Database Setup)
+
+1. MySQL에 <code>aivleTK</code> 데이터베이스를 생성합니다.
+2. 프로젝트 내 SQL 스크립트를 실행하여 스키마를 생성합니다.
+   - 파일 위치 :
+   - (선택사항) 최신 스키마 변경사항이 있다면 마이그레이션 스크립트도 실행합니다.
+
+---
+
+### 2️⃣ AI/ML 모델 서버 설정 (AI/ML Setup)
+
+낙찰가 예측 모델을 학습하거나 API 서버를 실행합니다.
+
+1. 가 있는 루트 디렉토리로 이동합니다.
+2. Python 가상환경 생성 및 패키지 설치:
+3. 모델 학습 및 실행:
+
+---
+
+### 3️⃣ 백엔드 서버 실행 (Backend Setup)
+
+Spring Boot 서버를 실행하여 API를 제공합니다.
+
+1. **설정 파일 수정** :
+2. **서버 실행** :
+   - 성실히 빌드 후 [http://localhost:8080](http://localhost:8080)에서 서버가 시작됩니다.
+
+---
+
+### 4️⃣ 프론트엔드 실행 (Frontend Setup)
+
+React 웹 애플리케이션을 실행합니다.
+
+1. **환경 변수 설정** : <code>Bid_FrontEnd/frontend</code> 디렉토리에 <code>.env</code> 파일을 생성합니다.
+2. **실행** :
+   - 브라우저에서 [http://localhost:5173](http://localhost:5173)으로 접속합니다.
+
+---
+
+❓ 트러블슈팅 (Troubleshooting)
+
+- **CORS 오류** : 프론트엔드(5173)와 백엔드(8080) 포트가 다르므로, 백엔드의 <code>WebConfig</code>에서 CORS 설정이 올바른지 확인하세요.
+- **DB 연결 실패** : MySQL 서비스가 실행 중인지, <code>application.yaml</code>의 계정 정보가 정확한지 확인하세요.
+- **Python 패키지 오류** : <code>pip install --upgrade pip</code> 후 다시 설치해보세요. LightGBM 설치 시 오류가 난다면 <code>libomp</code> (Mac) 등을 설치해야 할 수 있습니다.
+
+```bash
+  cd Bid_FrontEnd/frontend # 의존성 설치
+  npm install # 개발 서버 실행
+  npm run dev
+```
+
+```env
+  VITE_API_BASE_URL = http://localhost:8080/api
+```
+
+```bash
+  cd BidAssistance_BE/BE/aivleTK
+  # Mac : /Linux./gradlew bootRun
+  # Windows : gradlew.bat bootRun
+```
+
+```yaml
+spring:
+datasource:
+url: jdbc:mysql://localhost:3306/aivleTK
+username: <YOUR_DB_USERNAME>
+password: <YOUR_DB_PASSWORD>
+```
+
+1. BidAssistance_BE/BE/aivleTK/src/main/resources/application.yaml 파일을 열어 DB 정보와 Azure/OpenAI 키를 설정합니다.
+
+```bash
+  # 모델 학습 (약 5-10분 소요)
+  python train_bid_rate_model.py
+
+  # (옵션) 예측 API 서버 실행 시
+  # python app.py  (만약 별도의 Flask/FastAPI 서버가 있다면)
+```
+
+```bash
+  # 가상환경 생성 (선택사항)
+  python -m venv venvsource venv/bin/activate
+
+  # Mac/Linux
+  # venv\Scripts\activate
+
+  # Windows
+  # 패키지 설치
+  pip install -r requirements_ml.txt
+```
+
+1. train_bid_rate_model.py
+   - BidAssistance_BE/BE/aivleTK/src/main/resources/nara.sql
+
+```sql
+  CREATE DATABASE aivleTK;
+```
 
 <!-- ### 📦 배포 환경
 
