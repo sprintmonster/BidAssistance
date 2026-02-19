@@ -71,7 +71,7 @@
         <a href="https://github.com/ysb1208">@ysb1208</a>
       </td>
       <td align="center" width="200px">
-        <img src="./ops/images/team/이세용.jpg" width="120px" alt="이세용"/><br>
+        <img src="./ops/images/team/이세용-그레이-3.5x4.5-300.jpg" width="120px" alt="이세용"/><br>
         <b>이세용</b><br>
         <sub>BackEnd</sub><br>
         <a href="https://github.com/pla2n">@pla2n</a>
