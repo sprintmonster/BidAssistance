@@ -460,21 +460,21 @@ BidAssistance/
 │      │  ├─context
 │      │  │      ThemeContext.tsx
 │      │  │
-│      │  ├─layout
+│      │  ├─layout                                    # 레이아웃 컴포넌트
 │      │  │      AppLayout.tsx
 │      │  │      PageContainer.tsx
 │      │  │
-│      │  ├─routes
+│      │  ├─routes                                    # 라우팅 가드/권한 처리
 │      │  │      ProtectedRoute.tsx
 │      │  │      PublicRoute.tsx
 │      │  │
-│      │  ├─types
+│      │  ├─types                                     # 도메인 타입 정의
 │      │  │      bid.ts
 │      │  │      community.ts
 │      │  │      navigation.ts
 │      │  │      wishlist.ts
 │      │  │
-│      │  └─utils
+│      │  └─utils                                     
 │      │          accessControl.ts
 │      │          masking.ts
 │      │          password.ts
