@@ -37,7 +37,7 @@
   <table>
     <tr>
       <td align="center" width="200px">
-        <img src="./ops/images/team/전보윤.JPG" width="120px" alt="전보윤"/><br>
+        <img src="./ops/images/team/전보윤.jpg" width="120px" alt="전보윤"/><br>
         <b>전보윤</b><br>
         <sub>ProjectManager, AI</sub><br>
         <a href="https://github.com/attmc">@attmc</a>
