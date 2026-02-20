@@ -281,17 +281,18 @@ BidAssistance/
 │              scaler_X.pkl
 │
 ├─chatbot
-│  │  BidAssitanceModel.py
+│  │  BidAssitanceModel.py                            # AI 요약본 RAG 파이프라인
 │  │  Dockerfile
 │  │  file
-│  │  get_probability_from_model.py
-│  │  graph.py
-│  │  json설명.txt
-│  │  main.py
+│  │  get_probability_from_model.py                   # 추론파일
+│  │  graph.py                                        # 챗봇 파이프라인
+│  │  json설명.txt                                    # 공고 질문 json 추출 시 사용한 값, 설명
+│  │  main.py                                         # 챗봇 엔드포인트 
 │  │  requirements.txt
-│  │  search_tool_nltojson.py
+│  │  search_tool_nltojson.py                         # 공고 조회 질문 -> json 추출
 │  │  usage_tool.py                                   # 사이트 이용 관련 답변 생성 toolnode
 │  │  vector_db_embedding.py                          # "usage_data"내부 파일 임베딩 + FAISS 벡터 저장소 생성
+│  │  tft_v3_predictor.py                             # 추론파일
 │  │
 │  ├─faiss_db                                         # FAISS 벡터 저장소
 │  │  ├─api_faiss                                     # "api정의서.xlsx" 임베딩 후 데이터
@@ -306,18 +307,24 @@ BidAssistance/
 │  │          index.faiss
 │  │          index.pkl
 │  │
-│  ├─rag_index
+│  ├─model
+│  │  └─tft_v3
+│  │           best_model.pt
+│  │           features.txt
+│  │           scaler_X.pkl
+│  │
+│  ├─rag_index                                        # RAG 파이프라인용 벡터 db
 │  │      index.faiss
 │  │      index.pkl
 │  │
-│  ├─results_transformer
-│  │      best_model.pt
+│  │
+│  │
 │  │
 │  └─usage_data                                       # 임베딩 용도 파일 저장소 (.xlsx, .txt, .img)
 │      │  api정의서.xlsx
 │      │  홈페이지 사용 설명서.txt
 │      │
-│      └─images                                       # 빅 프로젝트 사이트 스크린 샷
+│      └─images                                       # 사이트 스크린 샷
 │              게시글.png
 │              계정찾기.png
 │              공고찾기.png
