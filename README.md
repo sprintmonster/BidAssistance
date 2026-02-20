@@ -297,16 +297,11 @@ BidAssistance/
 │  │  ├─api_faiss                                     # "api정의서.xlsx" 임베딩 후 데이터
 │  │  ├─image_faiss                                   # "images"내부 이미지 임베딩 후 데이터
 │  │  └─txt_faiss                                     # "홈페이지 사용 설명서.txt" 임베딩 후 데이터
-│  │
 │  ├─model
-│  │
 │  ├─rag_index                                        # RAG 파이프라인용 벡터 db
-│  │
-│  │
 │  └─usage_data                                       # 임베딩 용도 파일 저장소 (.xlsx, .txt, .img)
 │      │  api정의서.xlsx
 │      │  홈페이지 사용 설명서.txt
-│      │
 │      └─images                                       # 사이트 스크린 샷
 │
 ├─frontend
