@@ -230,22 +230,19 @@ BidAssistance/
 │      └─src
 │          ├─main
 │          │  ├─java
-│          │  │  └─com
-│          │  │      └─nara
-│          │  │          └─aivleTK
-│          │  │              │  AivleTkApplication.java
-│          │  │              ├─common/                       # 시간 공통설정
-│          │  │              ├─config/                       # Security, QueryDsl, WebClient 등 인프라 설정
-│          │  │              ├─controller/                   # API 엔드포인트 구현 (Alarm, Bid, User 등)
-│          │  │              ├─domain/                       # 데이터베이스 테이블 매핑 (JPA 엔티티) 
-│          │  │              ├─dto/                          #  계층 간 데이터 교환 객체 (요청/응답 모델)      
-│          │  │              ├─exception/                    # 예외 클래스 및 전역 핸들러   
-│          │  │              ├─repository/                   # DB 접근 및 QueryDsl 인터페이스
-│          │  │              ├─service/                      # 핵심 비즈니스 로직 구현
-│          │  │              │  └─bid/                       # 입찰 관련 특화 로직 (Scheduler 등 포함)
-│          │  │              │          
-│          │  │              └─util
-│          │  │                  └─JwtUtil.java #JwtUtil
+│          │  │  └─com/nara/aivleTK
+│          │  │     │  AivleTkApplication.java      # 시작점
+│          │  │     ├─common/                       # 시간 공통설정
+│          │  │     ├─config/                       # Security, QueryDsl, WebClient 등 인프라 설정
+│          │  │     ├─controller/                   # API 엔드포인트 구현 (Alarm, Bid, User 등)
+│          │  │     ├─domain/                       # 데이터베이스 테이블 매핑 (JPA 엔티티) 
+│          │  │     ├─dto/                          #  계층 간 데이터 교환 객체 (요청/응답 모델)      
+│          │  │     ├─exception/                    # 예외 클래스 및 전역 핸들러   
+│          │  │     ├─repository/                   # DB 접근 및 QueryDsl 인터페이스
+│          │  │     ├─service/                      # 핵심 비즈니스 로직 구현
+│          │  │     │  └─bid/                       # 입찰 관련 특화 로직 (Scheduler 등 포함)         
+│          │  │     └─util
+│          │  │         └─JwtUtil.java              #JwtUtil
 │          │  │                      
 │          │  └─resources
 │          │          application.yaml                        # 환경 설정
