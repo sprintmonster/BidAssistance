@@ -204,7 +204,7 @@ BidAssistance/
 │  package.json
 │  README.md
 │  requirements.txt
-│  
+│
 ├─.idea
 │      .gitignore
 │      Bid Opportunity Management App.iml
@@ -213,7 +213,7 @@ BidAssistance/
 │      modules.xml
 │      vcs.xml
 │      workspace.xml
-│      
+│
 ├─BE
 │  └─aivleTK
 │      │  .gitattributes
@@ -223,10 +223,10 @@ BidAssistance/
 │      │  gradlew
 │      │  gradlew.bat
 │      │  settings.gradle                                   #프로젝트 모듈 설정
-│      │  
+│      │
 │      ├─gradle
 │      │  └─wrapper                                         # 빌드 자동화를 위한 gradle-wrapper 포함
-│      │          
+│      │
 │      └─src
 │          ├─main
 │          │  ├─java
@@ -235,26 +235,26 @@ BidAssistance/
 │          │  │     ├─common/                       # 시간 공통설정
 │          │  │     ├─config/                       # Security, QueryDsl, WebClient 등 인프라 설정
 │          │  │     ├─controller/                   # API 엔드포인트 구현 (Alarm, Bid, User 등)
-│          │  │     ├─domain/                       # 데이터베이스 테이블 매핑 (JPA 엔티티) 
-│          │  │     ├─dto/                          #  계층 간 데이터 교환 객체 (요청/응답 모델)      
-│          │  │     ├─exception/                    # 예외 클래스 및 전역 핸들러   
+│          │  │     ├─domain/                       # 데이터베이스 테이블 매핑 (JPA 엔티티)
+│          │  │     ├─dto/                          #  계층 간 데이터 교환 객체 (요청/응답 모델)
+│          │  │     ├─exception/                    # 예외 클래스 및 전역 핸들러
 │          │  │     ├─repository/                   # DB 접근 및 QueryDsl 인터페이스
 │          │  │     ├─service/                      # 핵심 비즈니스 로직 구현
-│          │  │     │  └─bid/                       # 입찰 관련 특화 로직 (Scheduler 등 포함)         
+│          │  │     │  └─bid/                       # 입찰 관련 특화 로직 (Scheduler 등 포함)
 │          │  │     └─util
 │          │  │         └─JwtUtil.java              #JwtUtil
-│          │  │                      
+│          │  │
 │          │  └─resources
 │          │          application.yaml                        # 환경 설정
 │          │          nara.mwb                                # MySQL Workbench 모델링 파일
 │          │          nara.mwb.bak
 │          └─          nara.sql                               # 데이터베이스 스키마 및 초기 데이터
-│                                  
+│
 ├─BE_AI_server
 │  │  .gitignore
 │  │  README.md
 │  │  security_audit.log
-│  │  
+│  │
 │  ├─AI_server
 │  │      BidAssitanceModel.py (AI 요약본 RAG 파이프라인)
 │  │      csvdownload.py
@@ -270,16 +270,16 @@ BidAssistance/
 │  │      security_logger.py
 │  │      test_bid_4features.csv
 │  │      tft_v3_predictor.py (추론파일 - KDE, gaussian_kde() 의존성 문제로 유사하게 구현함)
-│  │          
+│  │
 │  └─model
 │      │  model_v2.pkl
 │      │  scaler2.pkl
-│      │  
+│      │
 │      └─tft_v3
 │              best_model.pt
 │              features.txt
 │              scaler_X.pkl
-│              
+│
 ├─chatbot
 │  │  BidAssitanceModel.py
 │  │  Dockerfile
@@ -290,34 +290,34 @@ BidAssistance/
 │  │  main.py
 │  │  requirements.txt
 │  │  search_tool_nltojson.py
-│  │  usage_tool.py
-│  │  vector_db_embedding.py
-│  │  
-│  ├─faiss_db
-│  │  ├─api_faiss
+│  │  usage_tool.py                                   # 사이트 이용 관련 답변 생성 toolnode
+│  │  vector_db_embedding.py                          # "usage_data"내부 파일 임베딩 + FAISS 벡터 저장소 생성
+│  │
+│  ├─faiss_db                                         # FAISS 벡터 저장소
+│  │  ├─api_faiss                                     # "api정의서.xlsx" 임베딩 후 데이터
 │  │  │      index.faiss
 │  │  │      index.pkl
-│  │  │      
-│  │  ├─image_faiss
+│  │  │
+│  │  ├─image_faiss                                   # "images"내부 이미지 임베딩 후 데이터
 │  │  │      index.faiss
 │  │  │      index.pkl
-│  │  │      
-│  │  └─txt_faiss
+│  │  │
+│  │  └─txt_faiss                                     # "홈페이지 사용 설명서.txt" 임베딩 후 데이터
 │  │          index.faiss
 │  │          index.pkl
-│  │          
+│  │
 │  ├─rag_index
 │  │      index.faiss
 │  │      index.pkl
-│  │      
+│  │
 │  ├─results_transformer
 │  │      best_model.pt
-│  │      
-│  └─usage_data
+│  │
+│  └─usage_data                                       # 임베딩 용도 파일 저장소 (.xlsx, .txt, .img)
 │      │  api정의서.xlsx
 │      │  홈페이지 사용 설명서.txt
-│      │  
-│      └─images
+│      │
+│      └─images                                       # 빅 프로젝트 사이트 스크린 샷
 │              게시글.png
 │              계정찾기.png
 │              공고찾기.png
@@ -332,7 +332,7 @@ BidAssistance/
 │              커뮤니티.png
 │              회원가입1.png
 │              회원가입2.png
-│              
+│
 ├─frontend
 │  │  .env.development
 │  │  .gitignore
@@ -342,39 +342,39 @@ BidAssistance/
 │  │  postcss.config.mjs
 │  │  tsconfig.json
 │  │  vite.config.ts
-│  │  
+│  │
 │  ├─.github
 │  │  └─workflows
 │  │          azure-static-web-apps-calm-tree-0e8ee630f.yml
-│  │          
+│  │
 │  ├─.vite
 │  │  └─deps
 │  │          package.json
 │  │          _metadata.json
-│  │          
+│  │
 │  ├─dist
 │  │  │  index.html
 │  │  │  logo.png
 │  │  │  logo2.png
 │  │  │  logo_mini.png
-│  │  │  
+│  │  │
 │  │  └─assets
 │  │          index-B3jamNrW.js
 │  │          index-CLo20HGn.css
-│  │          
+│  │
 │  ├─public
 │  │      logo.png
 │  │      logo2.png
 │  │      logo_mini.png
-│  │      
+│  │
 │  └─src
 │      │  main.tsx
 │      │  vite-env.d.ts
-│      │  
+│      │
 │      ├─app
 │      │  │  App.tsx
 │      │  │  DashboardPage.tsx
-│      │  │  
+│      │  │
 │      │  ├─api
 │      │  │      alarms.ts
 │      │  │      auth.ts
@@ -387,7 +387,7 @@ BidAssistance/
 │      │  │      notices.ts
 │      │  │      users.ts
 │      │  │      wishlist.ts
-│      │  │      
+│      │  │
 │      │  ├─components
 │      │  │  │  BidDiscovery.tsx
 │      │  │  │  BidSummary.tsx
@@ -422,14 +422,14 @@ BidAssistance/
 │      │  │  │  SimpleCaptcha.tsx
 │      │  │  │  TermsAndConditions.tsx
 │      │  │  │  TrendingPosts.tsx
-│      │  │  │  
+│      │  │  │
 │      │  │  ├─dashboard
 │      │  │  │      Dashboard.tsx
 │      │  │  │      MonthlyTrendChart.tsx
 │      │  │  │      RecommendedBidsSection.tsx
 │      │  │  │      RegionPieChart.tsx
 │      │  │  │      SummaryCard.tsx
-│      │  │  │      
+│      │  │  │
 │      │  │  └─ui
 │      │  │          accordion.tsx
 │      │  │          alert-dialog.tsx
@@ -481,49 +481,49 @@ BidAssistance/
 │      │  │          use-mobile.ts
 │      │  │          useToast.ts
 │      │  │          utils.ts
-│      │  │          
+│      │  │
 │      │  ├─context
 │      │  │      ThemeContext.tsx
-│      │  │      
+│      │  │
 │      │  ├─layout
 │      │  │      AppLayout.tsx
 │      │  │      PageContainer.tsx
-│      │  │      
+│      │  │
 │      │  ├─routes
 │      │  │      ProtectedRoute.tsx
 │      │  │      PublicRoute.tsx
-│      │  │      
+│      │  │
 │      │  ├─types
 │      │  │      bid.ts
 │      │  │      community.ts
 │      │  │      navigation.ts
 │      │  │      wishlist.ts
-│      │  │      
+│      │  │
 │      │  └─utils
 │      │          accessControl.ts
 │      │          masking.ts
 │      │          password.ts
 │      │          testLogin.ts
-│      │          
+│      │
 │      └─styles
 │              fonts.css
 │              index.css
 │              tailwind.css
 │              theme.css
-│              
+│
 ├─model
 │  │  model_v2.pkl
 │  │  scaler2.pkl
-│  │  
+│  │
 │  └─tft_v3
 │          best_model.pt
 │          features.txt
 │          scaler_X.pkl
-│          
+│
 └─ops
     └─images
 
-                
+
 ```
 
 </details>
