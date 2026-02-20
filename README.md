@@ -217,17 +217,15 @@ BidAssistance/
 ├─BE
 │  └─aivleTK
 │      │  .gitattributes
-│      │  .gitignore
-│      │  build.gradle
-│      │  Dockerfile
+│      │  .gitignore # 깃허브 예외 설정
+│      │  build.gradle # 의존성 관리 및 빌드 설정
+│      │  Dockerfile # 백엔드 어플리케이션 이미지 빌드 설정
 │      │  gradlew
 │      │  gradlew.bat
-│      │  settings.gradle
+│      │  settings.gradle #프로젝트 모듈 설정
 │      │  
 │      ├─gradle
-│      │  └─wrapper
-│      │          gradle-wrapper.jar
-│      │          gradle-wrapper.properties
+│      │  └─wrapper # 빌드 자동화를 위한 gradle-wrapper 포함
 │      │          
 │      └─src
 │          ├─main
@@ -236,59 +234,24 @@ BidAssistance/
 │          │  │      └─nara
 │          │  │          └─aivleTK
 │          │  │              │  AivleTkApplication.java
-│          │  │              │  
-│          │  │              ├─common
-│          │  │              │      
-│          │  │              ├─config
-│          │  │              │      
-│          │  │              ├─controller
-│          │  │              │      
-│          │  │              ├─domain
-│          │  │              │  ├─Attachment
-│          │  │              │  ├─board
-│          │  │              │  ├─company
-│          │  │              │  └─user
-│          │  │              │          
-│          │  │              ├─dto
-│          │  │              │  │  
-│          │  │              │  ├─alarm
-│          │  │              │  │      
-│          │  │              │  ├─bid
-│          │  │              │  │      
-│          │  │              │  ├─board
-│          │  │              │  │      
-│          │  │              │  ├─chatBot
-│          │  │              │  │      
-│          │  │              │  ├─comment
-│          │  │              │  │      
-│          │  │              │  ├─company
-│          │  │              │  │      
-│          │  │              │  ├─fastapi
-│          │  │              │  │      
-│          │  │              │  └─user
-│          │  │              │          
-│          │  │              ├─exception
-│          │  │              │      
-│          │  │              ├─repository
-│          │  │              │      
-│          │  │              ├─service
-│          │  │              │  └─bid
+│          │  │              ├─common # 시간 공통설정
+│          │  │              ├─config # Security, QueryDsl, WebClient 등 인프라 설정
+│          │  │              ├─controller # API 엔드포인트 구현 (Alarm, Bid, User 등)
+│          │  │              ├─domain # 데이터베이스 테이블 매핑 (JPA 엔티티) 
+│          │  │              ├─dto #  계층 간 데이터 교환 객체 (요청/응답 모델)      
+│          │  │              ├─exception # 예외 클래스 및 전역 핸들러   
+│          │  │              ├─repository # DB 접근 및 QueryDsl 인터페이스
+│          │  │              ├─service # 핵심 비즈니스 로직 구현
+│          │  │              │  └─bid # 입찰 관련 특화 로직 (Scheduler 등 포함)
 │          │  │              │          
 │          │  │              └─util
-│          │  │                      JwtUtil.java
+│          │  │                      JwtUtil.java #JwtUtil
 │          │  │                      
 │          │  └─resources
-│          │          application.yaml
-│          │          nara.mwb
+│          │          application.yaml #환경 설정
+│          │          nara.mwb #MySQL Workbench 모델링 파일
 │          │          nara.mwb.bak
-│          │          nara.sql
-│          │          
-│          └─test
-│              └─java
-│                  └─com
-│                      └─nara
-│                          └─aivleTK
-│                                  AivleTkApplicationTests.java
+│          └─          nara.sql #데이터베이스 스키마 및 초기 데이터
 │                                  
 ├─BE_AI_server
 │  │  .gitignore
