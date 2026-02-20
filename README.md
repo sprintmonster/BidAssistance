@@ -256,22 +256,22 @@ BidAssistance/
 │  │  security_audit.log
 │  │
 │  ├─AI_server
-│  │      BidAssitanceModel.py                                # AI 요약본 RAG 파이프라인
-│  │      csvdownload.py
-│  │      forfeatureselection.py
-│  │      get_probability_from_model.py                       # 추론파일 - 역함수화 후 미분
-│  │      model_serving.py                                    # 추론 모델 엔드포인트
-│  │      model_transformer.py                                # deprecated
-│  │      model_transformer_4feat_train.py                    # deprecated
-│  │      model_transformer_test.py                           # deprecated
+│  │      BidAssitanceModel.py                     # AI 요약본 RAG 파이프라인
+│  │      csvdownload.py                           #
+│  │      forfeatureselection.py                   #
+│  │      get_probability_from_model.py            # 추론파일 - 역함수화 후 미분
+│  │      model_serving.py                         # 4개 피쳐 추론 모델 엔드포인트 (v2)
+│  │      model_transformer.py                     # deprecated
+│  │      model_transformer_4feat_train.py         # deprecated
+│  │      model_transformer_test.py                # deprecated
 │  │      narah.py
-│  │      RAG_server.py                                       # AI 요약본 엔드포인트
+│  │      RAG_server.py                            # AI 요약본, 사정율 예측(v3) 엔드포인트
 │  │      rate_limit.py
 │  │      security_logger.py
 │  │      test_bid_4features.csv
-│  │      tft_v3_predictor.py                                 # 추론파일 - KDE, gaussian_kde() 의존성 문제로 유사하게 구현함
+│  │      tft_v3_predictor.py                      # 추론파일 - KDE, gaussian_kde() 의존성 문제로 유사하게 구현함
 │  │
-│  └─model
+│  └─model                                         # 데이터 스케일링 파일, 모델 pt파일
 │      │  model_v2.pkl
 │      │  scaler2.pkl
 │      │
@@ -565,7 +565,7 @@ AI를 활용한 지능형 검색, 공고 상세 분석을 통해서 누구든지
 ### 📝 AI 요약 보고서
 
 - **RAG 기반 요약** : 공고문 내용을 검색(Retrieval) 후 요약(Generation)하여 핵심 정보 전달
-- **사정율 구간 예측** : AI 분석을 통해 낙찰 확률이 높은 사정율 구간 제시, 전략적인 투찰 의사결정 지원
+- **사정율 구간 예측** : AI 분석을 통해 낙찰 확률이 높은 사정율 구간 제시, 전략적인 투찰 의사결정 지원. 예측 모델이 LLM에게 값을 전달
 - **핵심 정보 추출** : 필요한 조건/요건/제출 서류 등 중요한 내용을 구조화하여 제공
 - **결과 분석** : 요약 결과를 기반으로 인사이트 및 체크리스트 형태로 지원
 
