@@ -256,22 +256,22 @@ BidAssistance/
 │  │  security_audit.log
 │  │
 │  ├─AI_server
-│  │      BidAssitanceModel.py (AI 요약본 RAG 파이프라인)
-│  │      csvdownload.py
-│  │      forfeatureselection.py
-│  │      get_probability_from_model.py (추론파일 - 역함수화 후 미분)
-│  │      model_serving.py (추론 모델 엔드포인트)
-│  │      model_transformer.py (deprecated)
-│  │      model_transformer_4feat_train.py (deprecated)
-│  │      model_transformer_test.py (deprecated)
+│  │      BidAssitanceModel.py                     # AI 요약본 RAG 파이프라인
+│  │      csvdownload.py                           #
+│  │      forfeatureselection.py                   #
+│  │      get_probability_from_model.py            # 추론파일 - 역함수화 후 미분
+│  │      model_serving.py                         # 4개 피쳐 추론 모델 엔드포인트 (v2)
+│  │      model_transformer.py                     # deprecated
+│  │      model_transformer_4feat_train.py         # deprecated
+│  │      model_transformer_test.py                # deprecated
 │  │      narah.py
-│  │      RAG_server.py (AI 요약본 엔드포인트)
+│  │      RAG_server.py                            # AI 요약본, 사정율 예측(v3) 엔드포인트 
 │  │      rate_limit.py
 │  │      security_logger.py
 │  │      test_bid_4features.csv
-│  │      tft_v3_predictor.py (추론파일 - KDE, gaussian_kde() 의존성 문제로 유사하게 구현함)
+│  │      tft_v3_predictor.py                      # 추론파일 - KDE, gaussian_kde() 의존성 문제로 유사하게 구현함
 │  │
-│  └─model
+│  └─model                                         # 데이터 스케일링 파일, 모델 pt파일
 │      │  model_v2.pkl
 │      │  scaler2.pkl
 │      │
