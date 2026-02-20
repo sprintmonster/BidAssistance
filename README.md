@@ -343,14 +343,14 @@ BidAssistance/
 │  │      logo_mini.png
 │  │
 │  └─src
-│      │  main.tsx
-│      │  vite-env.d.ts
+│      │  main.tsx                                    # React 엔트리(ReactDOM, Router, Provider 등 초기화)
+│      │  vite-env.d.ts                               # Vite 타입 선언(환경변수 등)
 │      │
 │      ├─app
-│      │  │  App.tsx
-│      │  │  DashboardPage.tsx
+│      │  │  App.tsx                                  # 라우팅/레이아웃의 최상위 엔트리 컴포넌트
+│      │  │  DashboardPage.tsx                        # 대시보드 페이지(상위 컨테이너)
 │      │  │
-│      │  ├─api
+│      │  ├─api                                       # 백엔드 API 호출 모듈(HTTP 클라이언트 + 엔드포인트)
 │      │  │      alarms.ts
 │      │  │      auth.ts
 │      │  │      bids.ts
@@ -363,7 +363,7 @@ BidAssistance/
 │      │  │      users.ts
 │      │  │      wishlist.ts
 │      │  │
-│      │  ├─components
+│      │  ├─components                                # 화면 구성 컴포넌트(페이지 단위/기능 단위 UI)
 │      │  │  │  BidDiscovery.tsx
 │      │  │  │  BidSummary.tsx
 │      │  │  │  CartPage.tsx
@@ -398,7 +398,7 @@ BidAssistance/
 │      │  │  │  TermsAndConditions.tsx
 │      │  │  │  TrendingPosts.tsx
 │      │  │  │
-│      │  │  ├─dashboard
+│      │  │  ├─dashboard                              # 대시보드 전용 세부 컴포넌트(차트/카드/섹션)
 │      │  │  │      Dashboard.tsx
 │      │  │  │      MonthlyTrendChart.tsx
 │      │  │  │      RecommendedBidsSection.tsx
