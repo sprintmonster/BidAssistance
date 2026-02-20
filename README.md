@@ -344,7 +344,7 @@ BidAssistance/
 │  │
 │  └─src
 │      │  main.tsx                                    # React 엔트리(ReactDOM, Router, Provider 등 초기화)
-│      │  vite-env.d.ts                               # Vite 타입 선언(환경변수 등)
+│      │  vite-env.d.ts
 │      │
 │      ├─app
 │      │  │  App.tsx                                  # 라우팅/레이아웃의 최상위 엔트리 컴포넌트
