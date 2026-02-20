@@ -242,7 +242,7 @@ BidAssistance/
 │          │  │     ├─service/                      # 핵심 비즈니스 로직 구현
 │          │  │     │  └─bid/                       # 입찰 관련 특화 로직 (Scheduler 등 포함)
 │          │  │     └─util
-│          │  │         └─JwtUtil.java              #JwtUtil
+│          │  │         └─JwtUtil.java              # JwtUtil
 │          │  │
 │          │  └─resources
 │          │          application.yaml                        # 환경 설정
@@ -256,20 +256,20 @@ BidAssistance/
 │  │  security_audit.log
 │  │
 │  ├─AI_server
-│  │      BidAssitanceModel.py (AI 요약본 RAG 파이프라인)
+│  │      BidAssitanceModel.py                                # AI 요약본 RAG 파이프라인
 │  │      csvdownload.py
 │  │      forfeatureselection.py
-│  │      get_probability_from_model.py (추론파일 - 역함수화 후 미분)
-│  │      model_serving.py (추론 모델 엔드포인트)
-│  │      model_transformer.py (deprecated)
-│  │      model_transformer_4feat_train.py (deprecated)
-│  │      model_transformer_test.py (deprecated)
+│  │      get_probability_from_model.py                       # 추론파일 - 역함수화 후 미분
+│  │      model_serving.py                                    # 추론 모델 엔드포인트
+│  │      model_transformer.py                                # deprecated
+│  │      model_transformer_4feat_train.py                    # deprecated
+│  │      model_transformer_test.py                           # deprecated
 │  │      narah.py
-│  │      RAG_server.py (AI 요약본 엔드포인트)
+│  │      RAG_server.py                                       # AI 요약본 엔드포인트
 │  │      rate_limit.py
 │  │      security_logger.py
 │  │      test_bid_4features.csv
-│  │      tft_v3_predictor.py (추론파일 - KDE, gaussian_kde() 의존성 문제로 유사하게 구현함)
+│  │      tft_v3_predictor.py                                 # 추론파일 - KDE, gaussian_kde() 의존성 문제로 유사하게 구현함
 │  │
 │  └─model
 │      │  model_v2.pkl
