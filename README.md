@@ -195,67 +195,375 @@
 <summary><b>📂 상세 폴더 구조 보기</b></summary>
 
 ```
-chatbot-with-kt-dgucenter/
-├── .gitignore                  # Git 무시 파일
-├── README.md                   # 프로젝트 설명서
-├── docker-compose.yml          # 도커 컴포즈 설정
-├── .github/                    # CI /CD 폴더
-│   └──  workflows/             # Github 액션 파일
-├──     └── deploy.yml          # CI/CD 자동화 문서
-├── ops/                        # 문서 및 운영 자료
-│   ├── images/                 # README용 이미지
-│   ├── docs/                   # 추가 문서
-│   └── presentations/          # 발표 자료
-└── DSL_CHAT_BOT/               # 챗봇 소스코드
-    ├── backend/
-    │   ├── Dockerfile          # 백엔드 도커파일
-    │   ├── config/
-    │   │   ├── __init__.py
-    │   │   ├── constants.py    # 카테고리 상수, 모델명
-    │   │   └── settings.py     # API 키 불러오기, API URL, DB 경로
-    │   ├── data/
-    │   │   ├── final_data.csv  # 사업장 데이터
-    │   │   └── master_summary_final.csv # 창업률 통계
-    │   ├── models/
-    │   │   ├── __init__.py
-    │   │   ├── embedding_model.py # ko-sroberta 임베딩
-    │   │   └── llm_model.py    # Midm-2.0-Mini LLM
-    │   ├── services/
-    │   │   ├── __init__.py
-    │   │   ├── labeling.py     # 질문 카테고리 라벨링
-    │   │   ├── policy_service.py # 정책 정보 검색
-    │   │   ├── startup_service.py # 창업 데이터 분석
-    │   │   └── trend_service.py # 트렌드 분석
-    │   ├── utils/
-    │   │   ├── __init__.py
-    │   │   └── text_processor.py # CSV→텍스트 변환, 동의어/유의어 사전
-    │   ├── main.py             # FastAPI 서버
-    │   ├── rag_llm.py          # 호환성 레이어
-    │   ├── requirements.txt    # Python 의존성
-    │   └── .env                # API키 저장 <- 로컬에서 사용시 생성필요
-    └── frontend/
-        ├── Dockerfile          # 프론트엔드 도커파일
-        ├── netlify/                  # Netlify Functions 폴더
-        │   └── functions/
-        │       └── chat.js           # Functions 핸들러
-        ├── public/
-        ├── src/
-        │   ├── components/
-        │   │   ├── ChatBot.jsx       # 메인 챗봇 컴포넌트
-        │   │   ├── ChatBubble.jsx    # 채팅 말풍선
-        │   │   ├── ChatHeader.jsx    # 챗봇 헤더
-        │   │   ├── ChatInput.jsx     # 입력창
-        │   │   ├── ChatMessages.jsx  # 메시지 목록
-        │   │   └── ThemeToggle.jsx   # 테마 토글
-        │   ├── context/
-        │   │   └── ThemeContext.jsx  # 테마 컨텍스트
-        │   ├── styles/
-        │   │   └── ChatStyles.css    # 스타일시트
-        │   ├── App.jsx               # 메인 앱
-        │   └── index.js              # 엔트리 포인트
-        ├── netlify.toml              # Netlify 설정 파일
-        ├── .env                      # 백엔드 요청경로 <- 로컬사용시 생성필요
-        └── package.json              # Node.js 의존성
+BidAssistance/
+│  .gitignore
+│  ATTRIBUTIONS.md
+│  Dockerfile
+│  NanumGothic-Regular.ttf
+│  package-lock.json
+│  package.json
+│  README.md
+│  requirements.txt
+│  
+├─.idea
+│      .gitignore
+│      Bid Opportunity Management App.iml
+│      BidAssistance.iml
+│      misc.xml
+│      modules.xml
+│      vcs.xml
+│      workspace.xml
+│      
+├─BE
+│  └─aivleTK
+│      │  .gitattributes
+│      │  .gitignore
+│      │  build.gradle
+│      │  Dockerfile
+│      │  gradlew
+│      │  gradlew.bat
+│      │  settings.gradle
+│      │  
+│      ├─gradle
+│      │  └─wrapper
+│      │          gradle-wrapper.jar
+│      │          gradle-wrapper.properties
+│      │          
+│      └─src
+│          ├─main
+│          │  ├─java
+│          │  │  └─com
+│          │  │      └─nara
+│          │  │          └─aivleTK
+│          │  │              │  AivleTkApplication.java
+│          │  │              │  
+│          │  │              ├─common
+│          │  │              │      
+│          │  │              ├─config
+│          │  │              │      
+│          │  │              ├─controller
+│          │  │              │      
+│          │  │              ├─domain
+│          │  │              │  ├─Attachment
+│          │  │              │  ├─board
+│          │  │              │  ├─company
+│          │  │              │  └─user
+│          │  │              │          
+│          │  │              ├─dto
+│          │  │              │  │  
+│          │  │              │  ├─alarm
+│          │  │              │  │      
+│          │  │              │  ├─bid
+│          │  │              │  │      
+│          │  │              │  ├─board
+│          │  │              │  │      
+│          │  │              │  ├─chatBot
+│          │  │              │  │      
+│          │  │              │  ├─comment
+│          │  │              │  │      
+│          │  │              │  ├─company
+│          │  │              │  │      
+│          │  │              │  ├─fastapi
+│          │  │              │  │      
+│          │  │              │  └─user
+│          │  │              │          
+│          │  │              ├─exception
+│          │  │              │      
+│          │  │              ├─repository
+│          │  │              │      
+│          │  │              ├─service
+│          │  │              │  └─bid
+│          │  │              │          
+│          │  │              └─util
+│          │  │                      JwtUtil.java
+│          │  │                      
+│          │  └─resources
+│          │          application.yaml
+│          │          nara.mwb
+│          │          nara.mwb.bak
+│          │          nara.sql
+│          │          
+│          └─test
+│              └─java
+│                  └─com
+│                      └─nara
+│                          └─aivleTK
+│                                  AivleTkApplicationTests.java
+│                                  
+├─BE_AI_server
+│  │  .gitignore
+│  │  README.md
+│  │  security_audit.log
+│  │  
+│  ├─AI_server
+│  │      BidAssitanceModel.py
+│  │      csvdownload.py
+│  │      forfeatureselection.py
+│  │      get_probability_from_model.py
+│  │      model_serving.py
+│  │      model_transformer.py
+│  │      model_transformer_4feat_train.py
+│  │      model_transformer_test.py
+│  │      narah.py
+│  │      RAG_server.py
+│  │      rate_limit.py
+│  │      security_logger.py
+│  │      test_bid_4features.csv
+│  │      tft_v3_predictor.py
+│  │          
+│  └─model
+│      │  model_v2.pkl
+│      │  scaler2.pkl
+│      │  
+│      └─tft_v3
+│              best_model.pt
+│              features.txt
+│              scaler_X.pkl
+│              
+├─chatbot
+│  │  BidAssitanceModel.py
+│  │  Dockerfile
+│  │  file
+│  │  get_probability_from_model.py
+│  │  graph.py
+│  │  json설명.txt
+│  │  main.py
+│  │  requirements.txt
+│  │  search_tool_nltojson.py
+│  │  usage_tool.py
+│  │  vector_db_embedding.py
+│  │  
+│  ├─faiss_db
+│  │  ├─api_faiss
+│  │  │      index.faiss
+│  │  │      index.pkl
+│  │  │      
+│  │  ├─image_faiss
+│  │  │      index.faiss
+│  │  │      index.pkl
+│  │  │      
+│  │  └─txt_faiss
+│  │          index.faiss
+│  │          index.pkl
+│  │          
+│  ├─rag_index
+│  │      index.faiss
+│  │      index.pkl
+│  │      
+│  ├─results_transformer
+│  │      best_model.pt
+│  │      
+│  └─usage_data
+│      │  api정의서.xlsx
+│      │  홈페이지 사용 설명서.txt
+│      │  
+│      └─images
+│              게시글.png
+│              계정찾기.png
+│              공고찾기.png
+│              공지사항.png
+│              대시보드.png
+│              로그인.png
+│              메인페이지.png
+│              비밀번호찾기.png
+│              알림.png
+│              장바구니.png
+│              챗봇.png
+│              커뮤니티.png
+│              회원가입1.png
+│              회원가입2.png
+│              
+├─frontend
+│  │  .env.development
+│  │  .gitignore
+│  │  index.html
+│  │  package-lock.json
+│  │  package.json
+│  │  postcss.config.mjs
+│  │  tsconfig.json
+│  │  vite.config.ts
+│  │  
+│  ├─.github
+│  │  └─workflows
+│  │          azure-static-web-apps-calm-tree-0e8ee630f.yml
+│  │          
+│  ├─.vite
+│  │  └─deps
+│  │          package.json
+│  │          _metadata.json
+│  │          
+│  ├─dist
+│  │  │  index.html
+│  │  │  logo.png
+│  │  │  logo2.png
+│  │  │  logo_mini.png
+│  │  │  
+│  │  └─assets
+│  │          index-B3jamNrW.js
+│  │          index-CLo20HGn.css
+│  │          
+│  ├─public
+│  │      logo.png
+│  │      logo2.png
+│  │      logo_mini.png
+│  │      
+│  └─src
+│      │  main.tsx
+│      │  vite-env.d.ts
+│      │  
+│      ├─app
+│      │  │  App.tsx
+│      │  │  DashboardPage.tsx
+│      │  │  
+│      │  ├─api
+│      │  │      alarms.ts
+│      │  │      auth.ts
+│      │  │      bids.ts
+│      │  │      chatbot.ts
+│      │  │      client.ts
+│      │  │      community.ts
+│      │  │      company.ts
+│      │  │      keywords.ts
+│      │  │      notices.ts
+│      │  │      users.ts
+│      │  │      wishlist.ts
+│      │  │      
+│      │  ├─components
+│      │  │  │  BidDiscovery.tsx
+│      │  │  │  BidSummary.tsx
+│      │  │  │  CartPage.tsx
+│      │  │  │  ChatbotFloatingButton.tsx
+│      │  │  │  ChatbotModal.tsx
+│      │  │  │  ChatbotPage.tsx
+│      │  │  │  CommunityBoard.tsx
+│      │  │  │  CommunityPage.tsx
+│      │  │  │  ComparePage.tsx
+│      │  │  │  CustomerSupport.tsx
+│      │  │  │  Dashboard.tsx
+│      │  │  │  ExpertBadge.tsx
+│      │  │  │  FindAccount.tsx
+│      │  │  │  FloatingChatbotLauncher.tsx
+│      │  │  │  Home.tsx
+│      │  │  │  HomePage.tsx
+│      │  │  │  Login.tsx
+│      │  │  │  LoginPage.tsx
+│      │  │  │  NewPostForm.tsx
+│      │  │  │  NoticeDetailPage.tsx
+│      │  │  │  NoticePage.tsx
+│      │  │  │  NotificationsPage.tsx
+│      │  │  │  PasswordRules.tsx
+│      │  │  │  PostDetail.tsx
+│      │  │  │  PrivacyPolicy.tsx
+│      │  │  │  ProfilePage.tsx
+│      │  │  │  RecommendedBidsModal.tsx
+│      │  │  │  Register.tsx
+│      │  │  │  ResetPasswordPage.tsx
+│      │  │  │  SignupPage.tsx
+│      │  │  │  SimpleCaptcha.tsx
+│      │  │  │  TermsAndConditions.tsx
+│      │  │  │  TrendingPosts.tsx
+│      │  │  │  
+│      │  │  ├─dashboard
+│      │  │  │      Dashboard.tsx
+│      │  │  │      MonthlyTrendChart.tsx
+│      │  │  │      RecommendedBidsSection.tsx
+│      │  │  │      RegionPieChart.tsx
+│      │  │  │      SummaryCard.tsx
+│      │  │  │      
+│      │  │  └─ui
+│      │  │          accordion.tsx
+│      │  │          alert-dialog.tsx
+│      │  │          alert.tsx
+│      │  │          aspect-ratio.tsx
+│      │  │          avatar.tsx
+│      │  │          badge.tsx
+│      │  │          breadcrumb.tsx
+│      │  │          button.tsx
+│      │  │          calendar.tsx
+│      │  │          card.tsx
+│      │  │          carousel.tsx
+│      │  │          chart.tsx
+│      │  │          checkbox.tsx
+│      │  │          collapsible.tsx
+│      │  │          command.tsx
+│      │  │          context-menu.tsx
+│      │  │          dialog.tsx
+│      │  │          drawer.tsx
+│      │  │          dropdown-menu.tsx
+│      │  │          form.tsx
+│      │  │          hover-card.tsx
+│      │  │          input-otp.tsx
+│      │  │          input.tsx
+│      │  │          label.tsx
+│      │  │          menubar.tsx
+│      │  │          navigation-menu.tsx
+│      │  │          pagination.tsx
+│      │  │          popover.tsx
+│      │  │          progress.tsx
+│      │  │          radio-group.tsx
+│      │  │          resizable.tsx
+│      │  │          scroll-area.tsx
+│      │  │          select.tsx
+│      │  │          separator.tsx
+│      │  │          sheet.tsx
+│      │  │          sidebar.tsx
+│      │  │          skeleton.tsx
+│      │  │          slider.tsx
+│      │  │          sonner.tsx
+│      │  │          switch.tsx
+│      │  │          table.tsx
+│      │  │          tabs.tsx
+│      │  │          textarea.tsx
+│      │  │          Toast.tsx
+│      │  │          toggle-group.tsx
+│      │  │          toggle.tsx
+│      │  │          tooltip.tsx
+│      │  │          use-mobile.ts
+│      │  │          useToast.ts
+│      │  │          utils.ts
+│      │  │          
+│      │  ├─context
+│      │  │      ThemeContext.tsx
+│      │  │      
+│      │  ├─layout
+│      │  │      AppLayout.tsx
+│      │  │      PageContainer.tsx
+│      │  │      
+│      │  ├─routes
+│      │  │      ProtectedRoute.tsx
+│      │  │      PublicRoute.tsx
+│      │  │      
+│      │  ├─types
+│      │  │      bid.ts
+│      │  │      community.ts
+│      │  │      navigation.ts
+│      │  │      wishlist.ts
+│      │  │      
+│      │  └─utils
+│      │          accessControl.ts
+│      │          masking.ts
+│      │          password.ts
+│      │          testLogin.ts
+│      │          
+│      └─styles
+│              fonts.css
+│              index.css
+│              tailwind.css
+│              theme.css
+│              
+├─model
+│  │  model_v2.pkl
+│  │  scaler2.pkl
+│  │  
+│  └─tft_v3
+│          best_model.pt
+│          features.txt
+│          scaler_X.pkl
+│          
+└─ops
+    └─images
+
+                
 ```
 
 </details>
